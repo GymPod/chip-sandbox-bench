@@ -1,0 +1,17 @@
+{
+  "name": "code-sandbox-bench-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "bun src/bench.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/bun": "^1.2.16"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
+
