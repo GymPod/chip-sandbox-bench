@@ -2,7 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadTasks } from "./dataset";
 import { makeProvider, writeText } from "./providers";
-import type { BenchArgs, BenchTask, CommandResult } from "./types";
+import { resolveTaskEnv } from "./task_env";
+import type { BenchArgs, BenchTask, CommandResult, RunKind, RunMode, TaskEnv } from "./types";
 
 const prepareCommand = `
 set -eu
@@ -37,9 +38,11 @@ function parseArgs(argv: string[]): BenchArgs {
     values.set(argv[index], argv[index + 1]);
   }
   const provider = (values.get("--provider") ?? "local") as BenchArgs["provider"];
+  const mode = parseRunMode(values.get("--mode"));
   return {
     provider,
-    dataset: values.get("--dataset") ?? resolve(import.meta.dir, "../../data/terminalbench_2026_03_05_smoke16.jsonl"),
+    mode,
+    dataset: values.get("--dataset") ?? resolve(import.meta.dir, "../../data/swesmith_v4_smoke100.jsonl"),
     taskIndex: values.get("--task-index") ?? "all",
     runtime: values.get("--runtime") ?? "python3.13",
     timeoutSeconds: Number.parseInt(values.get("--timeout-seconds") ?? "180", 10),
@@ -51,12 +54,19 @@ function parseArgs(argv: string[]): BenchArgs {
     vercelSnapshotId: values.get("--vercel-snapshot-id") ?? process.env.VERCEL_SNAPSHOT_ID,
     modalImageId: values.get("--modal-image-id") ?? process.env.MODAL_IMAGE_ID,
     daytonaSnapshot: values.get("--daytona-snapshot") ?? process.env.DAYTONA_SNAPSHOT,
-    concurrency: Number.parseInt(values.get("--concurrency") ?? "1", 10),
+    concurrency: Number.parseInt(values.get("--concurrency") ?? "100", 10),
     cpu: Number.parseInt(values.get("--cpu") ?? "2", 10),
     memoryGb: Number.parseInt(values.get("--memory-gb") ?? "4", 10),
     diskGb: Number.parseInt(values.get("--disk-gb") ?? "10", 10),
     output: values.get("--output")
   };
+}
+
+function parseRunMode(value: string | undefined): RunMode {
+  if (value === undefined || value === "cold" || value === "warm") {
+    return value ?? "cold";
+  }
+  throw new Error(`Unsupported run mode: ${value}`);
 }
 
 function parseForwardEnv(value: string | undefined): string[] {
@@ -88,19 +98,10 @@ function estimateCost(provider: string, seconds: number, cpu: number, memoryGb: 
 }
 
 async function runTask(args: BenchArgs, task: BenchTask): Promise<Record<string, unknown>> {
-  const provider = makeProvider(args.provider, {
-    runtime: args.runtime,
-    timeoutSeconds: args.timeoutSeconds,
-    cpu: args.cpu,
-    memoryGb: args.memoryGb,
-    diskGb: args.diskGb,
-    prewarmProfile: args.prewarmProfile,
-    vercelSnapshotId: args.vercelSnapshotId,
-    modalImageId: args.modalImageId,
-    daytonaSnapshot: args.daytonaSnapshot
-  });
+  const taskEnv = resolveTaskEnv(task, args.runtime, args.provider);
   const solveCommand = resolveSolveCommand(args);
   const started = performance.now();
+  let provider: ReturnType<typeof makeProvider> | undefined;
   let solveElapsedSeconds: number | undefined;
   let solveResult: CommandResult | undefined;
   let result: CommandResult = { stdout: "", stderr: "", returnCode: 1 };
@@ -114,32 +115,65 @@ async function runTask(args: BenchArgs, task: BenchTask): Promise<Record<string,
     }
   }
   try {
-    await timed("start", () => provider.start());
-    await timed("upload", () => writeText(provider, "/tmp/task.tar.gz.b64", task.task_files.content, args.timeoutSeconds));
-    const prepare = await timed("prepare", () => provider.run(prepareCommand, undefined, args.timeoutSeconds));
+    const activeProvider = makeProvider(args.provider, {
+      runtime: taskEnv.runtime ?? args.runtime,
+      timeoutSeconds: args.timeoutSeconds,
+      cpu: args.cpu,
+      memoryGb: args.memoryGb,
+      diskGb: args.diskGb,
+      prewarmProfile: args.prewarmProfile,
+      vercelSnapshotId: args.vercelSnapshotId,
+      modalImageId: args.modalImageId,
+      daytonaSnapshot: args.daytonaSnapshot
+    });
+    provider = activeProvider;
+    await timed("start", () => activeProvider.start());
+    await timed("upload", () => writeText(activeProvider, "/tmp/task.tar.gz.b64", task.task_files.content, args.timeoutSeconds));
+    const prepare = await timed("prepare", () => activeProvider.run(prepareCommand, undefined, args.timeoutSeconds));
     if (prepare.returnCode === 0) {
-      await timed("instruction_write", () => writeTaskInstructions(provider, task, args.timeoutSeconds));
+      await timed("instruction_write", () => writeTaskInstructions(activeProvider, task, taskEnv, args.timeoutSeconds));
       if (solveCommand) {
         const solveStarted = performance.now();
         solveResult = await timed("solve", () =>
-          provider.run(withForwardedEnv(solveCommand, args.forwardEnv), "/workspace", args.solveTimeoutSeconds)
+          activeProvider.run(
+            withBenchEnv(withForwardedEnv(solveCommand, args.forwardEnv), taskEnv),
+            taskEnv.workdir,
+            args.solveTimeoutSeconds
+          )
         );
         solveElapsedSeconds = (performance.now() - solveStarted) / 1000;
       }
-      result = await timed("verify", () => provider.run(verifyCommand, "/workspace", args.timeoutSeconds));
+      result = await timed("verify", () => activeProvider.run(verifyCommand, taskEnv.verifierCwd, args.timeoutSeconds));
     } else {
       result = prepare;
     }
+  } catch (error) {
+    result = { stdout: "", stderr: formatError(error), returnCode: 1 };
   } finally {
-    await timed("stop", () => provider.stop());
+    const providerToStop = provider;
+    if (providerToStop) {
+      try {
+        await timed("stop", () => providerToStop.stop());
+      } catch (error) {
+        result = {
+          stdout: result.stdout,
+          stderr: `${result.stderr}\nstop failed:\n${formatError(error)}`.trim(),
+          returnCode: result.returnCode || 1
+        };
+      }
+    }
   }
   const elapsedSeconds = (performance.now() - started) / 1000;
   const item: Record<string, unknown> = {
     task_id: task.task_id,
+    env_type: taskEnv.envType,
+    data_source: taskEnv.dataSource,
+    task_workdir: taskEnv.workdir,
+    task_runtime: taskEnv.runtime,
+    task_docker_image: taskEnv.dockerImage,
     passed: result.returnCode === 0,
     return_code: result.returnCode,
     elapsed_seconds: elapsedSeconds,
-    estimated_cost_usd: estimateCost(args.provider, elapsedSeconds, args.cpu, args.memoryGb, args.diskGb),
     phases,
     stdout_tail: result.stdout.slice(-2000),
     stderr_tail: result.stderr.slice(-2000)
@@ -153,7 +187,16 @@ async function runTask(args: BenchArgs, task: BenchTask): Promise<Record<string,
   return item;
 }
 
-async function writeTaskInstructions(provider: ReturnType<typeof makeProvider>, task: BenchTask, timeoutSeconds: number): Promise<void> {
+function formatError(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ""}` : String(error);
+}
+
+async function writeTaskInstructions(
+  provider: ReturnType<typeof makeProvider>,
+  task: BenchTask,
+  taskEnv: TaskEnv,
+  timeoutSeconds: number
+): Promise<void> {
   const prompt = task.prompt || task.instruction;
   const instruction = task.instruction || task.prompt;
   const taskMarkdown = [
@@ -165,12 +208,15 @@ async function writeTaskInstructions(provider: ReturnType<typeof makeProvider>, 
     "## Instruction",
     instruction.trim(),
     "",
-    "Work in `/workspace`. The verifier will run from `/workspace` after your command exits."
+    `Work in \`${taskEnv.workdir}\`. The verifier will run after your command exits.`
   ].join("\n");
 
   await writeText(provider, "/tmp/task_prompt.md", prompt, timeoutSeconds);
   await writeText(provider, "/tmp/task_instruction.md", instruction, timeoutSeconds);
   await writeText(provider, "/workspace/TASK.md", taskMarkdown, timeoutSeconds);
+  if (taskEnv.workdir !== "/workspace") {
+    await writeText(provider, `${taskEnv.workdir}/TASK.md`, taskMarkdown, timeoutSeconds);
+  }
 }
 
 function withForwardedEnv(command: string, names: string[]): string {
@@ -184,17 +230,46 @@ function withForwardedEnv(command: string, names: string[]): string {
   return `${exports.join("\n")}\n${command}`;
 }
 
+function withBenchEnv(command: string, taskEnv: TaskEnv): string {
+  const exports = [
+    `export BENCH_TASK_ENV_TYPE=${shellQuote(taskEnv.envType)}`,
+    `export BENCH_TASK_WORKDIR=${shellQuote(taskEnv.workdir)}`,
+    `export BENCH_TASK_FILE=${shellQuote(`${taskEnv.workdir}/TASK.md`)}`,
+    `export BENCH_TASK_DOCKER_IMAGE=${shellQuote(taskEnv.dockerImage ?? "")}`
+  ];
+  return `${exports.join("\n")}\n${command}`;
+}
+
+function taskEnvCounts(tasks: BenchTask[]): Record<string, number> {
+  return tasks.reduce<Record<string, number>>((counts, task) => {
+    const key = task.env_type ?? "terminalbench";
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function estimateRunCost(args: BenchArgs, results: Record<string, unknown>[]): number {
+  return results.reduce((sum, item) => {
+    return sum + estimateCost(args.provider, Number(item.elapsed_seconds ?? 0), args.cpu, args.memoryGb, args.diskGb);
+  }, 0);
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(Bun.argv.slice(2));
   const tasks = loadTasks(args.dataset, args.taskIndex);
+  const kind: RunKind = resolveSolveCommand(args) ? "solve" : "verifier";
   const results = await runWithConcurrency(tasks, args);
   const summary = {
     provider: args.provider,
+    mode: args.mode,
+    kind,
+    dataset: args.dataset,
     runtime: args.runtime,
+    task_env_counts: taskEnvCounts(tasks),
     task_count: results.length,
-    solve_enabled: Boolean(resolveSolveCommand(args)),
+    solve_enabled: kind === "solve",
     passed: results.filter((item) => item.passed).length,
-    estimated_cost_usd: results.reduce((sum, item) => sum + Number(item.estimated_cost_usd), 0),
+    estimated_cost_usd: estimateRunCost(args, results),
     results
   };
   const output = `${JSON.stringify(summary, null, 2)}\n`;
