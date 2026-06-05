@@ -2,7 +2,7 @@
 
 Updated: 2026-06-05
 
-This page explains why the full 20-task rollup is not the primary vendor comparison.
+This page explains why the full 20-task rollup is not the primary vendor comparison. Detailed task notes are in [per-task-failure-audit.md](per-task-failure-audit.md), and provider-level notes are in [per-provider-report.md](per-provider-report.md).
 
 ## Excluded Tasks
 
@@ -34,12 +34,12 @@ That is a signal improvement, but not full fidelity. Docker metadata for `jyangb
 task | failed providers | failure character
 --- | --- | ---
 `amueller__word_cloud.ec24191c.func_basic__b5q81acm` | Vercel cold/warm | CLI executable invocation errors.
-`conan-io__conan.86f29e13.pr_11412` | Vercel cold/warm, Modal cold/warm | Real test/assertion failures after setup.
-`conan-io__conan.86f29e13.pr_15965` | Vercel cold/warm | Real test/assertion failures after setup.
+`conan-io__conan.86f29e13.pr_11412` | Vercel cold/warm, Modal cold/warm | Vercel hits missing `_sqlite3`; Modal reaches real tests and also shows patch rejects.
+`conan-io__conan.86f29e13.pr_15965` | Vercel cold/warm | Vercel collection-time autotools test errors.
 `dask__dask.5f61e423.combine_module__dkp16syb` | Vercel cold/warm | Real test failures, with `35 failed, 5846 passed`.
 `encode__starlette.db5063c2.combine_file__hrjivx2s` | Vercel cold/warm, Modal cold/warm | Staticfiles permission failures, with `2 failed, 865 passed`.
 `encode__starlette.db5063c2.func_basic__vehyiaux` | Vercel cold/warm, Modal cold/warm | Staticfiles permission failures, with `2 failed, 865 passed`.
-`facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998` | Vercel cold/warm, Daytona cold/warm | PyTorch/image fidelity gap on Vercel; remaining real test failures after PyTorch repair.
+`facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998` | Vercel cold/warm, Daytona cold/warm | PyTorch/image fidelity gap on Vercel; remaining real test failures after PyTorch repair; unresolved verifier result on Daytona.
 
 ## Provider Trade-Offs
 

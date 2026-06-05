@@ -23,6 +23,8 @@ The broader 20-task rollup is still useful, but it mixes provider performance wi
 
 - [reports/cross-vendor-comparison.md](reports/cross-vendor-comparison.md)
 - [reports/per-task-comparison.md](reports/per-task-comparison.md)
+- [reports/per-task-failure-audit.md](reports/per-task-failure-audit.md)
+- [reports/per-provider-report.md](reports/per-provider-report.md)
 - [reports/failure-modes-tradeoffs.md](reports/failure-modes-tradeoffs.md)
 
 ## Task Environment Mapping

@@ -32,4 +32,5 @@ facelessuser__soupsieve.a8080d97.func_basic__32q3kq07 | pass 27.4s | pass 27.1s 
 - Times are measured wall-clock task elapsed seconds from each provider result JSON.
 - A passing task means the solver exited cleanly and the verifier accepted the patched tree.
 - Failures are not normalized away here. For the apples-to-apples comparison, use [cross-vendor-comparison.md](cross-vendor-comparison.md).
-- Failure details are summarized in [failure-modes-tradeoffs.md](failure-modes-tradeoffs.md).
+- Detailed failure notes are in [per-task-failure-audit.md](per-task-failure-audit.md).
+- Provider-level interpretation is in [per-provider-report.md](per-provider-report.md).

@@ -6,6 +6,8 @@ This report is split into focused documents:
 
 - [Cross-vendor comparison](cross-vendor-comparison.md): the apples-to-apples provider comparison, centered on the 13 tasks that pass on Vercel, Modal, and Daytona in both cold and warm modes.
 - [Per-task comparison](per-task-comparison.md): task-by-task status and timing for the current 20-task SWE-Smith evidence set.
+- [Per-task failure audit](per-task-failure-audit.md): deeper notes on each excluded or failing task.
+- [Per-provider report](per-provider-report.md): provider-by-provider strengths, failure signatures, and trade-offs.
 - [Failure modes and trade-offs](failure-modes-tradeoffs.md): environment gaps, provider-specific failures, and interpretation notes.
 
 ## Evidence Set
