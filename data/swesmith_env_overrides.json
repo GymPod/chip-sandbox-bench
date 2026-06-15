@@ -31,7 +31,7 @@
   },
   "pandas-dev__pandas.95280573": {
     "pre_install_pip": [
-      "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.0 numpy versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
+      "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
     ],
     "resources": {
       "cpu": 4,
@@ -76,6 +76,67 @@
       "lxml",
       "html5lib"
     ]
+  },
+  "benoitc__gunicorn.bacbf8aa": {
+    "extra_pip": [
+      "gevent",
+      "eventlet"
+    ],
+    "notes": "Worker import tests require optional gevent/eventlet deps that are present in the task image but not installed by pip install -e ."
+  },
+  "agronholm__typeguard.b6a7e438": {
+    "pre_install_pip": [
+      "pytest<8"
+    ],
+    "notes": "The pytest plugin tests treat pytest deprecation warnings as failures on pytest 8+."
+  },
+  "cknd__stackprinter.219fcc52": {
+    "pre_install_pip": [
+      "pytest<9"
+    ],
+    "notes": "Older source-inspection tests fail collection under pytest 9."
+  },
+  "gawel__pyquery.811cd048": {
+    "extra_pip": [
+      "webtest"
+    ],
+    "notes": "conftest.py imports webtest.http, which is part of the original test environment."
+  },
+  "graphql-python__graphene.82903263": {
+    "extra_pip": [
+      "pytest-benchmark"
+    ],
+    "notes": "Benchmark tests require the pytest-benchmark fixture."
+  },
+  "python-openxml__python-docx.0cf6d71f": {
+    "pre_install_pip": [
+      "pytest<9"
+    ],
+    "extra_pip": [
+      "pyparsing<3"
+    ],
+    "notes": "The legacy test suite is not pytest 9 compatible and its XML test helpers import pyparsing."
+  },
+  "scanny__python-pptx.278b47b1": {
+    "pre_install_pip": [
+      "pytest<9"
+    ],
+    "extra_pip": [
+      "pyparsing<3"
+    ],
+    "notes": "The legacy test suite is not pytest 9 compatible and its XML test helpers import pyparsing."
+  },
+  "Suor__funcy.207a7810": {
+    "pre_install_pip": [
+      "pytest<9"
+    ],
+    "notes": "The legacy test suite is not pytest 9 compatible."
+  },
+  "pygments__pygments.27649ebb": {
+    "extra_pip": [
+      "wcag-contrast-ratio"
+    ],
+    "notes": "Contrast tests import wcag_contrast_ratio, which is present in the task image but not installed by pip install -e ."
   },
   "pydantic__pydantic.acb0f10f": {
     "install_cmds": [

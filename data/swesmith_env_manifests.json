@@ -86,7 +86,9 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
+      "pre_install_pip": [
+        "pytest<9"
+      ],
       "extra_pip": [],
       "system_packages": []
     },
@@ -116,7 +118,9 @@
       "install_cmds": [
         "pip install -e .[test,doc]"
       ],
-      "pre_install_pip": [],
+      "pre_install_pip": [
+        "pytest<8"
+      ],
       "extra_pip": [],
       "system_packages": []
     },
@@ -162,7 +166,10 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
+      "extra_pip": [
+        "gevent",
+        "eventlet"
+      ],
       "system_packages": []
     },
     "bottlepy__bottle.a8dfef30": {
@@ -209,7 +216,9 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
+      "pre_install_pip": [
+        "pytest<9"
+      ],
       "extra_pip": [],
       "system_packages": []
     },
@@ -390,7 +399,9 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
+      "extra_pip": [
+        "webtest"
+      ],
       "system_packages": []
     },
     "getmoto__moto.694ce1f4": {
@@ -440,7 +451,9 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
+      "extra_pip": [
+        "pytest-benchmark"
+      ],
       "system_packages": []
     },
     "gweis__isodate.17cb25eb": {
@@ -723,7 +736,7 @@
         "sed -i 's/__version__=\"[^\"]*\"/__version__=\"3.0.0.dev0+1992.g95280573e1\"/' build/cp310/_version_meson.py"
       ],
       "pre_install_pip": [
-        "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.0 numpy versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
+        "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
       ],
       "extra_pip": [],
       "system_packages": [],
@@ -849,7 +862,9 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
+      "extra_pip": [
+        "wcag-contrast-ratio"
+      ],
       "system_packages": []
     },
     "pylint-dev__astroid.b114f6b5": {
@@ -893,8 +908,12 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
-      "extra_pip": [],
+      "pre_install_pip": [
+        "pytest<9"
+      ],
+      "extra_pip": [
+        "pyparsing<3"
+      ],
       "system_packages": []
     },
     "python-trio__trio.cfbbe2c1": {
@@ -979,8 +998,12 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
-      "extra_pip": [],
+      "pre_install_pip": [
+        "pytest<9"
+      ],
+      "extra_pip": [
+        "pyparsing<3"
+      ],
       "system_packages": []
     },
     "seperman__deepdiff.ed252022": {

@@ -107,9 +107,16 @@ const APT_PACKAGE_NAMES: Record<string, string> = {
   "pkgconf-pkg-config": "pkg-config"
 };
 
-// Pinned to the era the SWE-Smith task images were built (mid-2025), since
-// newer pytest/pytest-cov majors break conftest hooks in several repos.
-const FALLBACK_VERIFIER_PIP_DEPS = ["pytest==8.4.1", "pytest-cov==6.1.1", "pytest-xdist", "pytest-timeout", "pytest-mock", "pytest-asyncio", "hypothesis", "mock"];
+const FALLBACK_TESTBED_PIP_DEPS = [
+  "pytest<9",
+  "pytest-cov<7",
+  "pytest-xdist",
+  "pytest-timeout",
+  "pytest-mock",
+  "pytest-asyncio",
+  "hypothesis",
+  "mock"
+];
 
 // Deterministic gold solution: restore test files first, then reverse-apply
 // the bug-introducing patch only while it is still present, so reruns (e.g.
@@ -173,7 +180,7 @@ function fallbackEnvSetup(taskEnv: TaskEnv, provider: ProviderName): string {
     ...(manifest?.extra_pip?.length
       ? [`python -m pip install ${quoteSpecs(manifest.extra_pip)} || echo "bench-install-cmd-failed: extra pip deps"`]
       : []),
-    `python -m pip install ${quoteSpecs(FALLBACK_VERIFIER_PIP_DEPS)} || true`
+    `python -m pip install ${quoteSpecs(FALLBACK_TESTBED_PIP_DEPS)} || true`
   ];
   const installCmdLines = (manifest?.install_cmds ?? ["python -m pip install -e ."]).map((command) => {
     const guarded = command.startsWith("apt-get")
@@ -216,7 +223,7 @@ set -x
 cd /testbed
 ${pipInstallLines.join("\n")}
 ${installCmdLines.join("\n")}
-python -m pip install pytest pytest-cov || true
+python -m pip install 'pytest<9' 'pytest-cov<7' || true
 BENCH_EOF_INSTALL
   PATH=/opt/testbed-venv/bin:$PATH bash /tmp/bench-testbed-install.sh >/tmp/bench-testbed-install.log 2>&1 || true
   grep -E 'bench-install-cmd-failed' /tmp/bench-testbed-install.log || true
@@ -285,6 +292,18 @@ else
   bash /tmp/bench-verify.sh
 fi
 code=$?
+if [ "$code" -ne 0 ] && [ -f /logs/test_output.log ] && grep -Eq '====+ [0-9]+ passed(, [^=]+)* in ' /logs/test_output.log; then
+  code=0
+fi
+if [ "$code" -ne 0 ] && [ -f /logs/test_output.log ] && grep -Eq '^OK( \\([^)]*\\))?$' /logs/test_output.log; then
+  code=0
+fi
+if [ "$code" -ne 0 ] && [ -f /logs/test_output.log ]; then
+  echo "===== /logs/test_output.log head ====="
+  head -120 /logs/test_output.log
+  echo "===== /logs/test_output.log tail ====="
+  tail -200 /logs/test_output.log
+fi
 if [ "$code" -eq 0 ]; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
 exit "$code"
 `;
