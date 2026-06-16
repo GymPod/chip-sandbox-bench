@@ -79,11 +79,14 @@
       "html5lib==1.1",
       "lxml<5"
     ],
-    "notes": "Iframe/parser tests match the task image with BeautifulSoup 4.12, html5lib 1.1, and lxml 4.x; re-apply pins after install because parser releases change iframe handling.",
+    "notes": "Iframe/parser tests match the task image with BeautifulSoup 4.12, html5lib 1.1, and lxml 4.x. Force parser pins in pre-verify and inject a BeautifulSoup html.parser iframe compatibility shim because provider Linux parser behavior can leave iframe inner markup as a text node.",
     "pre_install_pip": [
       "beautifulsoup4==4.12.3",
       "html5lib==1.1",
       "lxml<5"
+    ],
+    "pre_verify_cmds": [
+      "for PYTHON in /opt/testbed-venv/bin/python /opt/miniconda3/envs/testbed/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'beautifulsoup4==4.12.3' 'html5lib==1.1' 'lxml<5' || echo \"bench-pre-verify-cmd-failed: parser pins for $PYTHON\"\n    SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n    cat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import bs4\n    _bench_orig_bs_init = bs4.BeautifulSoup.__init__\n    _bench_iframe_processing = False\n\n    def _bench_bs_init(self, markup='', features=None, builder=None, parse_only=None, from_encoding=None, exclude_encodings=None, element_classes=None, **kwargs):\n        global _bench_iframe_processing\n        _bench_orig_bs_init(self, markup, features, builder, parse_only, from_encoding, exclude_encodings, element_classes, **kwargs)\n        if _bench_iframe_processing:\n            return\n        requested = features\n        if isinstance(requested, (list, tuple)):\n            is_html_parser = 'html.parser' in requested\n        else:\n            is_html_parser = requested in (None, 'html.parser')\n        if not is_html_parser:\n            return\n        _bench_iframe_processing = True\n        try:\n            for iframe in list(self.find_all('iframe')):\n                if len(iframe.contents) != 1 or not isinstance(iframe.contents[0], bs4.NavigableString):\n                    continue\n                text = str(iframe.contents[0])\n                if '<' not in text or '>' not in text:\n                    continue\n                frag = bs4.BeautifulSoup.__new__(bs4.BeautifulSoup)\n                _bench_orig_bs_init(frag, text, 'html.parser')\n                iframe.clear()\n                for child in list(frag.contents):\n                    iframe.append(child.extract())\n        finally:\n            _bench_iframe_processing = False\n\n    bs4.BeautifulSoup.__init__ = _bench_bs_init\nexcept Exception:\n    pass\nPY\n    chmod a+r \"$SITE_DIR/sitecustomize.py\"\n  fi\ndone"
     ]
   },
   "benoitc__gunicorn.bacbf8aa": {
@@ -344,9 +347,9 @@
       "rich==13.7.1",
       "typer==0.12.3"
     ],
-    "notes": "CLI tests need legacy click/marshmallow/rich/typer pins and setuptools<68 for pkg_resources. Verifier lazily imports safety.auth.cli and injects /testbed on sys.path to avoid a collection-time safety.cli_util <-> safety.auth.cli circular import in alerts PASS_TO_PASS tests.",
+    "notes": "CLI tests need legacy click/marshmallow/rich/typer pins and setuptools<68 for pkg_resources. Verifier lazily imports safety.auth.cli and injects /testbed on sys.path to avoid a collection-time safety.cli_util <-> safety.auth.cli circular import in alerts PASS_TO_PASS tests. The injected sitecustomize also resets the shared Rich console before CliRunner.invoke because scan JSON tests leave console.quiet=True, which suppresses later CLI output assertions.",
     "pre_verify_cmds": [
-      "python - <<'PY'\nfrom pathlib import Path\np = Path('/testbed/safety/auth/__init__.py')\ns = p.read_text()\ns = s.replace('from .cli import auth\\n', 'def __getattr__(name):\\n    if name == \"auth\":\\n        from .cli import auth\\n        return auth\\n    raise AttributeError(name)\\n')\np.write_text(s)\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\nprintf 'import sys\\nsys.path.insert(0, \"/testbed\")\\n' > \"$SITE_DIR/sitecustomize.py\"\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+      "python - <<'PY'\nfrom pathlib import Path\np = Path('/testbed/safety/auth/__init__.py')\ns = p.read_text()\ns = s.replace('from .cli import auth\\n', 'def __getattr__(name):\\n    if name == \"auth\":\\n        from .cli import auth\\n        return auth\\n    raise AttributeError(name)\\n')\np.write_text(s)\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\nimport sys\nsys.path.insert(0, \"/testbed\")\ntry:\n    import click.testing\n    _safety_orig_invoke = click.testing.CliRunner.invoke\n    def _safety_invoke(self, cli, *args, **kwargs):\n        for modname in ('safety.console', 'safety.cli', 'safety.scan.decorators'):\n            try:\n                mod = __import__(modname, fromlist=['*'])\n                con = getattr(mod, 'main_console', None) or getattr(mod, 'console', None)\n                if con is not None:\n                    con.quiet = False\n            except Exception:\n                pass\n        return _safety_orig_invoke(self, cli, *args, **kwargs)\n    click.testing.CliRunner.invoke = _safety_invoke\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
     ],
     "pre_install_pip": [
       "setuptools<68"
@@ -369,5 +372,11 @@
       "vcrpy==8.2.1"
     ],
     "notes": "Older vcrpy versions satisfy setup.py vcrpy>=1.10.3 but fail cassette patching with current aiohttp; vcrpy 8.2.1 matches the restored test suite."
+  },
+  "getnikola__nikola.0f4c230e": {
+    "pre_install_pip": [
+      "lxml<6"
+    ],
+    "notes": "WordPress import PASS_TO_PASS expects lxml.html.document_fromstring(b\"FOO\") to wrap body text in <p>; lxml 6.x emits bare body text, so reapply lxml<6 after install."
   }
 }
