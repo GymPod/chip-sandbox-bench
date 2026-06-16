@@ -155,6 +155,12 @@ function systemPackageInstall(dnfPackages: string[]): string {
   fi`;
 }
 
+function guardedShellLines(commands: string[] | undefined, label: string): string {
+  return (commands ?? [])
+    .map((command) => `{ ${command} ; } || echo "bench-${label}-cmd-failed: ${command.replaceAll('"', '\\"')}"`)
+    .join("\n");
+}
+
 // Fallback environment setup for providers that cannot run the task Docker
 // image (Vercel, local). The recipe comes from the per-repo manifest in
 // data/swesmith_env_manifests.json, which mirrors the SWE-Smith profile the
@@ -167,6 +173,19 @@ function fallbackEnvSetup(taskEnv: TaskEnv, provider: ProviderName): string {
   const pythonVersion = manifest?.python_version ?? "3.10";
   const mirror = manifest?.mirror ?? (taskEnv.repoKey ? `swesmith/${taskEnv.repoKey}` : "");
   const sourceId = taskEnv.sourceId ?? "";
+  const envKey = Buffer.from(
+    JSON.stringify({
+      repoKey: taskEnv.repoKey,
+      sourceId,
+      pythonVersion,
+      installCmds: manifest?.install_cmds ?? [],
+      preInstallPip: manifest?.pre_install_pip ?? [],
+      extraPip: manifest?.extra_pip ?? [],
+      systemPackages: manifest?.system_packages ?? [],
+      preVerifyCmds: manifest?.pre_verify_cmds ?? []
+    }),
+    "utf8"
+  ).toString("base64");
   const baseSystemPackages = ["git", "patch", "tar", "gzip", "gcc", "gcc-c++", "make"];
   const systemPackages = [...new Set([...baseSystemPackages, ...(manifest?.system_packages ?? [])])];
   // Each pip spec is shell-quoted: version constraints like "foo<2" or
@@ -174,14 +193,17 @@ function fallbackEnvSetup(taskEnv: TaskEnv, provider: ProviderName): string {
   const quoteSpecs = (specs: string[]): string =>
     specs.flatMap((spec) => spec.split(/\s+/)).map((token) => `'${token}'`).join(" ");
   const pipInstallLines = [
+    `python -m pip install ${quoteSpecs(FALLBACK_TESTBED_PIP_DEPS)} || true`,
     ...(manifest?.pre_install_pip ?? []).map(
       (spec) => `python -m pip install ${quoteSpecs([spec])} || echo "bench-install-cmd-failed: pip install ${spec}"`
     ),
     ...(manifest?.extra_pip?.length
       ? [`python -m pip install ${quoteSpecs(manifest.extra_pip)} || echo "bench-install-cmd-failed: extra pip deps"`]
-      : []),
-    `python -m pip install ${quoteSpecs(FALLBACK_TESTBED_PIP_DEPS)} || true`
+      : [])
   ];
+  const postInstallPinLines = (manifest?.pre_install_pip ?? []).map(
+    (spec) => `python -m pip install ${quoteSpecs([spec])} || echo "bench-install-cmd-failed: post install pip ${spec}"`
+  );
   const installCmdLines = (manifest?.install_cmds ?? ["python -m pip install -e ."]).map((command) => {
     const guarded = command.startsWith("apt-get")
       ? `if command -v apt-get >/dev/null 2>&1; then ${command}; fi`
@@ -197,8 +219,17 @@ function fallbackEnvSetup(taskEnv: TaskEnv, provider: ProviderName): string {
   fi`;
   return `
 BENCH_REPO='${taskEnv.repoKey ?? ""}'
+BENCH_ENV_KEY='${envKey}'
 if [ -f /opt/bench-fallback-repo ] && [ "$(cat /opt/bench-fallback-repo)" != "$BENCH_REPO" ]; then
-  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo
+  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo /opt/bench-fallback-env-key
+  rm -f /opt/verifier-venv/bin/pytest
+fi
+if [ -f /opt/bench-fallback-env-key ] && [ "$(cat /opt/bench-fallback-env-key)" != "$BENCH_ENV_KEY" ]; then
+  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo /opt/bench-fallback-env-key
+  rm -f /opt/verifier-venv/bin/pytest
+fi
+if [ -f /opt/bench-fallback-repo ] && [ ! -f /opt/bench-fallback-env-key ]; then
+  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo /opt/bench-fallback-env-key
   rm -f /opt/verifier-venv/bin/pytest
 fi
 if [ ! -x /opt/verifier-venv/bin/pytest ]; then
@@ -224,10 +255,19 @@ cd /testbed
 ${pipInstallLines.join("\n")}
 ${installCmdLines.join("\n")}
 python -m pip install 'pytest<9' 'pytest-cov<7' || true
+${postInstallPinLines.join("\n")}
 BENCH_EOF_INSTALL
   PATH=/opt/testbed-venv/bin:$PATH bash /tmp/bench-testbed-install.sh >/tmp/bench-testbed-install.log 2>&1 || true
   grep -E 'bench-install-cmd-failed' /tmp/bench-testbed-install.log || true
   tail -30 /tmp/bench-testbed-install.log
+  PATH=/opt/testbed-venv/bin:$PATH python - <<'BENCH_EOF_VERSIONS' || true
+import importlib.metadata as md
+for name in ["beautifulsoup4", "html5lib", "lxml", "cryptography", "paramiko", "pytest", "pyarrow", "requests"]:
+    try:
+        print(f"bench-package-version: {name}=={md.version(name)}")
+    except md.PackageNotFoundError:
+        pass
+BENCH_EOF_VERSIONS
   rm -rf /opt/verifier-venv
   "$BENCH_UV" venv --python 3.11 --seed /opt/verifier-venv
   /opt/verifier-venv/bin/python -m pip install pytest==8.4.1 swebench==4.0.3 datasets==2.16.1 swesmith==0.0.6 >/tmp/bench-pip-verifier.log 2>&1 || tail -5 /tmp/bench-pip-verifier.log
@@ -235,6 +275,7 @@ BENCH_EOF_INSTALL
   mkdir -p /usr/local/bin
   ln -sf /opt/testbed-venv/bin/pytest /usr/local/bin/pytest
   printf '%s' "$BENCH_REPO" > /opt/bench-fallback-repo
+  printf '%s' "$BENCH_ENV_KEY" > /opt/bench-fallback-env-key
   if [ ! -e /opt/miniconda3/bin/conda ]; then
     mkdir -p /opt/miniconda3/bin
     cat > /opt/miniconda3/bin/activate <<'BENCH_EOF_ACTIVATE'
@@ -271,8 +312,10 @@ export function verifyCommandFor(taskEnv: TaskEnv): string {
   if (taskEnv.envType !== "harbor_swesmith") {
     return verifyCommand;
   }
+  const preVerifyLines = guardedShellLines(taskEnv.manifest?.pre_verify_cmds, "pre-verify");
   return `
 set +e
+${preVerifyLines}
 cat > /tmp/bench-verify.sh <<'BENCH_EOF_VERIFY'
 if [ -x /tests/test.sh ] || [ -f /tests/test.sh ]; then
   bash /tests/test.sh

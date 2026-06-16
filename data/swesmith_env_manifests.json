@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-11T20:56:18Z",
+  "generated_at": "2026-06-16T20:59:45Z",
   "swesmith_version": "0.0.6",
   "datasets": [
-    "/home/user/code-sandbox-bench/data/swesmith_v4_smoke100.jsonl"
+    "/Users/jaylast/.codex/worktrees/889e/code-sandbox-bench/data/swesmith_v4_smoke100.jsonl"
   ],
   "repo_count": 66,
   "repos": {
@@ -89,8 +89,11 @@
       "pre_install_pip": [
         "pytest<9"
       ],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "whatever"
+      ],
+      "system_packages": [],
+      "notes": "The legacy test suite is not pytest 9 compatible. Collection imports the whatever placeholder package."
     },
     "adrienverge__yamllint.8513d9b9": {
       "owner": "adrienverge",
@@ -119,10 +122,13 @@
         "pip install -e .[test,doc]"
       ],
       "pre_install_pip": [
-        "pytest<8"
+        "pytest<8",
+        "pytest-asyncio<0.22",
+        "mypy==1.2.0"
       ],
       "extra_pip": [],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "The pytest plugin tests treat pytest deprecation warnings as failures on pytest 8+, latest pytest-asyncio is incompatible with pytest 7, and newer mypy pretty output wraps expected error lines."
     },
     "amueller__word_cloud.ec24191c": {
       "owner": "amueller",
@@ -170,7 +176,8 @@
         "gevent",
         "eventlet"
       ],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "Worker import tests require optional gevent/eventlet deps that are present in the task image but not installed by pip install -e ."
     },
     "bottlepy__bottle.a8dfef30": {
       "owner": "bottlepy",
@@ -219,8 +226,11 @@
       "pre_install_pip": [
         "pytest<9"
       ],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "numpy"
+      ],
+      "system_packages": [],
+      "notes": "Older source-inspection tests fail collection under pytest 9. Source inspection tests import numpy through tests/source.py."
     },
     "conan-io__conan.86f29e13": {
       "owner": "conan-io",
@@ -379,13 +389,18 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
-      "extra_pip": [
-        "beautifulsoup4",
-        "lxml",
-        "html5lib"
+      "pre_install_pip": [
+        "beautifulsoup4==4.12.3",
+        "html5lib==1.1",
+        "lxml<5"
       ],
-      "system_packages": []
+      "extra_pip": [
+        "beautifulsoup4==4.12.3",
+        "html5lib==1.1",
+        "lxml<5"
+      ],
+      "system_packages": [],
+      "notes": "Iframe/parser tests match the task image with BeautifulSoup 4.12, html5lib 1.1, and lxml 4.x; re-apply pins after install because parser releases change iframe handling."
     },
     "gawel__pyquery.811cd048": {
       "owner": "gawel",
@@ -400,9 +415,15 @@
       ],
       "pre_install_pip": [],
       "extra_pip": [
-        "webtest"
+        "webtest",
+        "lxml<5",
+        "requests"
       ],
-      "system_packages": []
+      "system_packages": [],
+      "pre_verify_cmds": [
+        "SITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import requests\n    from requests import Response\n    _orig_get = requests.get\n    _orig_request = requests.request\n    def _wiki_response(url, *args, **kwargs):\n        if isinstance(url, str) and url.startswith('http://ru.wikipedia.org/wiki/'):\n            r = Response()\n            r.status_code = 200\n            r.url = url\n            r._content = '<html><body><div id=\\\"pt-login\\\">\u0412\u043e\u0439\u0442\u0438</div></body></html>'.encode('utf-8')\n            r.encoding = 'utf-8'\n            return r\n        return None\n    def get(url, *args, **kwargs):\n        return _wiki_response(url, *args, **kwargs) or _orig_get(url, *args, **kwargs)\n    def request(method, url, *args, **kwargs):\n        if str(method).lower() == 'get':\n            response = _wiki_response(url, *args, **kwargs)\n            if response is not None:\n                return response\n        return _orig_request(method, url, *args, **kwargs)\n    requests.get = get\n    requests.request = request\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+      ],
+      "notes": "conftest.py imports webtest.http, legacy HTML serialization expects lxml 4.x, and unicode URL scraping tests use requests. Vercel fallback stubs requests for ru.wikipedia.org because the PASS_TO_PASS test depends on live Wikipedia returning #pt-login=\u0412\u043e\u0439\u0442\u0438, which now often 403s."
     },
     "getmoto__moto.694ce1f4": {
       "owner": "getmoto",
@@ -454,7 +475,8 @@
       "extra_pip": [
         "pytest-benchmark"
       ],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "Benchmark tests require the pytest-benchmark fixture."
     },
     "gweis__isodate.17cb25eb": {
       "owner": "gweis",
@@ -504,8 +526,12 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "tornado",
+        "typeguard"
+      ],
+      "system_packages": [],
+      "notes": "Tornado tests require tornado; typing regression imports typeguard in the task image."
     },
     "jsvine__pdfplumber.02ff4313": {
       "owner": "jsvine",
@@ -538,8 +564,11 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "parameterized"
+      ],
+      "system_packages": [],
+      "notes": "ClickHouse test modules use parameterized.expand."
     },
     "lepture__mistune.bf54ef67": {
       "owner": "lepture",
@@ -598,8 +627,11 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "PyYAML"
+      ],
+      "system_packages": [],
+      "notes": "CLI YAML target tests require PyYAML."
     },
     "marshmallow-code__apispec.8b421526": {
       "owner": "marshmallow-code",
@@ -628,8 +660,11 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "simplejson"
+      ],
+      "system_packages": [],
+      "notes": "tests/base.py imports simplejson."
     },
     "marshmallow-code__webargs.dbde72fe": {
       "owner": "marshmallow-code",
@@ -643,8 +678,21 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "webtest",
+        "webtest-aiohttp",
+        "aiohttp",
+        "bottle",
+        "django",
+        "falcon",
+        "flask",
+        "pyramid",
+        "tornado",
+        "pytest-aiohttp",
+        "pytest-asyncio<1"
+      ],
+      "system_packages": [],
+      "notes": "Parser tests need optional framework integrations plus pytest-aiohttp; Webargs aiohttp/tornado tests use the legacy event_loop fixture removed in pytest-asyncio 1.x."
     },
     "mozilla__bleach.73871d76": {
       "owner": "mozilla",
@@ -688,8 +736,13 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "pyjwt",
+        "cryptography",
+        "blinker"
+      ],
+      "system_packages": [],
+      "notes": "JWT/JWE tests require pyjwt/cryptography; token response scope-change tests require blinker signals."
     },
     "pallets__click.fde47b4b": {
       "owner": "pallets",
@@ -718,8 +771,11 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "trio"
+      ],
+      "system_packages": [],
+      "notes": "tests/conftest.py imports trio."
     },
     "pandas-dev__pandas.95280573": {
       "owner": "pandas-dev",
@@ -738,14 +794,16 @@
       "pre_install_pip": [
         "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
       ],
-      "extra_pip": [],
+      "extra_pip": [
+        "pyarrow==19.0.1"
+      ],
       "system_packages": [],
       "resources": {
         "cpu": 4,
         "memoryGb": 8,
         "diskGb": 20
       },
-      "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml."
+      "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml. Arrow tests require pre-pyarrow-20 behavior for skew/decimal semantics."
     },
     "paramiko__paramiko.23f92003": {
       "owner": "paramiko",
@@ -758,9 +816,16 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "pre_install_pip": [
+        "cryptography<43"
+      ],
+      "extra_pip": [
+        "invoke",
+        "icecream",
+        "pytest-relaxed"
+      ],
+      "system_packages": [],
+      "notes": "Test suite requires invoke/icecream/pytest-relaxed; encrypted key fixtures need cryptography 42.x behavior, so reapply cryptography<43 after install."
     },
     "pdfminer__pdfminer.six.1a8bd2f7": {
       "owner": "pdfminer",
@@ -865,7 +930,8 @@
       "extra_pip": [
         "wcag-contrast-ratio"
       ],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "Contrast tests import wcag_contrast_ratio, which is present in the task image but not installed by pip install -e ."
     },
     "pylint-dev__astroid.b114f6b5": {
       "owner": "pylint-dev",
@@ -879,8 +945,11 @@
         "python -m pip install -e ."
       ],
       "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "extra_pip": [
+        "setuptools<68"
+      ],
+      "system_packages": [],
+      "notes": "Namespace-package tests import pkg_resources and treat its newer deprecation warning as a failure, so use pre-warning setuptools."
     },
     "python-hyper__h11.bed0dd4a": {
       "owner": "python-hyper",
@@ -914,7 +983,8 @@
       "extra_pip": [
         "pyparsing<3"
       ],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "The legacy test suite is not pytest 9 compatible and its XML test helpers import pyparsing."
     },
     "python-trio__trio.cfbbe2c1": {
       "owner": "python-trio",
@@ -953,9 +1023,20 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
-      "extra_pip": [],
-      "system_packages": []
+      "pre_install_pip": [
+        "setuptools<68"
+      ],
+      "extra_pip": [
+        "click==8.1.7",
+        "marshmallow==3.21.3",
+        "rich==13.7.1",
+        "typer==0.12.3"
+      ],
+      "system_packages": [],
+      "pre_verify_cmds": [
+        "python - <<'PY'\nfrom pathlib import Path\np = Path('/testbed/safety/auth/__init__.py')\ns = p.read_text()\ns = s.replace('from .cli import auth\\n', 'def __getattr__(name):\\n    if name == \"auth\":\\n        from .cli import auth\\n        return auth\\n    raise AttributeError(name)\\n')\np.write_text(s)\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\nprintf 'import sys\\nsys.path.insert(0, \"/testbed\")\\n' > \"$SITE_DIR/sitecustomize.py\"\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+      ],
+      "notes": "CLI tests need legacy click/marshmallow/rich/typer pins and setuptools<68 for pkg_resources. Verifier lazily imports safety.auth.cli and injects /testbed on sys.path to avoid a collection-time safety.cli_util <-> safety.auth.cli circular import in alerts PASS_TO_PASS tests."
     },
     "r1chardj0n3s__parse.30da9e4f": {
       "owner": "r1chardj0n3s",
@@ -1004,7 +1085,8 @@
       "extra_pip": [
         "pyparsing<3"
       ],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "The legacy test suite is not pytest 9 compatible and its XML test helpers import pyparsing."
     },
     "seperman__deepdiff.ed252022": {
       "owner": "seperman",
@@ -1048,15 +1130,27 @@
       "install_cmds": [
         "python -m pip install -e ."
       ],
-      "pre_install_pip": [],
+      "pre_install_pip": [
+        "mcp==1.6.0",
+        "litellm[proxy]==1.63.7",
+        "openai==1.61.0",
+        "pydantic==2.10.6",
+        "diskcache==5.6.3"
+      ],
       "extra_pip": [
         "pillow",
-        "mcp",
         "datamodel-code-generator",
-        "litellm[proxy]==1.72.4"
+        "mcp==1.6.0",
+        "litellm[proxy]==1.63.7",
+        "openai==1.61.0",
+        "pydantic==2.10.6",
+        "diskcache==5.6.3"
       ],
       "system_packages": [],
-      "notes": "Test-only deps from the conda env yml; litellm era-pinned (with proxy extras for the mock LLM server fixture) because newer versions change ModelResponse mocking behavior. The image-handling F2P tests fetch URLs, so they need outbound HTTP."
+      "pre_verify_cmds": [
+        "mkdir -p /testbed/tests/caching/example_cache\npython - <<'PY'\nfrom pathlib import Path\nfrom urllib.request import urlopen\nurl = 'https://raw.githubusercontent.com/stanfordnlp/dspy/651a4c715ecc6c5e68b68d22172768f0b20f2eea/tests/caching/example_cache/cache.db'\nPath('/testbed/tests/caching/example_cache/cache.db').write_bytes(urlopen(url, timeout=30).read())\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import dspy.primitives.module as _dspy_module\n    import dspy.utils.saving as _dspy_saving\n    def _dynamic_get_dependency_versions():\n        return _dspy_saving.get_dependency_versions()\n    _dspy_module.get_dependency_versions = _dynamic_get_dependency_versions\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+      ],
+      "notes": "DSPy tests match the repo lockfile era: litellm/openai are pinned and pydantic must stay <2.11 for JSONAdapter structured output model generation. The SWE-Smith mirror is missing tests/caching/example_cache/cache.db from upstream 651a4c7; verifier restores it and shims Module.save dependency-version lookup to honor the test patch target."
     },
     "sunpy__sunpy.f8edfd5c": {
       "owner": "sunpy",
@@ -1133,9 +1227,12 @@
       "install_cmds": [
         "pip install -e '.[dev,test,async]'"
       ],
-      "pre_install_pip": [],
+      "pre_install_pip": [
+        "vcrpy==8.2.1"
+      ],
       "extra_pip": [],
-      "system_packages": []
+      "system_packages": [],
+      "notes": "Older vcrpy versions satisfy setup.py vcrpy>=1.10.3 but fail cassette patching with current aiohttp; vcrpy 8.2.1 matches the restored test suite."
     },
     "weaveworks__grafanalib.5c3b17ed": {
       "owner": "weaveworks",

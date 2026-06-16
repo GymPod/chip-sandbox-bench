@@ -38,7 +38,10 @@
       "memoryGb": 8,
       "diskGb": 20
     },
-    "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml."
+    "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml. Arrow tests require pre-pyarrow-20 behavior for skew/decimal semantics.",
+    "extra_pip": [
+      "pyarrow==19.0.1"
+    ]
   },
   "dask__dask.5f61e423": {
     "extra_pip": [
@@ -72,9 +75,15 @@
   },
   "facelessuser__soupsieve.a8080d97": {
     "extra_pip": [
-      "beautifulsoup4",
-      "lxml",
-      "html5lib"
+      "beautifulsoup4==4.12.3",
+      "html5lib==1.1",
+      "lxml<5"
+    ],
+    "notes": "Iframe/parser tests match the task image with BeautifulSoup 4.12, html5lib 1.1, and lxml 4.x; re-apply pins after install because parser releases change iframe handling.",
+    "pre_install_pip": [
+      "beautifulsoup4==4.12.3",
+      "html5lib==1.1",
+      "lxml<5"
     ]
   },
   "benoitc__gunicorn.bacbf8aa": {
@@ -86,21 +95,31 @@
   },
   "agronholm__typeguard.b6a7e438": {
     "pre_install_pip": [
-      "pytest<8"
+      "pytest<8",
+      "pytest-asyncio<0.22",
+      "mypy==1.2.0"
     ],
-    "notes": "The pytest plugin tests treat pytest deprecation warnings as failures on pytest 8+."
+    "notes": "The pytest plugin tests treat pytest deprecation warnings as failures on pytest 8+, latest pytest-asyncio is incompatible with pytest 7, and newer mypy pretty output wraps expected error lines."
   },
   "cknd__stackprinter.219fcc52": {
     "pre_install_pip": [
       "pytest<9"
     ],
-    "notes": "Older source-inspection tests fail collection under pytest 9."
+    "notes": "Older source-inspection tests fail collection under pytest 9. Source inspection tests import numpy through tests/source.py.",
+    "extra_pip": [
+      "numpy"
+    ]
   },
   "gawel__pyquery.811cd048": {
     "extra_pip": [
-      "webtest"
+      "webtest",
+      "lxml<5",
+      "requests"
     ],
-    "notes": "conftest.py imports webtest.http, which is part of the original test environment."
+    "notes": "conftest.py imports webtest.http, legacy HTML serialization expects lxml 4.x, and unicode URL scraping tests use requests. Vercel fallback stubs requests for ru.wikipedia.org because the PASS_TO_PASS test depends on live Wikipedia returning #pt-login=\u0412\u043e\u0439\u0442\u0438, which now often 403s.",
+    "pre_verify_cmds": [
+      "SITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import requests\n    from requests import Response\n    _orig_get = requests.get\n    _orig_request = requests.request\n    def _wiki_response(url, *args, **kwargs):\n        if isinstance(url, str) and url.startswith('http://ru.wikipedia.org/wiki/'):\n            r = Response()\n            r.status_code = 200\n            r.url = url\n            r._content = '<html><body><div id=\\\"pt-login\\\">\u0412\u043e\u0439\u0442\u0438</div></body></html>'.encode('utf-8')\n            r.encoding = 'utf-8'\n            return r\n        return None\n    def get(url, *args, **kwargs):\n        return _wiki_response(url, *args, **kwargs) or _orig_get(url, *args, **kwargs)\n    def request(method, url, *args, **kwargs):\n        if str(method).lower() == 'get':\n            response = _wiki_response(url, *args, **kwargs)\n            if response is not None:\n                return response\n        return _orig_request(method, url, *args, **kwargs)\n    requests.get = get\n    requests.request = request\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+    ]
   },
   "graphql-python__graphene.82903263": {
     "extra_pip": [
@@ -130,7 +149,10 @@
     "pre_install_pip": [
       "pytest<9"
     ],
-    "notes": "The legacy test suite is not pytest 9 compatible."
+    "notes": "The legacy test suite is not pytest 9 compatible. Collection imports the whatever placeholder package.",
+    "extra_pip": [
+      "whatever"
+    ]
   },
   "pygments__pygments.27649ebb": {
     "extra_pip": [
@@ -236,10 +258,116 @@
   "stanfordnlp__dspy.651a4c71": {
     "extra_pip": [
       "pillow",
-      "mcp",
       "datamodel-code-generator",
-      "litellm[proxy]==1.72.4"
+      "mcp==1.6.0",
+      "litellm[proxy]==1.63.7",
+      "openai==1.61.0",
+      "pydantic==2.10.6",
+      "diskcache==5.6.3"
     ],
-    "notes": "Test-only deps from the conda env yml; litellm era-pinned (with proxy extras for the mock LLM server fixture) because newer versions change ModelResponse mocking behavior. The image-handling F2P tests fetch URLs, so they need outbound HTTP."
+    "notes": "DSPy tests match the repo lockfile era: litellm/openai are pinned and pydantic must stay <2.11 for JSONAdapter structured output model generation. The SWE-Smith mirror is missing tests/caching/example_cache/cache.db from upstream 651a4c7; verifier restores it and shims Module.save dependency-version lookup to honor the test patch target.",
+    "pre_install_pip": [
+      "mcp==1.6.0",
+      "litellm[proxy]==1.63.7",
+      "openai==1.61.0",
+      "pydantic==2.10.6",
+      "diskcache==5.6.3"
+    ],
+    "pre_verify_cmds": [
+      "mkdir -p /testbed/tests/caching/example_cache\npython - <<'PY'\nfrom pathlib import Path\nfrom urllib.request import urlopen\nurl = 'https://raw.githubusercontent.com/stanfordnlp/dspy/651a4c715ecc6c5e68b68d22172768f0b20f2eea/tests/caching/example_cache/cache.db'\nPath('/testbed/tests/caching/example_cache/cache.db').write_bytes(urlopen(url, timeout=30).read())\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import dspy.primitives.module as _dspy_module\n    import dspy.utils.saving as _dspy_saving\n    def _dynamic_get_dependency_versions():\n        return _dspy_saving.get_dependency_versions()\n    _dspy_module.get_dependency_versions = _dynamic_get_dependency_versions\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+    ]
+  },
+  "jd__tenacity.0d40e76f": {
+    "extra_pip": [
+      "tornado",
+      "typeguard"
+    ],
+    "notes": "Tornado tests require tornado; typing regression imports typeguard in the task image."
+  },
+  "kayak__pypika.1c9646f0": {
+    "extra_pip": [
+      "parameterized"
+    ],
+    "notes": "ClickHouse test modules use parameterized.expand."
+  },
+  "oauthlib__oauthlib.1fd52536": {
+    "extra_pip": [
+      "pyjwt",
+      "cryptography",
+      "blinker"
+    ],
+    "notes": "JWT/JWE tests require pyjwt/cryptography; token response scope-change tests require blinker signals."
+  },
+  "marshmallow-code__marshmallow.9716fc62": {
+    "extra_pip": [
+      "simplejson"
+    ],
+    "notes": "tests/base.py imports simplejson."
+  },
+  "pallets__jinja.ada0a9a6": {
+    "extra_pip": [
+      "trio"
+    ],
+    "notes": "tests/conftest.py imports trio."
+  },
+  "paramiko__paramiko.23f92003": {
+    "extra_pip": [
+      "invoke",
+      "icecream",
+      "pytest-relaxed"
+    ],
+    "notes": "Test suite requires invoke/icecream/pytest-relaxed; encrypted key fixtures need cryptography 42.x behavior, so reapply cryptography<43 after install.",
+    "pre_install_pip": [
+      "cryptography<43"
+    ]
+  },
+  "marshmallow-code__webargs.dbde72fe": {
+    "extra_pip": [
+      "webtest",
+      "webtest-aiohttp",
+      "aiohttp",
+      "bottle",
+      "django",
+      "falcon",
+      "flask",
+      "pyramid",
+      "tornado",
+      "pytest-aiohttp",
+      "pytest-asyncio<1"
+    ],
+    "notes": "Parser tests need optional framework integrations plus pytest-aiohttp; Webargs aiohttp/tornado tests use the legacy event_loop fixture removed in pytest-asyncio 1.x."
+  },
+  "pyupio__safety.7654596b": {
+    "extra_pip": [
+      "click==8.1.7",
+      "marshmallow==3.21.3",
+      "rich==13.7.1",
+      "typer==0.12.3"
+    ],
+    "notes": "CLI tests need legacy click/marshmallow/rich/typer pins and setuptools<68 for pkg_resources. Verifier lazily imports safety.auth.cli and injects /testbed on sys.path to avoid a collection-time safety.cli_util <-> safety.auth.cli circular import in alerts PASS_TO_PASS tests.",
+    "pre_verify_cmds": [
+      "python - <<'PY'\nfrom pathlib import Path\np = Path('/testbed/safety/auth/__init__.py')\ns = p.read_text()\ns = s.replace('from .cli import auth\\n', 'def __getattr__(name):\\n    if name == \"auth\":\\n        from .cli import auth\\n        return auth\\n    raise AttributeError(name)\\n')\np.write_text(s)\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\nprintf 'import sys\\nsys.path.insert(0, \"/testbed\")\\n' > \"$SITE_DIR/sitecustomize.py\"\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+    ],
+    "pre_install_pip": [
+      "setuptools<68"
+    ]
+  },
+  "mahmoud__glom.fb3c4e76": {
+    "extra_pip": [
+      "PyYAML"
+    ],
+    "notes": "CLI YAML target tests require PyYAML."
+  },
+  "pylint-dev__astroid.b114f6b5": {
+    "extra_pip": [
+      "setuptools<68"
+    ],
+    "notes": "Namespace-package tests import pkg_resources and treat its newer deprecation warning as a failure, so use pre-warning setuptools."
+  },
+  "tweepy__tweepy.91a41c6e": {
+    "pre_install_pip": [
+      "vcrpy==8.2.1"
+    ],
+    "notes": "Older vcrpy versions satisfy setup.py vcrpy>=1.10.3 but fail cassette patching with current aiohttp; vcrpy 8.2.1 matches the restored test suite."
   }
 }

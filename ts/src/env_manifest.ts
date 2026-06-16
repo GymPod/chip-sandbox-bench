@@ -18,6 +18,7 @@ export type EnvManifestEntry = {
   pre_install_pip: string[];
   extra_pip: string[];
   system_packages: string[];
+  pre_verify_cmds?: string[];
   resources?: RepoResources;
   notes?: string;
 };

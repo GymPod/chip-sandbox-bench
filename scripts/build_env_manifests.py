@@ -202,6 +202,8 @@ def main() -> None:
         }
         if "resources" in override:
             entry["resources"] = override["resources"]
+        if "pre_verify_cmds" in override:
+            entry["pre_verify_cmds"] = override["pre_verify_cmds"]
         if "notes" in override:
             entry["notes"] = override["notes"]
         manifest_repos[repo_key] = entry
