@@ -189,7 +189,10 @@
       "jsonschema",
       "pytz"
     ],
-    "notes": "Profile uses make install (uv sync into its own venv); fallback installs the package plus the test dependency group directly."
+    "notes": "Profile uses make install (uv sync into its own venv); fallback installs the package plus the test dependency group directly. Direct task images invoke a root-owned uv path, so pre-verify rewrites it to the system uv installed by the task Dockerfile.",
+    "pre_verify_cmds": [
+      "if [ -f /tests/test.sh ]; then\n  sed -i 's#/root/.local/bin/uv#/usr/local/bin/uv#g' /tests/test.sh\nfi"
+    ]
   },
   "jsvine__pdfplumber.02ff4313": {
     "install_cmds": [

@@ -52,7 +52,7 @@ function parseDockerfileFrom(dockerfile: string): string | undefined {
 }
 
 function providerDockerfileCommands(task: BenchTask, dockerfile: string, provider: ProviderName): string[] | undefined {
-  if (provider === "daytona") {
+  if (provider === "modal" || provider === "daytona") {
     return taskDockerfileCommands(task, dockerfile);
   }
   return undefined;

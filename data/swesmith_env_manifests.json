@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-17T08:11:50Z",
+  "generated_at": "2026-06-17T15:40:41Z",
   "swesmith_version": "0.0.6",
   "datasets": [
     "data/swesmith_v4_smoke100.jsonl"
@@ -898,7 +898,10 @@
         "pytz"
       ],
       "system_packages": [],
-      "notes": "Profile uses make install (uv sync into its own venv); fallback installs the package plus the test dependency group directly."
+      "pre_verify_cmds": [
+        "if [ -f /tests/test.sh ]; then\n  sed -i 's#/root/.local/bin/uv#/usr/local/bin/uv#g' /tests/test.sh\nfi"
+      ],
+      "notes": "Profile uses make install (uv sync into its own venv); fallback installs the package plus the test dependency group directly. Direct task images invoke a root-owned uv path, so pre-verify rewrites it to the system uv installed by the task Dockerfile."
     },
     "pydata__patsy.a5d16484": {
       "owner": "pydata",

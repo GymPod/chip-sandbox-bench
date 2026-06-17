@@ -317,6 +317,7 @@ export function verifyCommandFor(taskEnv: TaskEnv): string {
 set +e
 ${preVerifyLines}
 cat > /tmp/bench-verify.sh <<'BENCH_EOF_VERIFY'
+export PYTHONPATH=/testbed/src:\${PYTHONPATH:-}
 if [ -x /tests/test.sh ] || [ -f /tests/test.sh ]; then
   bash /tests/test.sh
 else
@@ -395,7 +396,9 @@ function isTransientTaskFailure(args: BenchArgs, result: Record<string, unknown>
     return (
       stderr.includes("Error: Deadline exceeded") ||
       stderr.includes("Failed to read exec stdio stream") ||
+      stderr.includes("ImageJoinStreaming INTERNAL") ||
       stderr.includes("UNAVAILABLE") ||
+      stderr.includes("Received RST_STREAM") ||
       stderr.includes("Name resolution failed") ||
       stderr.includes("ECONNREFUSED") ||
       stderr.includes("No connection established")
