@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-17T15:40:41Z",
+  "generated_at": "2026-06-17T16:35:06Z",
   "swesmith_version": "0.0.6",
   "datasets": [
     "data/swesmith_v4_smoke100.jsonl"
@@ -1156,7 +1156,8 @@
         "litellm[proxy]==1.63.7",
         "openai==1.61.0",
         "pydantic==2.10.6",
-        "diskcache==5.6.3"
+        "diskcache==5.6.3",
+        "pytest-asyncio<1"
       ],
       "extra_pip": [
         "pillow",
@@ -1165,13 +1166,18 @@
         "litellm[proxy]==1.63.7",
         "openai==1.61.0",
         "pydantic==2.10.6",
-        "diskcache==5.6.3"
+        "diskcache==5.6.3",
+        "pytest-asyncio<1"
       ],
       "system_packages": [],
       "pre_verify_cmds": [
-        "mkdir -p /testbed/tests/caching/example_cache\npython - <<'PY'\nfrom pathlib import Path\nfrom urllib.request import urlopen\nurl = 'https://raw.githubusercontent.com/stanfordnlp/dspy/651a4c715ecc6c5e68b68d22172768f0b20f2eea/tests/caching/example_cache/cache.db'\nPath('/testbed/tests/caching/example_cache/cache.db').write_bytes(urlopen(url, timeout=30).read())\nPY\nfor PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'pytest<9' pillow datamodel-code-generator 'mcp==1.6.0' || {\n      SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n      VERIFIER_SITE=$(/opt/verifier-venv/bin/python -c 'import site; print(site.getsitepackages()[0])')\n      echo \"$VERIFIER_SITE\" > \"$SITE_DIR/bench-verifier-pytest.pth\"\n    }\n    SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n    cat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import dspy.primitives.module as _dspy_module\n    import dspy.utils.saving as _dspy_saving\n    def _dynamic_get_dependency_versions():\n        return _dspy_saving.get_dependency_versions()\n    _dspy_module.get_dependency_versions = _dynamic_get_dependency_versions\nexcept Exception:\n    pass\nPY\n    chmod a+r \"$SITE_DIR/sitecustomize.py\"\n  fi\ndone"
+        "[ -r /etc/profile ] && . /etc/profile || true",
+        "mkdir -p /testbed/tests/caching/example_cache && python -c \"from pathlib import Path; import base64, gzip; Path('/testbed/tests/caching/example_cache/cache.db').write_bytes(gzip.decompress(base64.b64decode('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')))\"",
+        "if [ -f /tests/test.sh ]; then sed -i 's/--tb=no/--tb=short/g' /tests/test.sh; fi",
+        "for PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do [ -x \"$PYTHON\" ] || continue; \"$PYTHON\" -m pip install 'pytest<9' 'pytest-asyncio<1' pillow datamodel-code-generator 'mcp==1.6.0' 'litellm[proxy]==1.63.7' 'openai==1.61.0' 'pydantic==2.10.6' 'diskcache==5.6.3' || echo \"bench-pre-verify-cmd-failed: dspy pip install\"; done",
+        "for PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do [ -x \"$PYTHON\" ] || continue; SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])'); cat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import dspy.primitives.module as _dspy_module\n    import dspy.utils.saving as _dspy_saving\n    def _dynamic_get_dependency_versions():\n        return _dspy_saving.get_dependency_versions()\n    _dspy_module.get_dependency_versions = _dynamic_get_dependency_versions\nexcept Exception:\n    pass\ntry:\n    import requests\n    _dspy_orig_get = requests.get\n    class _DSPyResponse:\n        def __init__(self, content, content_type):\n            self.content = content\n            self.headers = {'Content-Type': content_type}\n            self.status_code = 200\n        def raise_for_status(self):\n            return None\n    def _dspy_get(url, *args, **kwargs):\n        if isinstance(url, str) and url == 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf':\n            return _DSPyResponse(b'%PDF-1.4\\n1 0 obj<<>>endobj\\ntrailer<<>>\\n%%EOF\\n', 'application/pdf')\n        if isinstance(url, str) and url == 'https://images.dog.ceo/breeds/dane-great/n02109047_8912.jpg':\n            return _DSPyResponse(bytes.fromhex('ffd8ffe000104a46494600010100000100010000ffdb004300' + '08'*64 + 'ffc00011080001000103012200021101031101ffc4001400010000000000000000000000000000000000000000ffda0008010100003f00d2cf20ffd9'), 'image/jpeg')\n        return _dspy_orig_get(url, *args, **kwargs)\n    requests.get = _dspy_get\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\"; done"
       ],
-      "notes": "DSPy tests match the repo lockfile era: litellm/openai are pinned and pydantic must stay <2.11 for JSONAdapter structured output model generation. The SWE-Smith mirror is missing tests/caching/example_cache/cache.db from upstream 651a4c7; verifier restores it and shims Module.save dependency-version lookup to honor the test patch target. Direct task images can miss pytest and optional restored-test imports in the conda testbed env used by /tests/test.sh."
+      "notes": "DSPy tests match the repo lockfile era: litellm/openai are pinned, pydantic must stay <2.11, and pytest-asyncio<1 is needed for legacy async tests. The SWE-Smith mirror is missing tests/caching/example_cache/cache.db from upstream 651a4c7, so verifier restores an embedded copy and shims Module.save dependency-version lookup to honor the test patch target."
     },
     "sunpy__sunpy.f8edfd5c": {
       "owner": "sunpy",
