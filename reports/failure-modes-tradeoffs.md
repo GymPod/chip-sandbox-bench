@@ -1,111 +1,30 @@
 # Failure Modes And Trade-Offs
 
-Updated: 2026-06-05
+Updated: 2026-06-17
 
-This page explains why the full 20-task rollup is not the primary vendor comparison. Detailed task notes are in [per-task-failure-audit.md](per-task-failure-audit.md), and provider-level notes are in [per-provider-report.md](per-provider-report.md).
+The 100-task cold-gold runnability pass is now green across all three providers. The remaining interpretation work is about how to compare timings fairly, not about unresolved task executability.
 
-## Excluded Tasks
+## Current State
 
-The 13-task comparable subset excludes seven tasks from the 20-task evidence set:
+provider | runnable tasks | main execution path | remaining comparison caveat
+--- | ---: | --- | ---
+Vercel | 100/100 | Manifest-driven fallback runtime reconstruction | Not native per-task Docker; prepare time includes environment reconstruction.
+Modal | 100/100 | Native SWE-Smith task Docker images | Stitched evidence includes focused reruns, so use a fresh matrix for strict wall-clock comparisons.
+Daytona | 100/100 | Native SWE-Smith task Docker images | Stitched evidence includes focused reruns, so use a fresh matrix for strict wall-clock comparisons.
 
-- Vercel-only failures: `amueller__word_cloud.ec24191c.func_basic__b5q81acm`, `conan-io__conan.86f29e13.pr_15965`, `dask__dask.5f61e423.combine_module__dkp16syb`.
-- Vercel and Modal failures: `conan-io__conan.86f29e13.pr_11412`, `encode__starlette.db5063c2.combine_file__hrjivx2s`, `encode__starlette.db5063c2.func_basic__vehyiaux`.
-- Vercel and Daytona failures: `facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998`.
+## Resolved Failure Clusters
 
-## Vercel Fidelity Gaps
-
-SWE-Smith tasks are Docker-image tasks. Modal and Daytona can use task Docker images directly or reconstruct the Dockerfile setup. Vercel cannot consume each per-task Docker image directly in this harness, so Vercel uses a fallback Python runtime plus repo-specific dependency repair.
-
-Important Vercel runtime notes:
-
-- Vercel's `python3.13` runtime lacks `_sqlite3`; `cantools` therefore uses `/usr/bin/python3` when that interpreter can import `sqlite3`.
-- Some repos need Python 3.13 behavior, so the fallback cannot globally switch to `/usr/bin/python3`.
-- The Vercel verifier clears project-level pytest `addopts` to avoid incompatible coverage/plugin settings.
-- Repo-specific dependency fills are intentionally narrow so setup cost does not become global.
-
-## Fvcore And PyTorch
-
-`facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998` exposed a Docker-image fidelity gap. Without PyTorch, Vercel hit 14 collection errors. After adding a repo-specific Vercel install of `torch` from `https://download.pytorch.org/whl/cpu`, a targeted Vercel run reached real tests: `155 passed, 3 failed, 2 skipped`.
-
-That is a signal improvement, but not full fidelity. Docker metadata for `jyangballin/swesmith.x86_64.facebookresearch_1776_fvcore.a491d5b9` shows Ubuntu 22.04, Miniconda Python 3.12, and a repo-specific `/root/setup_env.sh`. The manifest includes a 6.6 GB layer, so exact image inspection or pull-based matching is expensive. The durable fix is a Vercel-compatible prebuilt runtime or snapshot derived from the task Docker setup.
-
-## Failure Summary
-
-task | failed providers | failure character
+cluster | examples | fix character
 --- | --- | ---
-`amueller__word_cloud.ec24191c.func_basic__b5q81acm` | Vercel cold/warm | CLI executable invocation errors.
-`conan-io__conan.86f29e13.pr_11412` | Vercel cold/warm, Modal cold/warm | Vercel hits missing `_sqlite3`; Modal reaches real tests and also shows patch rejects.
-`conan-io__conan.86f29e13.pr_15965` | Vercel cold/warm | Vercel collection-time autotools test errors.
-`dask__dask.5f61e423.combine_module__dkp16syb` | Vercel cold/warm | Real test failures, with `35 failed, 5846 passed`.
-`encode__starlette.db5063c2.combine_file__hrjivx2s` | Vercel cold/warm, Modal cold/warm | Staticfiles permission failures, with `2 failed, 865 passed`.
-`encode__starlette.db5063c2.func_basic__vehyiaux` | Vercel cold/warm, Modal cold/warm | Staticfiles permission failures, with `2 failed, 865 passed`.
-`facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998` | Vercel cold/warm, Daytona cold/warm | PyTorch/image fidelity gap on Vercel; remaining real test failures after PyTorch repair; unresolved verifier result on Daytona.
+Dependency pins | SoupSieve, Webargs, Nikola, Astroid, Safety | Repo-specific `swesmith_env_overrides.json` pins and pre-verify setup.
+Provider image/runtime fidelity | Pydantic, Modal task Docker commands | Provider-specific command and path normalization.
+Network or external fixture drift | Safety, DSPy | Local response/cache shims where task tests depend on remote fixtures.
+Heavy suite verification | Pandas, Tweepy, Tornado | Focused provider reruns and narrow pre-verify adjustments.
+SQLFluff verifier instability | task 87 | De-duplicated repeated `python_test.py` invocation in generated verifier command.
 
-## Provider Trade-Offs
+## Trade-Offs
 
-- Daytona is fastest and cheapest on the comparable subset, but Docker/image details matter and earlier high-concurrency runs hit CPU and memory limits.
-- Modal handles task Docker images well, but previous high-concurrency runs exposed sandbox creation and shutdown rate issues.
-- Vercel has good sandbox startup behavior, but SWE-Smith Docker-image fidelity must be approximated unless we build per-task-compatible snapshots.
-- Warm runs only compare cleanly when they use the same task set, solver command, model, resources, and concurrency. For SWE-Smith task Docker images, generic warm artifacts are less useful than task-compatible image/runtime reuse.
-
-## Scaling To 100 Tasks
-
-Updated 2026-06-11: the per-provider blockers below have been addressed in the harness; the remaining step is executing the full 100-task matrix and triaging results.
-
-The comparable subset was 13 of the first 20 tasks. `data/swesmith_v4_smoke100.jsonl` has 100 tasks across 66 repos.
-
-### Fixes Landed
-
-provider | blocker | fix
---- | --- | ---
-Vercel | Per-task Docker fidelity was approximated by a hand-maintained repo→deps mapping in `ts/src/bench.ts` that did not scale past a handful of repos. | The fallback environment is now reconstructed from `data/swesmith_env_manifests.json`, generated by `scripts/build_env_manifests.py` from the SWE-Smith profiles the task Docker images were built from (all 66 repos covered). The exact per-repo Python version is provisioned with uv into `/opt/testbed-venv` (fixes `_sqlite3` and wrong-interpreter issues), the mirror repo is cloned at the task branch, and the profile's install commands run inside the venv (fixes CLI entrypoints, torch, extras). Narrow per-repo knowledge lives in `data/swesmith_env_overrides.json` as data, not code.
-Vercel | Grading on the fallback runtime used a whole-suite-green stand-in, stricter than the benchmark's grader. | The fallback builds the same verifier venv as the task image (`pytest==8.4.1 swebench==4.0.3 datasets==2.16.1 swesmith==0.0.6` on uv-managed Python 3.11) and keeps the tarball's `tests/test_state.py`, so grading uses the task's real FAIL_TO_PASS/PASS_TO_PASS lists from `tests/config.json`. This also handles non-pytest runners (e.g. tornado's unittest output) via the profile log parsers.
-Modal | Non-deterministic gold-patch application (patch rejects on reruns) made solver/patch problems look provider-related. | Prepare now rewrites `/solution/solve.sh` into a deterministic, idempotent form: the gold patch is reverse-applied only while it is still present (`patch -R --dry-run` gate), and a final forward dry-run asserts a clean post-solve state. Rerunning solve.sh any number of times produces no rejects.
-Modal, Vercel | Starlette staticfiles permission tests fail when the suite runs as root. | The verifier now runs as the unprivileged `agent` user when one exists (the task image provides it; the fallback prepare creates it), matching the task image's L6 non-root semantics.
-Daytona | Resource limits and per-repo image fidelity on heavy repos. | Per-repo `resources` overrides in the manifest raise cpu/memory/disk for heavy repos (pandas, MONAI, fvcore, dask, moto, dvc, sunpy); `bench.ts` applies them per task and records effective resources in results, and the cost estimate uses the per-task values.
-All | 80 of 100 tasks unaudited; failures were triaged by hand. | `ts/src/triage.ts` classifies failed tasks from result JSONs into provider-transport, environment-fidelity, patch-application, timeout, and real-test-failure buckets. `scripts/gold_solver.sh` provides a solver-independent runnability check (apply gold patch deterministically, then verify).
-
-### Validation So Far
-
-Run in a Linux container exercising the exact generated prepare/solve/verify scripts (full fidelity except provider transport), gold solver applied:
-
-task | previous failure | result
---- | --- | ---
-`adrienverge__yamllint...26dq3p0r` | n/a (baseline) | passed, reward 1
-`amueller__word_cloud...b5q81acm` | Vercel CLI executable errors | passed (76 passed), after era-pinning `pytest==8.4.1`/`pytest-cov==6.1.1`
-`cantools__cantools...2yrjny26` | Vercel `_sqlite3` | passed, uv-managed interpreter includes sqlite3
-`encode__starlette...hrjivx2s` | Vercel/Modal staticfiles permission failures | passed with verifier running as `agent`
-`facebookresearch__fvcore...yldgp998` | Vercel torch gap, 3 residual failures | 139/140 passed with manifest torch + `tabulate==0.8.10`; the residual `TestHTTPIO` failure is real outbound HTTP blocked by the validation container's egress proxy, not expected on providers
-`dask__dask...dkp16syb` | 35 real test failures on Vercel | passed (5,000+ tests), reward 1, with conda-env deps from the manifest
-`conan-io__conan...pr_15965` | Vercel collection-time autotools errors | passed, reward 1, with autotools/cmake system packages from the manifest
-
-Spot checks of repos outside the audited 20 (gold solver, same validation path): `getmoto__moto` (pr_5370), `jsvine__pdfplumber`, `pydicom__pydicom`, `pydantic__pydantic` (5,203 passed), `sqlfluff__sqlfluff`, `sunpy__sunpy`, `python-trio__trio` (752 passed), and `iterative__dvc` all pass. Fixes folded back into the harness/overrides along the way: pydantic's hardcoded `/root/.local/bin/uv run` test command is rewritten to the venv pytest; trio needs its test-requirements plus era-pinned pyOpenSSL; dvc needs `pathspec==0.10.3`; pip version constraints in generated install lines are shell-quoted (an unquoted `cryptography<45` parses as a redirect).
-
-Two repos could not be fully validated from this container: `stanfordnlp__dspy` (its FAIL_TO_PASS tests fetch URLs, blocked by the validation container's egress proxy) and `facebookresearch__fvcore` (`TestHTTPIO` does real HTTP). Both are expected to pass on providers with open egress. `tornadoweb__tornado` fails grading on any platform, including the task Docker image: the swesmith 0.0.6 tornado log parser keys docstringed unittest tests by their docstring line, so `test_source_ip_fail` (which passes) is never matched against FAIL_TO_PASS — a task/upstream-parser defect, not a provider gap.
-
-### Running The Full Set
-
-```bash
-bun --env-file=.env ts/src/matrix.ts \
-  --providers all --modes cold,warm \
-  --task-index all --task-limit 100 \
-  --vercel-concurrency 1 --modal-concurrency 1 --daytona-concurrency 2 \
-  --run-concurrency 6 \
-  --timeout-seconds 900 --solve-timeout-seconds 600 \
-  --solve-command-file scripts/openrouter_solver.sh \
-  --output results/solve-price-matrix-task100.json
-```
-
-For a solver-independent runnability check first, substitute `--solve-command-file scripts/gold_solver.sh`. Then classify failures:
-
-```bash
-(cd ts && bun run triage ../results/ts-*-solve-all-*.json --output ../reports/generated-triage.md)
-```
-
-Expect wall-clock on the order of hours; raise Daytona concurrency only as far as account CPU/memory limits allow, and note that heavy repos now request up to 4 cpu / 8 GB / 20 GB per sandbox via manifest resource overrides.
-
-### Known Remaining Risks
-
-- `pandas-dev__pandas` builds from source on fallback runtimes (meson); 5 tasks, expect long prepare times and possibly the 900 s timeout to need raising for those tasks.
-- The fallback installs repo deps from current PyPI rather than the frozen conda env of the task image, so individual version-skew failures of the word_cloud/tabulate kind may remain in the unaudited 80; the override file is the place to pin them as triage finds them.
-- The validation above ran the exact generated scripts in a Linux container, not through the provider SDKs; the provider-transport behavior (sandbox creation, stream handling, rate limits) still needs the full matrix run to confirm.
+- The current reports use newest passing cold-gold evidence per provider/task. That is the right view for "can every task run?".
+- For strict speed and price comparisons, run a fresh single matrix with the same concurrency, timeouts, resources, and solver command across providers.
+- Vercel's SWE-Smith path is intentionally different from Modal/Daytona because it reconstructs task environments from manifests instead of running task Docker images directly.
+- Cost estimates are harness estimates from measured elapsed time and configured provider rates; they exclude model spend.

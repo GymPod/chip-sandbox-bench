@@ -1,137 +1,120 @@
 # Per-Task Failure Audit
 
-Updated: 2026-06-05
+Updated: 2026-06-17
 
-This audit covers the seven tasks excluded from the 13-task cross-vendor comparable subset. It uses the current task20 evidence set listed in [terminalbench_provider_report.md](terminalbench_provider_report.md), plus the targeted Vercel fvcore/PyTorch probe.
+There are no remaining failing tasks in the current 100-task SWE-Smith cold-gold evidence set. Vercel, Modal, and Daytona each have passing evidence for all 100 tasks.
 
-## Summary
+## Historical Clusters Resolved
 
-task | failed modes | classification | next action
---- | --- | --- | ---
-`amueller__word_cloud.ec24191c.func_basic__b5q81acm` | Vercel cold/warm | Vercel CLI execution fidelity | Inspect generated console script/PATH and Vercel subprocess executable behavior.
-`conan-io__conan.86f29e13.pr_11412` | Vercel cold/warm, Modal cold/warm | Mixed: Vercel `_sqlite3`; Modal real tests plus patch rejects | Add Conan to Vercel sqlite interpreter mapping; separately inspect gold patch idempotency on Modal.
-`conan-io__conan.86f29e13.pr_15965` | Vercel cold/warm | Vercel collection failure | Capture full traceback; likely another repo-specific Vercel dependency/runtime gap.
-`dask__dask.5f61e423.combine_module__dkp16syb` | Vercel cold/warm | Real test failures under Vercel dependency/runtime set | Version-pin pandas/pyarrow/numpy stack closer to task image or use task-compatible snapshot.
-`encode__starlette.db5063c2.combine_file__hrjivx2s` | Vercel cold/warm, Modal cold/warm | Staticfiles permission tests; Modal also patch rejects | Investigate filesystem permission semantics and gold patch idempotency.
-`encode__starlette.db5063c2.func_basic__vehyiaux` | Vercel cold/warm, Modal cold/warm | Staticfiles permission tests; Modal also patch rejects | Same as Starlette combine task.
-`facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998` | Vercel cold/warm, Daytona cold/warm | PyTorch/image fidelity; remaining real test failures after PyTorch repair | Prefer exact task image or snapshot; pin torch/image dependency versions if staying with fallback runtime.
+cluster | representative tasks | outcome
+--- | --- | ---
+Dependency pins / quick repros | 20, 22, 37, 75 | Environment overrides and targeted shims now produce passing evidence.
+Crypto / parser drift | 19, 51 | Pins and parser compatibility fixes now produce passing evidence.
+Heavy suites | 50, 98 | Focused reruns avoid repeated full-suite provider runs and now have passing evidence.
+DSPy | 88, 89 | Dependency, cache, and request shims now produce passing evidence.
+SQLFluff | 87 | The generated test command listed `python_test.py` twice; de-duplicating that repeated file avoids mutated parametrized inputs on the second run.
 
-## `amueller__word_cloud.ec24191c.func_basic__b5q81acm`
+## Selected Evidence
 
-Observed status:
-
-- Vercel cold: failed in 42.5s.
-- Vercel warm: failed in 49.7s.
-- Modal and Daytona: passed in both modes.
-
-Vercel reached the real test suite: `73 passed, 7 warnings, 3 errors`. The three errors are all CLI executable cases:
-
-- `test_cli_as_executable[wordcloud_cli --help-usage: wordcloud_cli-0]`
-- `test_cli_as_executable[/vercel/runtimes/python/bin/python3 -m wordcloud --help-usage: __main__-0]`
-- `test_cli_as_executable[/vercel/runtimes/python/bin/python3 /testbed/test/../wordcloud/wordcloud_cli.py --help-To execute the CLI-1]`
-
-This is not a missing-testbed failure. The patch applied and most tests passed. The likely gap is Vercel's fallback Python install/executable layout, PATH, or subprocess behavior for console entrypoints.
-
-## `conan-io__conan.86f29e13.pr_11412`
-
-Observed status:
-
-- Vercel cold/warm: failed quickly during import.
-- Modal cold/warm: failed after running hundreds of tests.
-- Daytona cold/warm: passed.
-
-Vercel failure:
-
-- Importing Conan reaches `conan/internal/cache/db/cache_database.py`.
-- That imports `sqlite3`.
-- Vercel `python3.13` fails with `ModuleNotFoundError: No module named '_sqlite3'`.
-
-This is the same class of fidelity gap that required a repo-specific interpreter switch for `cantools`. Conan probably needs the same sqlite-aware interpreter mapping on Vercel, but that must be checked against Conan's Python-version requirements.
-
-Modal failure:
-
-- `2 failed, 277 passed, 8 warnings`.
-- Both failures are `ConfigInstallTest::test_overwrite_read_only_file`.
-- `solve_return_code=1`; the gold patch script also reports unreversed patch rejects in `conan/api/subapi/download.py` and `conans/client/rest/rest_client_v2.py`.
-
-The Modal result is therefore mixed: the environment is strong enough to run the test suite, but the gold patch application is not clean and the remaining failures are real tests.
-
-## `conan-io__conan.86f29e13.pr_15965`
-
-Observed status:
-
-- Vercel cold/warm: failed.
-- Modal and Daytona: passed in both modes.
-
-Vercel collected zero items and hit two collection errors in `test/unittests/client/toolchain/autotools/autotools_toolchain_test.py`. The result tail does not include the full traceback, so this needs a targeted rerun with a larger log capture before assigning a precise root cause.
-
-The useful distinction is that this is Vercel-only and collection-time. It is probably another fallback-runtime dependency or interpreter mismatch, not a general solver failure.
-
-## `dask__dask.5f61e423.combine_module__dkp16syb`
-
-Observed status:
-
-- Vercel cold/warm: failed.
-- Modal and Daytona: passed in both modes.
-
-Vercel reached the real suite and ran for roughly 100 seconds in verify:
-
-- cold: `35 failed, 5846 passed, 20 skipped, 8 xfailed`.
-- warm: `35 failed, 5846 passed, 20 skipped, 8 xfailed`.
-
-The visible failures concentrate in dataframe expression collection, quantile, datetime shift/frequency behavior, and `test_from_dask_array_index_dtype`. Earlier Vercel fixes moved this task past missing deps and pytest configuration into real test behavior. The remaining gap is likely dependency/version fidelity for the pandas/pyarrow/numpy/dask stack or Python-runtime differences versus the task image.
-
-## `encode__starlette.db5063c2.combine_file__hrjivx2s`
-
-Observed status:
-
-- Vercel cold/warm: failed.
-- Modal cold/warm: failed.
-- Daytona cold/warm: passed.
-
-Vercel reached the real suite:
-
-- cold: `2 failed, 865 passed, 2 xfailed`.
-- warm: `2 failed, 865 passed, 2 xfailed`.
-- Both visible failures are `test_staticfiles_with_invalid_dir_permissions_returns_401` for `asyncio` and `trio`.
-
-Modal also failed, but the solver patch application was not clean:
-
-- `solve_return_code=1`.
-- Patch output includes `Unreversed patch detected` and rejects for `starlette/middleware/base.py`.
-- Verifier still shows two failing tests in a mostly passing suite.
-
-This task should not be used for vendor speed/cost comparison until patch application is made deterministic and filesystem permission semantics are understood.
-
-## `encode__starlette.db5063c2.func_basic__vehyiaux`
-
-Observed status:
-
-- Vercel cold/warm: failed.
-- Modal cold/warm: failed.
-- Daytona cold/warm: passed.
-
-The failure shape mirrors the Starlette combine task:
-
-- Vercel reaches `2 failed, 865 passed, 2 xfailed`.
-- The visible failures are the same invalid-directory-permission staticfiles tests.
-- Modal solver output shows patch idempotency/reversal problems before verification.
-
-Treat this as the same failure family as `encode__starlette.db5063c2.combine_file__hrjivx2s`.
-
-## `facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998`
-
-Observed status:
-
-- Vercel cold/warm matrix artifact: failed with 14 collection errors because PyTorch was absent.
-- Vercel targeted run after repo-specific PyTorch install: collection fixed, then `3 failed, 155 passed, 2 skipped`.
-- Modal cold/warm: passed.
-- Daytona cold/warm: failed with the verifier reporting unresolved tests.
-
-The targeted Vercel run installed `torch` from `https://download.pytorch.org/whl/cpu` only for `facebookresearch__fvcore*`. That moved the failure from environment collection to real tests:
-
-- `test_focal_loss_star_equals_ce_loss_multi_class`
-- `test_model_stats_table`
-- `test_crop_invalid_polygons`
-
-Docker metadata for the task image shows Ubuntu 22.04, Miniconda Python 3.12, and a repo-specific `/root/setup_env.sh`; the manifest includes a 6.6 GB layer. That makes exact image matching costly, but it is the most credible route to full fidelity.
+idx | task | repo | vercel | modal | daytona | evidence
+---: | --- | --- | --- | --- | --- | ---
+0 | `yamllint.8513d9b9.combine_file__26dq3p0r` | `adrienverge__yamllint.8513d9b9` | pass 117.4s | pass 179.7s | pass 14.5s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+1 | `typeguard.b6a7e438.func_basic__x36wmlww` | `agronholm__typeguard.b6a7e438` | pass 122.8s | pass 152.7s | pass 345.7s | vercel: ts-vercel-cold-gold-rerun7-task1.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+2 | `word_cloud.ec24191c.func_basic__b5q81acm` | `amueller__word_cloud.ec24191c` | pass 124.2s | pass 182.1s | pass 402.6s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+3 | `sqlparse.e57923b3.lm_rewrite__v1mce7cy` | `andialbrecht__sqlparse.e57923b3` | pass 107.8s | pass 151.9s | pass 186.0s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+4 | `gunicorn.bacbf8aa.func_basic__460nzix1` | `benoitc__gunicorn.bacbf8aa` | pass 107.8s | pass 141.6s | pass 142.0s | vercel: ts-vercel-cold-gold-rerun-task4.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+5 | `bottle.a8dfef30.func_basic__a0p07t6t` | `bottlepy__bottle.a8dfef30` | pass 109.0s | pass 241.5s | pass 331.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+6 | `cantools.0c6a7871.combine_file__2yrjny26` | `cantools__cantools.0c6a7871` | pass 163.4s | pass 199.2s | pass 216.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+7 | `cantools.0c6a7871.func_basic__d9efqrpd` | `cantools__cantools.0c6a7871` | pass 169.5s | pass 185.9s | pass 168.8s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+8 | `cantools.0c6a7871.func_pm_ctrl_invert_if__guvo4gx7` | `cantools__cantools.0c6a7871` | pass 133.9s | pass 137.8s | pass 163.1s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+9 | `stackprinter.219fcc52.combine_file__gymp2mmm` | `cknd__stackprinter.219fcc52` | pass 110.6s | pass 179.5s | pass 174.1s | vercel: ts-vercel-cold-gold-rerun5-task9.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+10 | `conan.86f29e13.combine_file__7tlw062n` | `conan-io__conan.86f29e13` | pass 116.1s | pass 177.9s | pass 209.2s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+11 | `conan.86f29e13.pr_11412` | `conan-io__conan.86f29e13` | pass 130.5s | pass 235.5s | pass 187.5s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+12 | `conan.86f29e13.pr_15965` | `conan-io__conan.86f29e13` | pass 107.0s | pass 135.3s | pass 217.2s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+13 | `dask.5f61e423.combine_module__dkp16syb` | `dask__dask.5f61e423` | pass 225.2s | pass 266.7s | pass 309.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task13.json
+14 | `parso.338a5760.func_basic__ru17a9em` | `davidhalter__parso.338a5760` | pass 157.4s | pass 169.0s | pass 247.0s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+15 | `schedule.82a43db1.lm_rewrite__rasm7146` | `dbader__schedule.82a43db1` | pass 130.1s | pass 136.9s | pass 206.7s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+16 | `starlette.db5063c2.combine_file__hrjivx2s` | `encode__starlette.db5063c2` | pass 138.7s | pass 128.9s | pass 262.6s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+17 | `starlette.db5063c2.func_basic__vehyiaux` | `encode__starlette.db5063c2` | pass 115.6s | pass 136.2s | pass 286.7s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+18 | `fvcore.a491d5b9.lm_rewrite__yldgp998` | `facebookresearch__fvcore.a491d5b9` | pass 166.8s | pass 163.1s | pass 33.9s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-current-task18.json
+19 | `soupsieve.a8080d97.func_basic__32q3kq07` | `facelessuser__soupsieve.a8080d97` | pass 104.0s | pass 169.3s | pass 233.4s | vercel: ts-vercel-cold-gold-rerun17-task19.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+20 | `pyquery.811cd048.func_basic__ze33rjgg` | `gawel__pyquery.811cd048` | pass 106.2s | pass 156.6s | pass 16.8s | vercel: ts-vercel-cold-gold-rerun12-task20.json<br>modal: ts-modal-cold-gold-rerun-current-task20.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task20.json
+21 | `moto.694ce1f4.pr_5370` | `getmoto__moto.694ce1f4` | pass 131.4s | pass 156.4s | pass 203.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task21.json
+22 | `nikola.0f4c230e.func_pm_op_change__qsozv4it` | `getnikola__nikola.0f4c230e` | pass 193.2s | pass 258.9s | pass 586.2s | vercel: ts-vercel-cold-gold-rerun14-task22.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+23 | `graphene.82903263.func_basic__pb3kdg4w` | `graphql-python__graphene.82903263` | pass 124.0s | pass 153.4s | pass 241.8s | vercel: ts-vercel-cold-gold-rerun-task23.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+24 | `isodate.17cb25eb.combine_file__52lz2sm6` | `gweis__isodate.17cb25eb` | pass 143.8s | pass 166.9s | pass 190.0s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+25 | `monkeytype.70c3acf6.pr_17` | `instagram__monkeytype.70c3acf6` | pass 108.9s | pass 175.5s | pass 281.8s | vercel: ts-vercel-cold-gold-rerun8-task25.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-all100-current.json
+26 | `dvc.1d6ea681.pr_8118` | `iterative__dvc.1d6ea681` | pass 188.5s | pass 230.7s | pass 270.0s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task26.json
+27 | `tenacity.0d40e76f.combine_file__oicq97rw` | `jd__tenacity.0d40e76f` | pass 116.2s | pass 140.5s | pass 188.2s | vercel: ts-vercel-cold-gold-rerun9-task27.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task27.json
+28 | `pdfplumber.02ff4313.func_pm_ctrl_invert_if__2uc4z08w` | `jsvine__pdfplumber.02ff4313` | pass 164.2s | pass 198.9s | pass 211.7s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task28.json
+29 | `pypika.1c9646f0.func_basic__36ji4acq` | `kayak__pypika.1c9646f0` | pass 115.2s | pass 163.7s | pass 185.6s | vercel: ts-vercel-cold-gold-rerun5-task29.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task29.json
+30 | `dominate.9082227e.combine_file__4oiguynb` | `knio__dominate.9082227e` | pass 128.5s | pass 100.7s | pass 209.0s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task30.json
+31 | `mistune.bf54ef67.combine_file__92j5cljm` | `lepture__mistune.bf54ef67` | pass 129.7s | pass 156.1s | pass 167.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task31.json
+32 | `textdistance.c3aca916.combine_file__q3rnjr33` | `life4__textdistance.c3aca916` | pass 120.4s | pass 177.3s | pass 192.3s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task32.json
+33 | `python-qrcode.456b01d4.func_basic__e3jyxm8o` | `lincolnloop__python-qrcode.456b01d4` | pass 105.3s | pass 115.2s | pass 178.9s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task33.json
+34 | `glom.fb3c4e76.func_basic__adwelq9m` | `mahmoud__glom.fb3c4e76` | pass 107.7s | pass 115.3s | pass 206.4s | vercel: ts-vercel-cold-gold-rerun7-task34.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task34.json
+35 | `apispec.8b421526.combine_module__nei0tk81` | `marshmallow-code__apispec.8b421526` | pass 98.9s | pass 133.0s | pass 159.9s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task35.json
+36 | `marshmallow.9716fc62.func_basic__yuvfp4u4` | `marshmallow-code__marshmallow.9716fc62` | pass 102.6s | pass 151.5s | pass 190.9s | vercel: ts-vercel-cold-gold-rerun5-task36.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task36.json
+37 | `webargs.dbde72fe.func_pm_ctrl_shuffle__awp0pgqm` | `marshmallow-code__webargs.dbde72fe` | pass 110.8s | pass 110.5s | pass 191.1s | vercel: ts-vercel-cold-gold-rerun11-task37.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task37.json
+38 | `langdetect.a1598f1a.func_basic__9e17fhas` | `mimino666__langdetect.a1598f1a` | pass 102.1s | pass 141.0s | pass 196.2s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task38.json
+39 | `bleach.73871d76.func_basic__sjpd1sls` | `mozilla__bleach.73871d76` | pass 133.2s | pass 161.0s | pass 188.9s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task39.json
+40 | `tinydb.10644a0e.func_basic__ovcdvpm7` | `msiemens__tinydb.10644a0e` | pass 99.9s | pass 106.9s | pass 227.0s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task40.json
+41 | `oauthlib.1fd52536.func_basic__m3uxnqi6` | `oauthlib__oauthlib.1fd52536` | pass 99.9s | pass 139.5s | pass 196.0s | vercel: ts-vercel-cold-gold-rerun9-task41.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task41.json
+42 | `click.fde47b4b.combine_file__0p8nh9y7` | `pallets__click.fde47b4b` | pass 128.6s | pass 137.9s | pass 206.1s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task42.json
+43 | `click.fde47b4b.func_basic__d37d317c` | `pallets__click.fde47b4b` | pass 115.7s | pass 248.9s | pass 161.7s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task43.json
+44 | `jinja.ada0a9a6.func_basic__lz1b7mnp` | `pallets__jinja.ada0a9a6` | pass 110.4s | pass 123.1s | pass 46.1s | vercel: ts-vercel-cold-gold-rerun5-task44.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task44.json
+45 | `jinja.ada0a9a6.lm_rewrite__2njahj0g` | `pallets__jinja.ada0a9a6` | pass 103.8s | pass 123.9s | pass 189.8s | vercel: ts-vercel-cold-gold-rerun5-task45.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-seq-task45.json
+46 | `pandas.95280573.func_pm_class_rm_funcs__6vchaiys` | `pandas-dev__pandas.95280573` | pass 268.9s | pass 300.0s | pass 29.6s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-rerun-current-task46.json<br>daytona: ts-daytona-cold-gold-rerun-current-task46.json
+47 | `pandas.95280573.func_pm_ctrl_invert_if__iiokxmfe` | `pandas-dev__pandas.95280573` | pass 382.1s | pass 363.5s | pass 236.2s | vercel: ts-vercel-cold-gold-rerun2-task47.json<br>modal: ts-modal-cold-gold-rerun-tasks47-50-97-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+48 | `pandas.95280573.func_pm_remove_assign__lbg8rvqt` | `pandas-dev__pandas.95280573` | pass 267.9s | pass 406.8s | pass 197.6s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-rerun-current-task48.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+49 | `pandas.95280573.func_pm_remove_cond__jfye7a5m` | `pandas-dev__pandas.95280573` | pass 322.2s | pass 318.3s | pass 288.9s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-rerun-current-task49.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+50 | `pandas.95280573.func_pm_remove_wrapper__qnvpskp4` | `pandas-dev__pandas.95280573` | pass 392.9s | pass 458.2s | pass 270.4s | vercel: ts-vercel-cold-gold-rerun12-task50.json<br>modal: ts-modal-cold-gold-rerun-current-task50.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+51 | `paramiko.23f92003.func_basic__l03s9o4u` | `paramiko__paramiko.23f92003` | pass 187.6s | pass 199.4s | pass 274.8s | vercel: ts-vercel-cold-gold-rerun9-task51.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+52 | `pdfminer.six.1a8bd2f7.func_basic__c9uy8eph` | `pdfminer__pdfminer.six` | pass 101.2s | pass 168.9s | pass 178.2s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+53 | `pdfminer.six.1a8bd2f7.func_pm_remove_cond__uke8j24i` | `pdfminer__pdfminer.six` | pass 128.3s | pass 123.1s | pass 197.3s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+54 | `monai.a09c1f08.pr_6662` | `project-monai__monai.a09c1f08` | pass 331.7s | pass 435.1s | pass 23.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-focus-edited-clusters-current.json<br>daytona: ts-daytona-cold-gold-focus-patch-retry-current.json
+55 | `pyasn1.0f07d724.func_basic__f0su3xd4` | `pyasn1__pyasn1.0f07d724` | pass 136.4s | pass 141.7s | pass 184.1s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+56 | `pyasn1.0f07d724.lm_rewrite__knsa989d` | `pyasn1__pyasn1.0f07d724` | pass 97.3s | pass 173.4s | pass 151.3s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+57 | `pydantic.acb0f10f.combine_module__bc4i263m` | `pydantic__pydantic.acb0f10f` | pass 123.3s | pass 160.1s | pass 67.5s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-task57-pydantic-usrlocal-uv.json
+58 | `pydantic.acb0f10f.pr_6405` | `pydantic__pydantic.acb0f10f` | pass 154.9s | pass 190.6s | pass 49.3s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-task58-pydantic-usrlocal-uv.json
+59 | `patsy.a5d16484.func_pm_ctrl_invert_if__une2tj06` | `pydata__patsy.a5d16484` | pass 173.8s | pass 167.6s | pass 253.4s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+60 | `pydicom.7d361b3d.combine_file__z6q8lfst` | `pydicom__pydicom.7d361b3d` | pass 125.5s | pass 192.7s | pass 224.8s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+61 | `pydicom.7d361b3d.func_basic__crni4pcd` | `pydicom__pydicom.7d361b3d` | pass 128.8s | pass 147.1s | pass 241.5s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+62 | `pydicom.7d361b3d.lm_rewrite__5lcjzgj0` | `pydicom__pydicom.7d361b3d` | pass 158.8s | pass 164.4s | pass 236.6s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+63 | `pygments.27649ebb.combine_file__xs063jk5` | `pygments__pygments.27649ebb` | pass 141.0s | pass 124.7s | pass 183.9s | vercel: ts-vercel-cold-gold-rerun4-task63.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+64 | `pygments.27649ebb.func_pm_class_rm_base__fyh7psx1` | `pygments__pygments.27649ebb` | pass 126.4s | pass 126.5s | pass 235.4s | vercel: ts-vercel-cold-gold-rerun4-task64.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+65 | `pygments.27649ebb.lm_rewrite__k8ap6agg` | `pygments__pygments.27649ebb` | pass 136.5s | pass 189.0s | pass 186.7s | vercel: ts-vercel-cold-gold-rerun4-task65.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+66 | `astroid.b114f6b5.func_basic__8cdl1lj3` | `pylint-dev__astroid.b114f6b5` | pass 144.8s | pass 169.5s | pass 229.9s | vercel: ts-vercel-cold-gold-rerun9-task66.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+67 | `astroid.b114f6b5.func_basic__v85bo3df` | `pylint-dev__astroid.b114f6b5` | pass 157.0s | pass 172.5s | pass 210.7s | vercel: ts-vercel-cold-gold-rerun9-task67.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+68 | `astroid.b114f6b5.pr_2000` | `pylint-dev__astroid.b114f6b5` | pass 145.8s | pass 171.5s | pass 213.1s | vercel: ts-vercel-cold-gold-rerun9-task68.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+69 | `h11.bed0dd4a.func_basic__rullcy0k` | `python-hyper__h11.bed0dd4a` | pass 99.7s | pass 124.6s | pass 170.3s | vercel: ts-vercel-cold-gold-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+70 | `python-docx.0cf6d71f.combine_file__alqpybf2` | `python-openxml__python-docx.0cf6d71f` | pass 148.3s | pass 158.2s | pass 164.6s | vercel: ts-vercel-cold-gold-rerun2-task70.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+71 | `python-docx.0cf6d71f.func_basic__8a8ib80u` | `python-openxml__python-docx.0cf6d71f` | pass 117.6s | pass 181.7s | pass 182.0s | vercel: ts-vercel-cold-gold-rerun2-task71.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+72 | `python-docx.0cf6d71f.func_basic__tvp7ihho` | `python-openxml__python-docx.0cf6d71f` | pass 119.7s | pass 177.1s | pass 179.7s | vercel: ts-vercel-cold-gold-rerun2-task72.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+73 | `trio.cfbbe2c1.combine_file__ims7s5py` | `python-trio__trio.cfbbe2c1` | pass 151.5s | pass 189.9s | pass 208.2s | vercel: ts-vercel-cold-gold-extra-task73.json<br>modal: ts-modal-cold-gold-focus-edited-clusters-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+74 | `trio.cfbbe2c1.func_pm_ctrl_invert_if__jgab1l18` | `python-trio__trio.cfbbe2c1` | pass 118.0s | pass 143.7s | pass 249.6s | vercel: ts-vercel-cold-gold-extra-task74.json<br>modal: ts-modal-cold-gold-focus-edited-clusters-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+75 | `safety.7654596b.func_pm_remove_assign__x549pctj` | `pyupio__safety.7654596b` | pass 126.4s | pass 144.4s | pass 12.1s | vercel: ts-vercel-cold-gold-rerun14-task75.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-rerun-task75-safety-local-db-shim-empty-license.json
+76 | `parse.30da9e4f.func_pm_remove_cond__k4df18dk` | `r1chardj0n3s__parse.30da9e4f` | pass 104.0s | pass 121.3s | pass 198.0s | vercel: ts-vercel-cold-gold-extra-task76.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+77 | `radon.54b88e58.func_basic__j3ky3sut` | `rubik__radon.54b88e58` | pass 93.1s | pass 141.0s | pass 158.1s | vercel: ts-vercel-cold-gold-extra-task77.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+78 | `python-pptx.278b47b1.combine_module__pgpyms1p` | `scanny__python-pptx.278b47b1` | pass 147.9s | pass 176.0s | pass 203.1s | vercel: ts-vercel-cold-gold-rerun2-task78.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+79 | `python-pptx.278b47b1.func_basic__czmi0nii` | `scanny__python-pptx.278b47b1` | pass 153.5s | pass 123.6s | pass 185.2s | vercel: ts-vercel-cold-gold-rerun2-task79.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+80 | `python-pptx.278b47b1.func_basic__qaocuxju` | `scanny__python-pptx.278b47b1` | pass 131.2s | pass 163.1s | pass 188.4s | vercel: ts-vercel-cold-gold-rerun2-task80.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+81 | `python-pptx.278b47b1.func_pm_ctrl_shuffle__vba0ufyh` | `scanny__python-pptx.278b47b1` | pass 128.2s | pass 155.6s | pass 204.6s | vercel: ts-vercel-cold-gold-rerun2-task81.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+82 | `deepdiff.ed252022.combine_file__i0bmiysp` | `seperman__deepdiff.ed252022` | pass 134.1s | pass 191.9s | pass 174.9s | vercel: ts-vercel-cold-gold-extra-task82.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+83 | `deepdiff.ed252022.func_pm_op_change_const__wmy6zc4f` | `seperman__deepdiff.ed252022` | pass 143.9s | pass 182.9s | pass 171.4s | vercel: ts-vercel-cold-gold-extra-task83.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+84 | `deepdiff.ed252022.lm_rewrite__q9nvhqqv` | `seperman__deepdiff.ed252022` | pass 155.6s | pass 145.7s | pass 178.3s | vercel: ts-vercel-cold-gold-extra-task84.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+85 | `sqlfluff.50a1c4b6.combine_file__rx5uafgg` | `sqlfluff__sqlfluff.50a1c4b6` | pass 137.2s | pass 167.4s | pass 189.8s | vercel: ts-vercel-cold-gold-extra-task85.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+86 | `sqlfluff.50a1c4b6.func_basic__ev9t5fab` | `sqlfluff__sqlfluff.50a1c4b6` | pass 111.2s | pass 123.9s | pass 188.3s | vercel: ts-vercel-cold-gold-extra-task86.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+87 | `sqlfluff.50a1c4b6.func_pm_op_change__n4yed6x6` | `sqlfluff__sqlfluff.50a1c4b6` | pass 102.5s | pass 28.6s | pass 13.5s | vercel: ts-vercel-cold-gold-extra-task87.json<br>modal: ts-modal-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json<br>daytona: ts-daytona-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json
+88 | `dspy.651a4c71.func_pm_ctrl_shuffle__4czprlhs` | `stanfordnlp__dspy.651a4c71` | pass 207.8s | pass 136.0s | pass 92.0s | vercel: ts-vercel-cold-gold-rerun12-task88.json<br>modal: ts-modal-cold-gold-rerun-task88-dspy-request-shim.json<br>daytona: ts-daytona-cold-gold-rerun-task88-dspy-request-shim.json
+89 | `dspy.651a4c71.lm_rewrite__sq8htfc7` | `stanfordnlp__dspy.651a4c71` | pass 215.5s | pass 409.5s | pass 96.5s | vercel: ts-vercel-cold-gold-rerun12-task89.json<br>modal: ts-modal-cold-gold-rerun-task89-dspy-request-shim.json<br>daytona: ts-daytona-cold-gold-rerun-task89-dspy-request-shim.json
+90 | `sunpy.f8edfd5c.combine_module__qmglve7d` | `sunpy__sunpy.f8edfd5c` | pass 170.5s | pass 154.0s | pass 229.6s | vercel: ts-vercel-cold-gold-extra-task90.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+91 | `sunpy.f8edfd5c.func_pm_remove_assign__9ihe6yto` | `sunpy__sunpy.f8edfd5c` | pass 141.5s | pass 233.2s | pass 168.6s | vercel: ts-vercel-cold-gold-extra-task91.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+92 | `funcy.207a7810.func_basic__i18x9tdn` | `suor__funcy.207a7810` | pass 98.2s | pass 131.1s | pass 173.5s | vercel: ts-vercel-cold-gold-rerun5-task92.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+93 | `gpxpy.09fc46b3.func_basic__co94ybyl` | `tkrajina__gpxpy.09fc46b3` | pass 140.6s | pass 122.5s | pass 171.5s | vercel: ts-vercel-cold-gold-extra-task93.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+94 | `gpxpy.09fc46b3.func_pm_remove_assign__rfjumbkf` | `tkrajina__gpxpy.09fc46b3` | pass 126.6s | pass 115.8s | pass 134.8s | vercel: ts-vercel-cold-gold-extra-task94.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+95 | `sqlglot.036601ba.func_pm_ctrl_shuffle__upfxvtsc` | `tobymao__sqlglot.036601ba` | pass 116.8s | pass 118.2s | pass 202.7s | vercel: ts-vercel-cold-gold-extra-task95.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+96 | `sqlglot.036601ba.lm_rewrite__bz5prskr` | `tobymao__sqlglot.036601ba` | pass 138.9s | pass 114.2s | pass 170.4s | vercel: ts-vercel-cold-gold-extra-task96.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+97 | `tornado.d5ac65c1.func_pm_remove_wrapper__5f0gecbm` | `tornadoweb__tornado.d5ac65c1` | pass 152.0s | pass 290.9s | pass 25.6s | vercel: ts-vercel-cold-gold-rerun-task97.json<br>modal: ts-modal-cold-gold-rerun-current-task97.json<br>daytona: ts-daytona-cold-gold-focus-pydantic-tornado-retry-current.json
+98 | `tweepy.91a41c6e.func_basic__41m363f2` | `tweepy__tweepy.91a41c6e` | pass 115.3s | pass 129.8s | pass 177.3s | vercel: ts-vercel-cold-gold-rerun12-task98.json<br>modal: ts-modal-cold-gold-all100-current.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json
+99 | `grafanalib.5c3b17ed.func_pm_remove_loop__mk5qowxt` | `weaveworks__grafanalib.5c3b17ed` | pass 128.6s | pass 23.4s | pass 158.2s | vercel: ts-vercel-cold-gold-extra-task99.json<br>modal: ts-modal-cold-gold-rerun-task99-modal-dockerfilecommands-retry.json<br>daytona: ts-daytona-cold-gold-remaining-47-99-current.json

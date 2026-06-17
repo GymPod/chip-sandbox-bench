@@ -1,91 +1,149 @@
 # Per-Provider Report
 
-Updated: 2026-06-05
+Updated: 2026-06-17
 
-This page summarizes provider behavior on the current 20-task SWE-Smith evidence set. Use [cross-vendor-comparison.md](cross-vendor-comparison.md) for the strict apples-to-apples subset and [per-task-failure-audit.md](per-task-failure-audit.md) for detailed failed-task notes.
+This report summarizes current provider behavior on the 100-task SWE-Smith cold-gold runnability evidence set. Use [cross-vendor-comparison.md](cross-vendor-comparison.md) for the head-to-head rollup and [per-task-comparison.md](per-task-comparison.md) for task-level timings.
 
-## Provider Rollup
+## Rollup
 
-provider | mode | passed | total seconds | estimated provider cost | notable caveat
---- | --- | ---: | ---: | ---: | ---
-vercel | cold | 13/20 | 994.5 | $0.0942 | Fallback runtime, no direct task Docker image.
-vercel | warm | 13/20 | 1023.5 | $0.0969 | Warm does not remove most SWE-Smith setup cost.
-modal | cold | 17/20 | 1045.4 | $0.0693 | Strong image fidelity, but some patch rejects and real failures.
-modal | warm | 17/20 | 968.4 | $0.0642 | Slightly faster than cold on this slice.
-daytona | cold | 19/20 | 765.2 | $0.0353 | Best coverage here; fvcore still fails.
-daytona | warm | 19/20 | 698.5 | $0.0322 | Fastest and lowest estimated provider cost in this slice.
+provider | passed | observed task seconds | mean seconds | median seconds | p95 seconds | estimated provider cost
+--- | ---: | ---: | ---: | ---: | ---: | ---:
+vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
+modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
+daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 
 ## Vercel
 
-Current result:
-
-- 13/20 cold, 13/20 warm.
-- On the 13-task comparable subset: 659.4s cold and 670.8s warm.
-
-Strengths:
-
-- Executes simple Python package tasks reliably after fallback verifier setup.
-- Vercel-specific fixes now get `typeguard`, `cantools`, `starlette`, `soupsieve`, and `dask` past basic missing-dependency or pytest-config failures.
-- Task startup is predictable in this slice.
-
-Failure signatures:
-
-- `_sqlite3` missing from Vercel `python3.13`, visible in `conan-io__conan.86f29e13.pr_11412`.
-- Console-script/subprocess fidelity issues in `amueller__word_cloud.ec24191c.func_basic__b5q81acm`.
-- Collection-time Conan autotools errors in `conan-io__conan.86f29e13.pr_15965`.
-- Large real-test mismatch in `dask__dask.5f61e423.combine_module__dkp16syb`.
-- Staticfiles permission test failures in both Starlette tasks.
-- Missing PyTorch for fvcore in the matrix artifact; targeted PyTorch repair changes this to real test failures.
-
-Trade-off:
-
-Vercel needs a task-compatible runtime or snapshot path for SWE-Smith Docker-image tasks. Repo-specific dependency repair improves signal, but each repair adds setup time and can still miss pinned image details.
+- Current evidence: 100/100 passing.
+- Execution model: fallback runtime reconstruction from `data/swesmith_env_manifests.json`, because Vercel cannot directly consume each SWE-Smith task Docker image.
+- Main cost driver: prepare and dependency reconstruction dominate relative to Modal and Daytona.
+- Product fit: useful once manifests are complete, but timing comparisons should account for the fallback-runtime setup path.
 
 ## Modal
 
-Current result:
-
-- 17/20 cold, 17/20 warm.
-- On the 13-task comparable subset: 559.3s cold and 523.5s warm.
-
-Strengths:
-
-- Good Docker-image fidelity for SWE-Smith tasks.
-- Passes Vercel-only hard cases such as wordcloud, Conan `pr_15965`, Dask, and fvcore.
-- Warm mode is modestly faster than cold on the comparable subset.
-
-Failure signatures:
-
-- Conan `pr_11412` reaches real tests and fails `ConfigInstallTest::test_overwrite_read_only_file`; solver patch output also shows unreversed patch rejects.
-- Both Starlette tasks show patch-application rejects in Modal and then fail with a mostly passing suite.
-- Earlier high-concurrency runs exposed sandbox creation and shutdown rate issues, so task concurrency needs to track account limits.
-
-Trade-off:
-
-Modal is a strong fidelity provider for task-Docker workloads, but the current gold-solver patch application is not deterministic for all tasks. That can make a failure look provider-related when the patch script is the immediate problem.
+- Current evidence: 100/100 passing.
+- Execution model: native task Docker image support for SWE-Smith task images.
+- Recent fixes addressed deterministic solve application, transient provider transport retries, Dockerfile command handling, DSPy dependency/cache drift, Pandas/Tweepy focused reruns, and SQLFluff test command de-duplication.
+- Product fit: strong fidelity for task-Docker workloads, with retry handling still useful for transient stream/setup failures.
 
 ## Daytona
 
-Current result:
+- Current evidence: 100/100 passing.
+- Execution model: native task Docker image support for SWE-Smith task images.
+- Recent fixes addressed deterministic solve application, task image command fidelity, Pydantic uv pathing, Safety local DB/provider egress behavior, DSPy drift, and SQLFluff test command de-duplication.
+- Product fit: lowest estimated provider cost in the current stitched cold-gold evidence set, with native task-Docker fidelity.
 
-- 19/20 cold, 19/20 warm.
-- On the 13-task comparable subset: 385.8s cold and 349.8s warm.
+## Evidence Files
 
-Strengths:
+### Vercel
 
-- Best pass count in the current 20-task evidence set.
-- Lowest estimated provider cost and fastest elapsed time on the comparable subset.
-- Passes the Vercel/Modal Starlette failures and the Vercel-only Dask/wordcloud/Conan failures.
+- `results/ts-vercel-cold-gold-extra-task73.json`
+- `results/ts-vercel-cold-gold-extra-task74.json`
+- `results/ts-vercel-cold-gold-extra-task76.json`
+- `results/ts-vercel-cold-gold-extra-task77.json`
+- `results/ts-vercel-cold-gold-extra-task82.json`
+- `results/ts-vercel-cold-gold-extra-task83.json`
+- `results/ts-vercel-cold-gold-extra-task84.json`
+- `results/ts-vercel-cold-gold-extra-task85.json`
+- `results/ts-vercel-cold-gold-extra-task86.json`
+- `results/ts-vercel-cold-gold-extra-task87.json`
+- `results/ts-vercel-cold-gold-extra-task90.json`
+- `results/ts-vercel-cold-gold-extra-task91.json`
+- `results/ts-vercel-cold-gold-extra-task93.json`
+- `results/ts-vercel-cold-gold-extra-task94.json`
+- `results/ts-vercel-cold-gold-extra-task95.json`
+- `results/ts-vercel-cold-gold-extra-task96.json`
+- `results/ts-vercel-cold-gold-extra-task99.json`
+- `results/ts-vercel-cold-gold-rerun-task23.json`
+- `results/ts-vercel-cold-gold-rerun-task4.json`
+- `results/ts-vercel-cold-gold-rerun-task97.json`
+- `results/ts-vercel-cold-gold-rerun11-task37.json`
+- `results/ts-vercel-cold-gold-rerun12-task20.json`
+- `results/ts-vercel-cold-gold-rerun12-task50.json`
+- `results/ts-vercel-cold-gold-rerun12-task88.json`
+- `results/ts-vercel-cold-gold-rerun12-task89.json`
+- `results/ts-vercel-cold-gold-rerun12-task98.json`
+- `results/ts-vercel-cold-gold-rerun14-task22.json`
+- `results/ts-vercel-cold-gold-rerun14-task75.json`
+- `results/ts-vercel-cold-gold-rerun17-task19.json`
+- `results/ts-vercel-cold-gold-rerun2-task47.json`
+- `results/ts-vercel-cold-gold-rerun2-task70.json`
+- `results/ts-vercel-cold-gold-rerun2-task71.json`
+- `results/ts-vercel-cold-gold-rerun2-task72.json`
+- `results/ts-vercel-cold-gold-rerun2-task78.json`
+- `results/ts-vercel-cold-gold-rerun2-task79.json`
+- `results/ts-vercel-cold-gold-rerun2-task80.json`
+- `results/ts-vercel-cold-gold-rerun2-task81.json`
+- `results/ts-vercel-cold-gold-rerun4-task63.json`
+- `results/ts-vercel-cold-gold-rerun4-task64.json`
+- `results/ts-vercel-cold-gold-rerun4-task65.json`
+- `results/ts-vercel-cold-gold-rerun5-task29.json`
+- `results/ts-vercel-cold-gold-rerun5-task36.json`
+- `results/ts-vercel-cold-gold-rerun5-task44.json`
+- `results/ts-vercel-cold-gold-rerun5-task45.json`
+- `results/ts-vercel-cold-gold-rerun5-task9.json`
+- `results/ts-vercel-cold-gold-rerun5-task92.json`
+- `results/ts-vercel-cold-gold-rerun7-task1.json`
+- `results/ts-vercel-cold-gold-rerun7-task34.json`
+- `results/ts-vercel-cold-gold-rerun8-task25.json`
+- `results/ts-vercel-cold-gold-rerun9-task27.json`
+- `results/ts-vercel-cold-gold-rerun9-task41.json`
+- `results/ts-vercel-cold-gold-rerun9-task51.json`
+- `results/ts-vercel-cold-gold-rerun9-task66.json`
+- `results/ts-vercel-cold-gold-rerun9-task67.json`
+- `results/ts-vercel-cold-gold-rerun9-task68.json`
+- `results/ts-vercel-cold-gold-task70.json`
 
-Failure signatures:
+### Modal
 
-- Fvcore fails in both cold and warm with `test_patch_resolved` reporting unresolved tests, even though the patch applies.
-- Earlier high-concurrency experiments hit CPU and memory limits, so concurrency needs to be raised carefully despite improved limits.
+- `results/ts-modal-cold-gold-all100-current.json`
+- `results/ts-modal-cold-gold-focus-edited-clusters-current.json`
+- `results/ts-modal-cold-gold-rerun-current-task20.json`
+- `results/ts-modal-cold-gold-rerun-current-task46.json`
+- `results/ts-modal-cold-gold-rerun-current-task48.json`
+- `results/ts-modal-cold-gold-rerun-current-task49.json`
+- `results/ts-modal-cold-gold-rerun-current-task50.json`
+- `results/ts-modal-cold-gold-rerun-current-task97.json`
+- `results/ts-modal-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json`
+- `results/ts-modal-cold-gold-rerun-task88-dspy-request-shim.json`
+- `results/ts-modal-cold-gold-rerun-task89-dspy-request-shim.json`
+- `results/ts-modal-cold-gold-rerun-task99-modal-dockerfilecommands-retry.json`
+- `results/ts-modal-cold-gold-rerun-tasks47-50-97-current.json`
 
-Trade-off:
+### Daytona
 
-Daytona looks best on this slice, but its behavior depends on resource limits and task-image setup. The fvcore failure shows that high overall pass rate does not eliminate per-repo fidelity or solver correctness questions.
-
-## Cross-Provider Takeaway
-
-For price/performance, compare only tasks all providers can pass. For product fit, the excluded failures matter: they show where each provider needs image fidelity, dependency pinning, patch determinism, or concurrency tuning before larger SWE-Smith runs are interpretable.
+- `results/ts-daytona-cold-gold-all100-current.json`
+- `results/ts-daytona-cold-gold-focus-patch-retry-current.json`
+- `results/ts-daytona-cold-gold-focus-pydantic-tornado-retry-current.json`
+- `results/ts-daytona-cold-gold-remaining-47-99-current.json`
+- `results/ts-daytona-cold-gold-rerun-current-task18.json`
+- `results/ts-daytona-cold-gold-rerun-current-task46.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task13.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task20.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task21.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task26.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task27.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task28.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task29.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task30.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task31.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task32.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task33.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task34.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task35.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task36.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task37.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task38.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task39.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task40.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task41.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task42.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task43.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task44.json`
+- `results/ts-daytona-cold-gold-rerun-seq-task45.json`
+- `results/ts-daytona-cold-gold-rerun-task57-pydantic-usrlocal-uv.json`
+- `results/ts-daytona-cold-gold-rerun-task58-pydantic-usrlocal-uv.json`
+- `results/ts-daytona-cold-gold-rerun-task75-safety-local-db-shim-empty-license.json`
+- `results/ts-daytona-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json`
+- `results/ts-daytona-cold-gold-rerun-task88-dspy-request-shim.json`
+- `results/ts-daytona-cold-gold-rerun-task89-dspy-request-shim.json`

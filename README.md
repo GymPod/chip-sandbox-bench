@@ -9,7 +9,7 @@ The project currently compares Vercel, Modal, and Daytona on TerminalBench and S
 - `data/`: bundled TerminalBench and SWE-Smith smoke datasets in parquet and JSONL form.
 - `py/`: Python runner and provider adapters.
 - `ts/`: Bun/TypeScript runner, matrix runner, prewarm helper, and report generator.
-- `results/`: checked-in benchmark artifacts and investigation probes.
+- `results/`: ignored local benchmark artifacts plus checked-in metadata.
 - `reports/`: curated markdown analysis split into cross-vendor, per-task, and failure-mode views.
 - `scripts/`: dataset extraction and OpenRouter solver helpers.
 
@@ -17,9 +17,9 @@ The project currently compares Vercel, Modal, and Daytona on TerminalBench and S
 
 Start with [reports/terminalbench_provider_report.md](reports/terminalbench_provider_report.md).
 
-The current apples-to-apples comparison focuses on the 13 tasks from the first 20 SWE-Smith smoke tasks that pass on all three providers in both warm and cold modes. On that subset, Daytona is fastest and lowest estimated provider cost, Modal is next, and Vercel is slowest for this SWE-Smith fallback-runtime workload.
+The current apples-to-apples runnability comparison covers all 100 tasks in `data/swesmith_v4_smoke100.jsonl`. Vercel, Modal, and Daytona each have 100/100 passing cold-gold evidence.
 
-The broader 20-task rollup is still useful, but it mixes provider performance with Docker-image fidelity gaps and real task failures. Details are split across:
+The timing rollups are stitched from full and focused reruns, so use them for provider head-to-head shape rather than strict synchronized wall-clock claims. Details are split across:
 
 - [reports/cross-vendor-comparison.md](reports/cross-vendor-comparison.md)
 - [reports/per-task-comparison.md](reports/per-task-comparison.md)
@@ -87,9 +87,9 @@ The generated report is intentionally separate from the curated report files.
 
 The curated reports in `reports/` were produced in three steps:
 
-1. **Solve-enabled matrix runs.** `ts/src/matrix.ts` ran cold and warm solve runs for Vercel, Modal, and Daytona over the first 20 tasks of `data/swesmith_v4_smoke100.jsonl`, using `scripts/openrouter_solver.sh` as the solver. Each provider/mode run wrote one result JSON to `results/`; the exact input files behind the current reports are listed in [results/README.md](results/README.md) under "Current Report Inputs".
-2. **Raw report generation.** `ts/src/report.ts` (`bun run report`) discovers the newest `ts-<provider>-<mode>-solve-all*.json` per provider/mode in `--results-dir` and computes the rollup, phase, and per-task tables. No numbers in the generated report are hand-written.
-3. **Curated analysis.** The cross-vendor, per-task, and failure-mode documents were written from the raw report plus the per-task output tails in the result JSONs, restricting the headline comparison to the 13 tasks that pass on all three providers in both cold and warm modes.
+1. **Cold-gold provider runs.** `ts/src/bench.ts` ran solver-independent gold-patch checks for Vercel, Modal, and Daytona across `data/swesmith_v4_smoke100.jsonl`, with focused reruns for repaired failure clusters.
+2. **Evidence aggregation.** The regenerated reports scan local ignored `results/ts-<provider>-cold-gold*.json` files and select the newest passing result for each provider/task. If no passing result exists, they select the newest cold-gold result.
+3. **Curated analysis.** The cross-vendor, per-task, and failure-mode documents summarize the full 100-task comparable set and call out that the timing view is stitched from full and focused reruns.
 
 The `Updated:` date in each curated report reflects when the analysis was last revised, not when the benchmark runs executed.
 

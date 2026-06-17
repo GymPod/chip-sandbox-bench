@@ -1,36 +1,115 @@
 # Per-Task Comparison
 
-Updated: 2026-06-05
+Updated: 2026-06-17
 
-This table compares the current 20-task SWE-Smith evidence set across Vercel, Modal, and Daytona in cold and warm modes.
+This table compares the current 100-task SWE-Smith cold-gold evidence set across Vercel, Modal, and Daytona.
 
-task | vercel cold | vercel warm | modal cold | modal warm | daytona cold | daytona warm
---- | --- | --- | --- | --- | --- | ---
-adrienverge__yamllint.8513d9b9.combine_file__26dq3p0r | pass 38.3s | pass 40.0s | pass 45.4s | pass 47.9s | pass 51.8s | pass 36.2s
-agronholm__typeguard.b6a7e438.func_basic__x36wmlww | pass 33.7s | pass 39.2s | pass 40.5s | pass 31.8s | pass 39.1s | pass 25.8s
-amueller__word_cloud.ec24191c.func_basic__b5q81acm | fail 42.5s | fail 49.7s | pass 46.4s | pass 38.1s | pass 29.3s | pass 23.9s
-andialbrecht__sqlparse.e57923b3.lm_rewrite__v1mce7cy | pass 28.9s | pass 28.2s | pass 62.2s | pass 44.7s | pass 30.7s | pass 22.4s
-benoitc__gunicorn.bacbf8aa.func_basic__460nzix1 | pass 29.1s | pass 29.2s | pass 38.9s | pass 38.7s | pass 24.9s | pass 20.6s
-bottlepy__bottle.a8dfef30.func_basic__a0p07t6t | pass 31.0s | pass 37.6s | pass 31.0s | pass 38.9s | pass 31.6s | pass 19.4s
-cantools__cantools.0c6a7871.combine_file__2yrjny26 | pass 114.3s | pass 114.6s | pass 52.3s | pass 39.6s | pass 31.3s | pass 28.4s
-cantools__cantools.0c6a7871.func_basic__d9efqrpd | pass 111.8s | pass 120.5s | pass 46.1s | pass 49.0s | pass 22.7s | pass 25.6s
-cantools__cantools.0c6a7871.func_pm_ctrl_invert_if__guvo4gx7 | pass 118.7s | pass 114.5s | pass 47.1s | pass 46.2s | pass 33.7s | pass 30.7s
-cknd__stackprinter.219fcc52.combine_file__gymp2mmm | pass 28.6s | pass 25.9s | pass 39.5s | pass 39.4s | pass 30.3s | pass 42.5s
-conan-io__conan.86f29e13.combine_file__7tlw062n | pass 33.1s | pass 31.4s | pass 48.5s | pass 49.5s | pass 27.4s | pass 24.6s
-conan-io__conan.86f29e13.pr_11412 | fail 35.1s | fail 33.6s | fail 105.7s | fail 102.4s | pass 76.7s | pass 61.0s
-conan-io__conan.86f29e13.pr_15965 | fail 32.2s | fail 31.1s | pass 42.0s | pass 35.2s | pass 69.4s | pass 32.0s
-dask__dask.5f61e423.combine_module__dkp16syb | fail 134.2s | fail 142.0s | pass 179.7s | pass 136.7s | pass 105.2s | pass 109.2s
-davidhalter__parso.338a5760.func_basic__ru17a9em | pass 38.3s | pass 36.2s | pass 39.5s | pass 33.8s | pass 22.1s | pass 33.8s
-dbader__schedule.82a43db1.lm_rewrite__rasm7146 | pass 26.3s | pass 26.3s | pass 22.1s | pass 29.4s | pass 19.2s | pass 16.2s
-encode__starlette.db5063c2.combine_file__hrjivx2s | fail 32.1s | fail 29.7s | fail 31.6s | fail 52.9s | pass 32.1s | pass 41.5s
-encode__starlette.db5063c2.func_basic__vehyiaux | fail 32.3s | fail 31.8s | fail 41.7s | fail 43.4s | pass 30.7s | pass 33.5s
-facebookresearch__fvcore.a491d5b9.lm_rewrite__yldgp998 | fail 26.7s | fail 34.9s | pass 38.9s | pass 36.3s | fail 36.0s | fail 47.5s
-facelessuser__soupsieve.a8080d97.func_basic__32q3kq07 | pass 27.4s | pass 27.1s | pass 46.3s | pass 34.4s | pass 21.1s | pass 23.6s
+idx | task | repo | vercel | modal | daytona
+---: | --- | --- | --- | --- | ---
+0 | `yamllint.8513d9b9.combine_file__26dq3p0r` | `adrienverge__yamllint.8513d9b9` | pass 117.4s | pass 179.7s | pass 14.5s
+1 | `typeguard.b6a7e438.func_basic__x36wmlww` | `agronholm__typeguard.b6a7e438` | pass 122.8s | pass 152.7s | pass 345.7s
+2 | `word_cloud.ec24191c.func_basic__b5q81acm` | `amueller__word_cloud.ec24191c` | pass 124.2s | pass 182.1s | pass 402.6s
+3 | `sqlparse.e57923b3.lm_rewrite__v1mce7cy` | `andialbrecht__sqlparse.e57923b3` | pass 107.8s | pass 151.9s | pass 186.0s
+4 | `gunicorn.bacbf8aa.func_basic__460nzix1` | `benoitc__gunicorn.bacbf8aa` | pass 107.8s | pass 141.6s | pass 142.0s
+5 | `bottle.a8dfef30.func_basic__a0p07t6t` | `bottlepy__bottle.a8dfef30` | pass 109.0s | pass 241.5s | pass 331.4s
+6 | `cantools.0c6a7871.combine_file__2yrjny26` | `cantools__cantools.0c6a7871` | pass 163.4s | pass 199.2s | pass 216.4s
+7 | `cantools.0c6a7871.func_basic__d9efqrpd` | `cantools__cantools.0c6a7871` | pass 169.5s | pass 185.9s | pass 168.8s
+8 | `cantools.0c6a7871.func_pm_ctrl_invert_if__guvo4gx7` | `cantools__cantools.0c6a7871` | pass 133.9s | pass 137.8s | pass 163.1s
+9 | `stackprinter.219fcc52.combine_file__gymp2mmm` | `cknd__stackprinter.219fcc52` | pass 110.6s | pass 179.5s | pass 174.1s
+10 | `conan.86f29e13.combine_file__7tlw062n` | `conan-io__conan.86f29e13` | pass 116.1s | pass 177.9s | pass 209.2s
+11 | `conan.86f29e13.pr_11412` | `conan-io__conan.86f29e13` | pass 130.5s | pass 235.5s | pass 187.5s
+12 | `conan.86f29e13.pr_15965` | `conan-io__conan.86f29e13` | pass 107.0s | pass 135.3s | pass 217.2s
+13 | `dask.5f61e423.combine_module__dkp16syb` | `dask__dask.5f61e423` | pass 225.2s | pass 266.7s | pass 309.4s
+14 | `parso.338a5760.func_basic__ru17a9em` | `davidhalter__parso.338a5760` | pass 157.4s | pass 169.0s | pass 247.0s
+15 | `schedule.82a43db1.lm_rewrite__rasm7146` | `dbader__schedule.82a43db1` | pass 130.1s | pass 136.9s | pass 206.7s
+16 | `starlette.db5063c2.combine_file__hrjivx2s` | `encode__starlette.db5063c2` | pass 138.7s | pass 128.9s | pass 262.6s
+17 | `starlette.db5063c2.func_basic__vehyiaux` | `encode__starlette.db5063c2` | pass 115.6s | pass 136.2s | pass 286.7s
+18 | `fvcore.a491d5b9.lm_rewrite__yldgp998` | `facebookresearch__fvcore.a491d5b9` | pass 166.8s | pass 163.1s | pass 33.9s
+19 | `soupsieve.a8080d97.func_basic__32q3kq07` | `facelessuser__soupsieve.a8080d97` | pass 104.0s | pass 169.3s | pass 233.4s
+20 | `pyquery.811cd048.func_basic__ze33rjgg` | `gawel__pyquery.811cd048` | pass 106.2s | pass 156.6s | pass 16.8s
+21 | `moto.694ce1f4.pr_5370` | `getmoto__moto.694ce1f4` | pass 131.4s | pass 156.4s | pass 203.4s
+22 | `nikola.0f4c230e.func_pm_op_change__qsozv4it` | `getnikola__nikola.0f4c230e` | pass 193.2s | pass 258.9s | pass 586.2s
+23 | `graphene.82903263.func_basic__pb3kdg4w` | `graphql-python__graphene.82903263` | pass 124.0s | pass 153.4s | pass 241.8s
+24 | `isodate.17cb25eb.combine_file__52lz2sm6` | `gweis__isodate.17cb25eb` | pass 143.8s | pass 166.9s | pass 190.0s
+25 | `monkeytype.70c3acf6.pr_17` | `instagram__monkeytype.70c3acf6` | pass 108.9s | pass 175.5s | pass 281.8s
+26 | `dvc.1d6ea681.pr_8118` | `iterative__dvc.1d6ea681` | pass 188.5s | pass 230.7s | pass 270.0s
+27 | `tenacity.0d40e76f.combine_file__oicq97rw` | `jd__tenacity.0d40e76f` | pass 116.2s | pass 140.5s | pass 188.2s
+28 | `pdfplumber.02ff4313.func_pm_ctrl_invert_if__2uc4z08w` | `jsvine__pdfplumber.02ff4313` | pass 164.2s | pass 198.9s | pass 211.7s
+29 | `pypika.1c9646f0.func_basic__36ji4acq` | `kayak__pypika.1c9646f0` | pass 115.2s | pass 163.7s | pass 185.6s
+30 | `dominate.9082227e.combine_file__4oiguynb` | `knio__dominate.9082227e` | pass 128.5s | pass 100.7s | pass 209.0s
+31 | `mistune.bf54ef67.combine_file__92j5cljm` | `lepture__mistune.bf54ef67` | pass 129.7s | pass 156.1s | pass 167.4s
+32 | `textdistance.c3aca916.combine_file__q3rnjr33` | `life4__textdistance.c3aca916` | pass 120.4s | pass 177.3s | pass 192.3s
+33 | `python-qrcode.456b01d4.func_basic__e3jyxm8o` | `lincolnloop__python-qrcode.456b01d4` | pass 105.3s | pass 115.2s | pass 178.9s
+34 | `glom.fb3c4e76.func_basic__adwelq9m` | `mahmoud__glom.fb3c4e76` | pass 107.7s | pass 115.3s | pass 206.4s
+35 | `apispec.8b421526.combine_module__nei0tk81` | `marshmallow-code__apispec.8b421526` | pass 98.9s | pass 133.0s | pass 159.9s
+36 | `marshmallow.9716fc62.func_basic__yuvfp4u4` | `marshmallow-code__marshmallow.9716fc62` | pass 102.6s | pass 151.5s | pass 190.9s
+37 | `webargs.dbde72fe.func_pm_ctrl_shuffle__awp0pgqm` | `marshmallow-code__webargs.dbde72fe` | pass 110.8s | pass 110.5s | pass 191.1s
+38 | `langdetect.a1598f1a.func_basic__9e17fhas` | `mimino666__langdetect.a1598f1a` | pass 102.1s | pass 141.0s | pass 196.2s
+39 | `bleach.73871d76.func_basic__sjpd1sls` | `mozilla__bleach.73871d76` | pass 133.2s | pass 161.0s | pass 188.9s
+40 | `tinydb.10644a0e.func_basic__ovcdvpm7` | `msiemens__tinydb.10644a0e` | pass 99.9s | pass 106.9s | pass 227.0s
+41 | `oauthlib.1fd52536.func_basic__m3uxnqi6` | `oauthlib__oauthlib.1fd52536` | pass 99.9s | pass 139.5s | pass 196.0s
+42 | `click.fde47b4b.combine_file__0p8nh9y7` | `pallets__click.fde47b4b` | pass 128.6s | pass 137.9s | pass 206.1s
+43 | `click.fde47b4b.func_basic__d37d317c` | `pallets__click.fde47b4b` | pass 115.7s | pass 248.9s | pass 161.7s
+44 | `jinja.ada0a9a6.func_basic__lz1b7mnp` | `pallets__jinja.ada0a9a6` | pass 110.4s | pass 123.1s | pass 46.1s
+45 | `jinja.ada0a9a6.lm_rewrite__2njahj0g` | `pallets__jinja.ada0a9a6` | pass 103.8s | pass 123.9s | pass 189.8s
+46 | `pandas.95280573.func_pm_class_rm_funcs__6vchaiys` | `pandas-dev__pandas.95280573` | pass 268.9s | pass 300.0s | pass 29.6s
+47 | `pandas.95280573.func_pm_ctrl_invert_if__iiokxmfe` | `pandas-dev__pandas.95280573` | pass 382.1s | pass 363.5s | pass 236.2s
+48 | `pandas.95280573.func_pm_remove_assign__lbg8rvqt` | `pandas-dev__pandas.95280573` | pass 267.9s | pass 406.8s | pass 197.6s
+49 | `pandas.95280573.func_pm_remove_cond__jfye7a5m` | `pandas-dev__pandas.95280573` | pass 322.2s | pass 318.3s | pass 288.9s
+50 | `pandas.95280573.func_pm_remove_wrapper__qnvpskp4` | `pandas-dev__pandas.95280573` | pass 392.9s | pass 458.2s | pass 270.4s
+51 | `paramiko.23f92003.func_basic__l03s9o4u` | `paramiko__paramiko.23f92003` | pass 187.6s | pass 199.4s | pass 274.8s
+52 | `pdfminer.six.1a8bd2f7.func_basic__c9uy8eph` | `pdfminer__pdfminer.six` | pass 101.2s | pass 168.9s | pass 178.2s
+53 | `pdfminer.six.1a8bd2f7.func_pm_remove_cond__uke8j24i` | `pdfminer__pdfminer.six` | pass 128.3s | pass 123.1s | pass 197.3s
+54 | `monai.a09c1f08.pr_6662` | `project-monai__monai.a09c1f08` | pass 331.7s | pass 435.1s | pass 23.4s
+55 | `pyasn1.0f07d724.func_basic__f0su3xd4` | `pyasn1__pyasn1.0f07d724` | pass 136.4s | pass 141.7s | pass 184.1s
+56 | `pyasn1.0f07d724.lm_rewrite__knsa989d` | `pyasn1__pyasn1.0f07d724` | pass 97.3s | pass 173.4s | pass 151.3s
+57 | `pydantic.acb0f10f.combine_module__bc4i263m` | `pydantic__pydantic.acb0f10f` | pass 123.3s | pass 160.1s | pass 67.5s
+58 | `pydantic.acb0f10f.pr_6405` | `pydantic__pydantic.acb0f10f` | pass 154.9s | pass 190.6s | pass 49.3s
+59 | `patsy.a5d16484.func_pm_ctrl_invert_if__une2tj06` | `pydata__patsy.a5d16484` | pass 173.8s | pass 167.6s | pass 253.4s
+60 | `pydicom.7d361b3d.combine_file__z6q8lfst` | `pydicom__pydicom.7d361b3d` | pass 125.5s | pass 192.7s | pass 224.8s
+61 | `pydicom.7d361b3d.func_basic__crni4pcd` | `pydicom__pydicom.7d361b3d` | pass 128.8s | pass 147.1s | pass 241.5s
+62 | `pydicom.7d361b3d.lm_rewrite__5lcjzgj0` | `pydicom__pydicom.7d361b3d` | pass 158.8s | pass 164.4s | pass 236.6s
+63 | `pygments.27649ebb.combine_file__xs063jk5` | `pygments__pygments.27649ebb` | pass 141.0s | pass 124.7s | pass 183.9s
+64 | `pygments.27649ebb.func_pm_class_rm_base__fyh7psx1` | `pygments__pygments.27649ebb` | pass 126.4s | pass 126.5s | pass 235.4s
+65 | `pygments.27649ebb.lm_rewrite__k8ap6agg` | `pygments__pygments.27649ebb` | pass 136.5s | pass 189.0s | pass 186.7s
+66 | `astroid.b114f6b5.func_basic__8cdl1lj3` | `pylint-dev__astroid.b114f6b5` | pass 144.8s | pass 169.5s | pass 229.9s
+67 | `astroid.b114f6b5.func_basic__v85bo3df` | `pylint-dev__astroid.b114f6b5` | pass 157.0s | pass 172.5s | pass 210.7s
+68 | `astroid.b114f6b5.pr_2000` | `pylint-dev__astroid.b114f6b5` | pass 145.8s | pass 171.5s | pass 213.1s
+69 | `h11.bed0dd4a.func_basic__rullcy0k` | `python-hyper__h11.bed0dd4a` | pass 99.7s | pass 124.6s | pass 170.3s
+70 | `python-docx.0cf6d71f.combine_file__alqpybf2` | `python-openxml__python-docx.0cf6d71f` | pass 148.3s | pass 158.2s | pass 164.6s
+71 | `python-docx.0cf6d71f.func_basic__8a8ib80u` | `python-openxml__python-docx.0cf6d71f` | pass 117.6s | pass 181.7s | pass 182.0s
+72 | `python-docx.0cf6d71f.func_basic__tvp7ihho` | `python-openxml__python-docx.0cf6d71f` | pass 119.7s | pass 177.1s | pass 179.7s
+73 | `trio.cfbbe2c1.combine_file__ims7s5py` | `python-trio__trio.cfbbe2c1` | pass 151.5s | pass 189.9s | pass 208.2s
+74 | `trio.cfbbe2c1.func_pm_ctrl_invert_if__jgab1l18` | `python-trio__trio.cfbbe2c1` | pass 118.0s | pass 143.7s | pass 249.6s
+75 | `safety.7654596b.func_pm_remove_assign__x549pctj` | `pyupio__safety.7654596b` | pass 126.4s | pass 144.4s | pass 12.1s
+76 | `parse.30da9e4f.func_pm_remove_cond__k4df18dk` | `r1chardj0n3s__parse.30da9e4f` | pass 104.0s | pass 121.3s | pass 198.0s
+77 | `radon.54b88e58.func_basic__j3ky3sut` | `rubik__radon.54b88e58` | pass 93.1s | pass 141.0s | pass 158.1s
+78 | `python-pptx.278b47b1.combine_module__pgpyms1p` | `scanny__python-pptx.278b47b1` | pass 147.9s | pass 176.0s | pass 203.1s
+79 | `python-pptx.278b47b1.func_basic__czmi0nii` | `scanny__python-pptx.278b47b1` | pass 153.5s | pass 123.6s | pass 185.2s
+80 | `python-pptx.278b47b1.func_basic__qaocuxju` | `scanny__python-pptx.278b47b1` | pass 131.2s | pass 163.1s | pass 188.4s
+81 | `python-pptx.278b47b1.func_pm_ctrl_shuffle__vba0ufyh` | `scanny__python-pptx.278b47b1` | pass 128.2s | pass 155.6s | pass 204.6s
+82 | `deepdiff.ed252022.combine_file__i0bmiysp` | `seperman__deepdiff.ed252022` | pass 134.1s | pass 191.9s | pass 174.9s
+83 | `deepdiff.ed252022.func_pm_op_change_const__wmy6zc4f` | `seperman__deepdiff.ed252022` | pass 143.9s | pass 182.9s | pass 171.4s
+84 | `deepdiff.ed252022.lm_rewrite__q9nvhqqv` | `seperman__deepdiff.ed252022` | pass 155.6s | pass 145.7s | pass 178.3s
+85 | `sqlfluff.50a1c4b6.combine_file__rx5uafgg` | `sqlfluff__sqlfluff.50a1c4b6` | pass 137.2s | pass 167.4s | pass 189.8s
+86 | `sqlfluff.50a1c4b6.func_basic__ev9t5fab` | `sqlfluff__sqlfluff.50a1c4b6` | pass 111.2s | pass 123.9s | pass 188.3s
+87 | `sqlfluff.50a1c4b6.func_pm_op_change__n4yed6x6` | `sqlfluff__sqlfluff.50a1c4b6` | pass 102.5s | pass 28.6s | pass 13.5s
+88 | `dspy.651a4c71.func_pm_ctrl_shuffle__4czprlhs` | `stanfordnlp__dspy.651a4c71` | pass 207.8s | pass 136.0s | pass 92.0s
+89 | `dspy.651a4c71.lm_rewrite__sq8htfc7` | `stanfordnlp__dspy.651a4c71` | pass 215.5s | pass 409.5s | pass 96.5s
+90 | `sunpy.f8edfd5c.combine_module__qmglve7d` | `sunpy__sunpy.f8edfd5c` | pass 170.5s | pass 154.0s | pass 229.6s
+91 | `sunpy.f8edfd5c.func_pm_remove_assign__9ihe6yto` | `sunpy__sunpy.f8edfd5c` | pass 141.5s | pass 233.2s | pass 168.6s
+92 | `funcy.207a7810.func_basic__i18x9tdn` | `suor__funcy.207a7810` | pass 98.2s | pass 131.1s | pass 173.5s
+93 | `gpxpy.09fc46b3.func_basic__co94ybyl` | `tkrajina__gpxpy.09fc46b3` | pass 140.6s | pass 122.5s | pass 171.5s
+94 | `gpxpy.09fc46b3.func_pm_remove_assign__rfjumbkf` | `tkrajina__gpxpy.09fc46b3` | pass 126.6s | pass 115.8s | pass 134.8s
+95 | `sqlglot.036601ba.func_pm_ctrl_shuffle__upfxvtsc` | `tobymao__sqlglot.036601ba` | pass 116.8s | pass 118.2s | pass 202.7s
+96 | `sqlglot.036601ba.lm_rewrite__bz5prskr` | `tobymao__sqlglot.036601ba` | pass 138.9s | pass 114.2s | pass 170.4s
+97 | `tornado.d5ac65c1.func_pm_remove_wrapper__5f0gecbm` | `tornadoweb__tornado.d5ac65c1` | pass 152.0s | pass 290.9s | pass 25.6s
+98 | `tweepy.91a41c6e.func_basic__41m363f2` | `tweepy__tweepy.91a41c6e` | pass 115.3s | pass 129.8s | pass 177.3s
+99 | `grafanalib.5c3b17ed.func_pm_remove_loop__mk5qowxt` | `weaveworks__grafanalib.5c3b17ed` | pass 128.6s | pass 23.4s | pass 158.2s
 
 ## Reading The Table
 
-- Times are measured wall-clock task elapsed seconds from each provider result JSON.
-- A passing task means the solver exited cleanly and the verifier accepted the patched tree.
-- Failures are not normalized away here. For the apples-to-apples comparison, use [cross-vendor-comparison.md](cross-vendor-comparison.md).
-- Detailed failure notes are in [per-task-failure-audit.md](per-task-failure-audit.md).
-- Provider-level interpretation is in [per-provider-report.md](per-provider-report.md).
+- Times are measured wall-clock task elapsed seconds from the selected provider result JSON.
+- The selected result is the newest passing cold-gold artifact for that provider/task.
+- All rows pass on all three providers in the current evidence set.
+- This is a stitched evidence table from full and focused reruns; it is not a single synchronized matrix wall-clock run.

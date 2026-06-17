@@ -1,39 +1,29 @@
 # Sandbox Provider Report
 
-Updated: 2026-06-05
+Updated: 2026-06-17
 
-This report is split into focused documents:
+This report set now tracks the 100-task SWE-Smith cold-gold runnability comparison across Vercel, Modal, and Daytona.
 
-- [Cross-vendor comparison](cross-vendor-comparison.md): the apples-to-apples provider comparison, centered on the 13 tasks that pass on Vercel, Modal, and Daytona in both cold and warm modes.
-- [Per-task comparison](per-task-comparison.md): task-by-task status and timing for the current 20-task SWE-Smith evidence set.
-- [Per-task failure audit](per-task-failure-audit.md): deeper notes on each excluded or failing task.
-- [Per-provider report](per-provider-report.md): provider-by-provider strengths, failure signatures, and trade-offs.
-- [Failure modes and trade-offs](failure-modes-tradeoffs.md): environment gaps, provider-specific failures, and interpretation notes.
+## Summary
 
-## Evidence Set
+All three providers have passing evidence for all 100 tasks in `data/swesmith_v4_smoke100.jsonl`.
 
-The focused comparison uses the first 20 tasks from `data/swesmith_v4_smoke100.jsonl`.
+provider | passed | observed task seconds | mean seconds | median seconds | p95 seconds | estimated provider cost
+--- | ---: | ---: | ---: | ---: | ---: | ---:
+vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
+modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
+daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 
-Vercel uses the latest rerun after fallback verifier fixes:
+## Report Index
 
-- `results/ts-vercel-cold-solve-all-gold-task20-vercel-current-rerun.json`
-- `results/ts-vercel-warm-solve-all-gold-task20-vercel-current-rerun.json`
+- [Cross-vendor comparison](cross-vendor-comparison.md): head-to-head rollup for the full 100-task comparable set.
+- [Per-task comparison](per-task-comparison.md): every task across Vercel, Modal, and Daytona.
+- [Per-provider report](per-provider-report.md): provider-by-provider execution notes and evidence files.
+- [Failure modes and trade-offs](failure-modes-tradeoffs.md): resolved clusters and remaining comparison caveats.
+- [Per-task failure audit](per-task-failure-audit.md): current no-failure state plus historical cluster summary.
 
-Modal and Daytona use the latest complete task20 env-fix artifacts:
+## Notes
 
-- `results/ts-modal-cold-solve-all-gold-task20-envfix.json`
-- `results/ts-modal-warm-solve-all-gold-task20-envfix.json`
-- `results/ts-daytona-cold-solve-all-gold-task20-envfix.json`
-- `results/ts-daytona-warm-solve-all-gold-task20-envfix.json`
-
-## Headline
-
-On the 13-task all-provider-passing subset, Daytona is fastest and lowest estimated provider cost, Modal is next, and Vercel is slowest for this SWE-Smith fallback-runtime workload.
-
-provider | cold seconds | warm seconds | cold cost | warm cost
---- | ---: | ---: | ---: | ---:
-vercel | 659.4 | 670.8 | $0.0624 | $0.0635
-modal | 559.3 | 523.5 | $0.0371 | $0.0347
-daytona | 385.8 | 349.8 | $0.0178 | $0.0161
-
-The broader 20-task rollup is useful for coverage, but it mixes genuine solver/test failures with provider fidelity gaps. Use the cross-vendor subset as the main price/performance comparison.
+- The comparison is solver-independent cold-gold runnability evidence.
+- The timing rollups are stitched from full and focused reruns. Use a fresh synchronized matrix before making strict wall-clock claims.
+- Vercel uses manifest-driven fallback environment reconstruction for SWE-Smith tasks; Modal and Daytona use native task Docker images.

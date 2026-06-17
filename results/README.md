@@ -1,6 +1,6 @@
 # Results
 
-Checked-in benchmark artifacts and investigation probes.
+Checked-in benchmark metadata and ignored local benchmark artifacts.
 
 ## Naming
 
@@ -8,27 +8,26 @@ Common result names use:
 
 ```text
 ts-<provider>-<mode>-solve-all-<suffix>.json
+ts-<provider>-cold-gold-<suffix>.json
 solve-price-matrix-<suffix>.json
 ```
-
-Examples:
-
-- `ts-vercel-cold-solve-all-gold-task20-vercel-current-rerun.json`
-- `ts-modal-warm-solve-all-gold-task20-envfix.json`
-- `solve-price-matrix-gold-task20-vercel-current-rerun.json`
 
 Provider files contain per-task results. Matrix files summarize a set of provider/mode runs.
 
 ## Current Report Inputs
 
-The curated reports use these files:
+The curated reports now use cold-gold SWE-Smith evidence for all 100 tasks in `data/swesmith_v4_smoke100.jsonl`.
 
-- `ts-vercel-cold-solve-all-gold-task20-vercel-current-rerun.json`
-- `ts-vercel-warm-solve-all-gold-task20-vercel-current-rerun.json`
-- `ts-modal-cold-solve-all-gold-task20-envfix.json`
-- `ts-modal-warm-solve-all-gold-task20-envfix.json`
-- `ts-daytona-cold-solve-all-gold-task20-envfix.json`
-- `ts-daytona-warm-solve-all-gold-task20-envfix.json`
+Evidence selection rule:
+
+- Scan local ignored `results/ts-<provider>-cold-gold*.json` files.
+- For each provider/task, select the newest passing result.
+- If no passing result exists, select the newest cold-gold result.
+
+The current report generation found 100/100 passing evidence for Vercel, Modal, and Daytona. The latest task-87 SQLFluff confirmation files are:
+
+- `ts-daytona-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json`
+- `ts-modal-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json`
 
 See `../reports/terminalbench_provider_report.md` for the report index.
 
@@ -37,6 +36,7 @@ See `../reports/terminalbench_provider_report.md` for the report index.
 - `prewarm-*`: warm artifact creation or inspection output.
 - `*-verifier-*`: verifier-only checks. Daytona verifier artifacts live under `verifier/`.
 - `*-solve-*`: solver-enabled runs.
+- `*-cold-gold-*`: solver-independent gold-patch runnability checks.
 - `*-env-*`, `*-probe*`, `*-trace*`: provider or task-environment investigations.
 
 Result JSON may include output tails from task logs. Do not store secrets in task output or forwarded environment values.
