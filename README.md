@@ -11,6 +11,7 @@ The project currently compares Vercel, Modal, and Daytona on TerminalBench and S
 - `ts/`: Bun/TypeScript runner, matrix runner, prewarm helper, and report generator.
 - `results/`: ignored local benchmark artifacts plus checked-in metadata.
 - `reports/`: curated markdown analysis split into cross-vendor, per-task, and failure-mode views.
+- `docs/providers/`: provider configuration notes for Vercel, Modal, and Daytona.
 - `scripts/`: dataset extraction and OpenRouter solver helpers.
 
 ## Current Findings
@@ -94,6 +95,8 @@ The curated reports in `reports/` were produced in three steps:
 The `Updated:` date in each curated report reflects when the analysis was last revised, not when the benchmark runs executed.
 
 ## Provider Notes
+
+Provider-specific setup details live in [docs/providers/](docs/providers/).
 
 - Vercel uses `@vercel/sandbox`. Configure `VERCEL_API_KEY`, `VERCEL_ACCESS_TOKEN`, or `VERCEL_TOKEN`, plus `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID` unless OIDC credentials are available.
 - Modal uses the Modal SDK credentials supported by `modal`.
