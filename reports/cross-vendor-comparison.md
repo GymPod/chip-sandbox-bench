@@ -26,6 +26,7 @@ daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 - Daytona has the lowest estimated provider cost in this stitched newest-passing evidence set.
 - Modal sits between Vercel and Daytona on estimated provider cost in this evidence set.
 - Because this table stitches full and focused reruns, use it for runnability and rough head-to-head shape; run a fresh synchronized matrix before making strict speed claims.
+- Treat estimated provider cost as directional only. See [cost estimate caveats](cost-estimate-caveats.md).
 
 ## Mean Phase Seconds
 

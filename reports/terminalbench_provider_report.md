@@ -21,9 +21,11 @@ daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 - [Per-provider report](per-provider-report.md): provider-by-provider execution notes and evidence files.
 - [Failure modes and trade-offs](failure-modes-tradeoffs.md): resolved clusters and remaining comparison caveats.
 - [Per-task failure audit](per-task-failure-audit.md): current no-failure state plus historical cluster summary.
+- [Cost estimate caveats](cost-estimate-caveats.md): reliability audit for the dollar estimates and underlying result data.
 
 ## Notes
 
 - The comparison is solver-independent cold-gold runnability evidence.
 - The timing rollups are stitched from full and focused reruns. Use a fresh synchronized matrix before making strict wall-clock claims.
+- The dollar figures are harness estimates, not reconciled provider billing data. See [cost estimate caveats](cost-estimate-caveats.md).
 - Vercel uses manifest-driven fallback environment reconstruction for SWE-Smith tasks; Modal and Daytona use native task Docker images.
