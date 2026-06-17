@@ -17,7 +17,10 @@
       "memoryGb": 8,
       "diskGb": 20
     },
-    "notes": "CPU torch wheel index keeps fallback runtimes within disk/time budgets (PyPI CUDA torch as fallback); tabulate is pinned because 0.10 changes _model_stats_table indentation."
+    "notes": "CPU torch wheel index keeps fallback runtimes within disk/time budgets (PyPI CUDA torch as fallback); tabulate is pinned because 0.10 changes _model_stats_table indentation. Verifier stubs the fvcore/iopath facebook.com HTTP download used by TestHTTPIO because live network access can raise urllib errors on sandbox providers.",
+    "pre_verify_cmds": [
+      "for PYTHON in /opt/testbed-venv/bin/python /opt/miniconda3/envs/testbed/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n    cat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import os\n    import iopath.common.file_io as fio\n    _orig_download = fio.download\n    def _bench_download(url, dir, *, filename=None, progress=True):\n        if url == 'https://www.facebook.com':\n            os.makedirs(dir, exist_ok=True)\n            if filename is None:\n                filename = 'facebook.com'\n            path = os.path.join(dir, filename)\n            if not os.path.exists(path):\n                with open(path, 'w', encoding='utf-8') as f:\n                    f.write('<html><body>facebook</body></html>')\n            return path\n        return _orig_download(url, dir, filename=filename, progress=progress)\n    fio.download = _bench_download\nexcept Exception:\n    pass\nPY\n    chmod a+r \"$SITE_DIR/sitecustomize.py\"\n  fi\ndone"
+    ]
   },
   "Project-MONAI__MONAI.a09c1f08": {
     "pre_install_pip": [
@@ -27,20 +30,26 @@
       "memoryGb": 8,
       "diskGb": 20
     },
-    "notes": "requirements-dev.txt pulls torch; preinstall the CPU wheel so pip resolution does not download CUDA builds."
+    "notes": "requirements-dev.txt pulls torch; preinstall the CPU wheel so pip resolution does not download CUDA builds. Direct task images can miss pytest in the conda testbed env, so pre-verify restores pytest/parameterized there too.",
+    "pre_verify_cmds": [
+      "for PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'pytest<9' parameterized || {\n      SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n      VERIFIER_SITE=$(/opt/verifier-venv/bin/python -c 'import site; print(site.getsitepackages()[0])')\n      echo \"$VERIFIER_SITE\" > \"$SITE_DIR/bench-verifier-pytest.pth\"\n    }\n  fi\ndone"
+    ]
   },
   "pandas-dev__pandas.95280573": {
     "pre_install_pip": [
-      "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
+      "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy<2 versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
     ],
     "resources": {
       "cpu": 4,
       "memoryGb": 8,
       "diskGb": 20
     },
-    "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml. Arrow tests require pre-pyarrow-20 behavior for skew/decimal semantics.",
+    "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml. NumPy must stay <2 for this pandas C-API era, and Arrow tests require pre-pyarrow-20 behavior for skew/decimal semantics.",
     "extra_pip": [
       "pyarrow==19.0.1"
+    ],
+    "pre_verify_cmds": [
+      "for PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'meson-python>=0.13.1' 'meson>=1.2.1' ninja 'cython>=3.1' 'numpy<2' versioneer[toml] python-dateutil pytz hypothesis pytest-xdist 'pyarrow==19.0.1' || echo \"bench-pre-verify-cmd-failed: pandas build deps for $PYTHON\"\n  fi\ndone"
     ]
   },
   "dask__dask.5f61e423": {
@@ -119,9 +128,9 @@
       "lxml<5",
       "requests"
     ],
-    "notes": "conftest.py imports webtest.http, legacy HTML serialization expects lxml 4.x, and unicode URL scraping tests use requests. Vercel fallback stubs requests for ru.wikipedia.org because the PASS_TO_PASS test depends on live Wikipedia returning #pt-login=\u0412\u043e\u0439\u0442\u0438, which now often 403s.",
+    "notes": "conftest.py imports webtest.http, legacy HTML serialization expects lxml 4.x, and unicode URL scraping tests use requests. The verifier stubs requests for ru.wikipedia.org in both fallback and task-image envs because the PASS_TO_PASS test depends on live Wikipedia returning #pt-login=\u0412\u043e\u0439\u0442\u0438, which now often 403s.",
     "pre_verify_cmds": [
-      "SITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import requests\n    from requests import Response\n    _orig_get = requests.get\n    _orig_request = requests.request\n    def _wiki_response(url, *args, **kwargs):\n        if isinstance(url, str) and url.startswith('http://ru.wikipedia.org/wiki/'):\n            r = Response()\n            r.status_code = 200\n            r.url = url\n            r._content = '<html><body><div id=\\\"pt-login\\\">\u0412\u043e\u0439\u0442\u0438</div></body></html>'.encode('utf-8')\n            r.encoding = 'utf-8'\n            return r\n        return None\n    def get(url, *args, **kwargs):\n        return _wiki_response(url, *args, **kwargs) or _orig_get(url, *args, **kwargs)\n    def request(method, url, *args, **kwargs):\n        if str(method).lower() == 'get':\n            response = _wiki_response(url, *args, **kwargs)\n            if response is not None:\n                return response\n        return _orig_request(method, url, *args, **kwargs)\n    requests.get = get\n    requests.request = request\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+      "for PYTHON in /opt/testbed-venv/bin/python /opt/miniconda3/envs/testbed/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n    cat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import requests\n    from requests import Response\n    _orig_get = requests.get\n    _orig_request = requests.request\n    def _wiki_response(url, *args, **kwargs):\n        if isinstance(url, str) and url.startswith('http://ru.wikipedia.org/wiki/'):\n            r = Response()\n            r.status_code = 200\n            r.url = url\n            r._content = '<html><body><div id=\"pt-login\">\u0412\u043e\u0439\u0442\u0438</div></body></html>'.encode('utf-8')\n            r.encoding = 'utf-8'\n            return r\n        return None\n    def get(url, *args, **kwargs):\n        return _wiki_response(url, *args, **kwargs) or _orig_get(url, *args, **kwargs)\n    def request(method, url, *args, **kwargs):\n        if str(method).lower() == 'get':\n            response = _wiki_response(url, *args, **kwargs)\n            if response is not None:\n                return response\n        return _orig_request(method, url, *args, **kwargs)\n    requests.get = get\n    requests.request = request\nexcept Exception:\n    pass\nPY\n    chmod a+r \"$SITE_DIR/sitecustomize.py\"\n  fi\ndone"
     ]
   },
   "graphql-python__graphene.82903263": {
@@ -256,7 +265,10 @@
       "pyOpenSSL==25.0.0",
       "cryptography<45"
     ],
-    "notes": "Test-only deps from trio's test-requirements; pyOpenSSL/cryptography era-pinned because newer majors break the DTLS test context."
+    "notes": "Test-only deps from trio's test-requirements; pyOpenSSL/cryptography era-pinned because newer majors break the DTLS test context. Modal's network sandbox rejects a few local-address socket cases outside the SWE-Smith target, so direct-image verification excludes those provider-sensitive cases.",
+    "pre_verify_cmds": [
+      "if [ -f /tests/test.sh ]; then\n  sed -i 's#pytest --disable-warnings --color=no --tb=no --verbose#pytest --disable-warnings --color=no --tb=no --verbose -k \"not test_local_address_real and not test_SocketStream_basics and not test_send_recv_variants\"#' /tests/test.sh\nfi"
+    ]
   },
   "stanfordnlp__dspy.651a4c71": {
     "extra_pip": [
@@ -268,7 +280,7 @@
       "pydantic==2.10.6",
       "diskcache==5.6.3"
     ],
-    "notes": "DSPy tests match the repo lockfile era: litellm/openai are pinned and pydantic must stay <2.11 for JSONAdapter structured output model generation. The SWE-Smith mirror is missing tests/caching/example_cache/cache.db from upstream 651a4c7; verifier restores it and shims Module.save dependency-version lookup to honor the test patch target.",
+    "notes": "DSPy tests match the repo lockfile era: litellm/openai are pinned and pydantic must stay <2.11 for JSONAdapter structured output model generation. The SWE-Smith mirror is missing tests/caching/example_cache/cache.db from upstream 651a4c7; verifier restores it and shims Module.save dependency-version lookup to honor the test patch target. Direct task images can miss pytest and optional restored-test imports in the conda testbed env used by /tests/test.sh.",
     "pre_install_pip": [
       "mcp==1.6.0",
       "litellm[proxy]==1.63.7",
@@ -277,7 +289,7 @@
       "diskcache==5.6.3"
     ],
     "pre_verify_cmds": [
-      "mkdir -p /testbed/tests/caching/example_cache\npython - <<'PY'\nfrom pathlib import Path\nfrom urllib.request import urlopen\nurl = 'https://raw.githubusercontent.com/stanfordnlp/dspy/651a4c715ecc6c5e68b68d22172768f0b20f2eea/tests/caching/example_cache/cache.db'\nPath('/testbed/tests/caching/example_cache/cache.db').write_bytes(urlopen(url, timeout=30).read())\nPY\nSITE_DIR=$(/opt/testbed-venv/bin/python - <<'PY'\nimport site\nprint(site.getsitepackages()[0])\nPY\n)\ncat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import dspy.primitives.module as _dspy_module\n    import dspy.utils.saving as _dspy_saving\n    def _dynamic_get_dependency_versions():\n        return _dspy_saving.get_dependency_versions()\n    _dspy_module.get_dependency_versions = _dynamic_get_dependency_versions\nexcept Exception:\n    pass\nPY\nchmod a+r \"$SITE_DIR/sitecustomize.py\""
+      "mkdir -p /testbed/tests/caching/example_cache\npython - <<'PY'\nfrom pathlib import Path\nfrom urllib.request import urlopen\nurl = 'https://raw.githubusercontent.com/stanfordnlp/dspy/651a4c715ecc6c5e68b68d22172768f0b20f2eea/tests/caching/example_cache/cache.db'\nPath('/testbed/tests/caching/example_cache/cache.db').write_bytes(urlopen(url, timeout=30).read())\nPY\nfor PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'pytest<9' pillow datamodel-code-generator 'mcp==1.6.0' || {\n      SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n      VERIFIER_SITE=$(/opt/verifier-venv/bin/python -c 'import site; print(site.getsitepackages()[0])')\n      echo \"$VERIFIER_SITE\" > \"$SITE_DIR/bench-verifier-pytest.pth\"\n    }\n    SITE_DIR=$(\"$PYTHON\" -c 'import site; print(site.getsitepackages()[0])')\n    cat > \"$SITE_DIR/sitecustomize.py\" <<'PY'\ntry:\n    import dspy.primitives.module as _dspy_module\n    import dspy.utils.saving as _dspy_saving\n    def _dynamic_get_dependency_versions():\n        return _dspy_saving.get_dependency_versions()\n    _dspy_module.get_dependency_versions = _dynamic_get_dependency_versions\nexcept Exception:\n    pass\nPY\n    chmod a+r \"$SITE_DIR/sitecustomize.py\"\n  fi\ndone"
     ]
   },
   "jd__tenacity.0d40e76f": {
@@ -378,5 +390,11 @@
       "lxml<6"
     ],
     "notes": "WordPress import PASS_TO_PASS expects lxml.html.document_fromstring(b\"FOO\") to wrap body text in <p>; lxml 6.x emits bare body text, so reapply lxml<6 after install."
+  },
+  "tornadoweb__tornado.d5ac65c1": {
+    "pre_verify_cmds": [
+      "if [ -f /tests/test.sh ]; then\n  python - <<'PY'\nfrom pathlib import Path\npath = Path('/tests/test.sh')\ntext = path.read_text()\nneedle = 'source /opt/miniconda3/bin/activate; conda activate testbed; python -m tornado.test --verbose > /logs/test_output.log 2>&1'\nreplacement = '''source /opt/miniconda3/bin/activate; conda activate testbed; python - <<'BENCH_TORNADO'\nfrom pathlib import Path\npath = Path('/testbed/tornado/test/tcpclient_test.py')\ntext = path.read_text()\nold = '    def test_source_port_fail(self):\\\\n        \"\"\"Fail when trying to use source port 1.\"\"\"'\nnew = '    @unittest.skip(\"provider allows privileged source port 1\")\\\\n    def test_source_port_fail(self):\\\\n        \"\"\"Fail when trying to use source port 1.\"\"\"'\nif old in text and new not in text:\n    path.write_text(text.replace(old, new))\nBENCH_TORNADO\npython -m tornado.test --verbose > /logs/test_output.log 2>&1'''\nif needle in text:\n    path.write_text(text.replace(needle, replacement))\nPY\nfi"
+    ],
+    "notes": "Provider sandboxes may allow binding privileged source port 1, so pre-verify marks Tornado source_port_fail skipped after tests are restored; it is outside this task's graded FAIL_TO_PASS/PASS_TO_PASS set."
   }
 }

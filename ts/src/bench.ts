@@ -157,7 +157,7 @@ function systemPackageInstall(dnfPackages: string[]): string {
 
 function guardedShellLines(commands: string[] | undefined, label: string): string {
   return (commands ?? [])
-    .map((command) => `{ ${command} ; } || echo "bench-${label}-cmd-failed: ${command.replaceAll('"', '\\"')}"`)
+    .map((command, index) => `{ ${command} ; } || echo "bench-${label}-cmd-failed-${index + 1}"`)
     .join("\n");
 }
 
@@ -427,7 +427,8 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
   }
   const cpu = Math.max(args.cpu, taskEnv.resources?.cpu ?? 0);
   const memoryGb = Math.max(args.memoryGb, taskEnv.resources?.memoryGb ?? 0);
-  const diskGb = Math.max(args.diskGb, taskEnv.resources?.diskGb ?? 0);
+  const requestedDiskGb = Math.max(args.diskGb, taskEnv.resources?.diskGb ?? 0);
+  const diskGb = args.provider === "daytona" ? Math.min(requestedDiskGb, 10) : requestedDiskGb;
   try {
     const activeProvider = makeProvider(args.provider, {
       runtime: taskEnv.runtime ?? args.runtime,
@@ -616,7 +617,7 @@ async function main(): Promise<void> {
 async function runWithConcurrency(tasks: BenchTask[], args: BenchArgs): Promise<Record<string, unknown>[]> {
   const results: Record<string, unknown>[] = new Array(tasks.length);
   let nextIndex = 0;
-  const workerCount = Math.max(1, Math.min(args.concurrency, tasks.length));
+  const workerCount = effectiveWorkerCount(tasks, args);
   async function worker(): Promise<void> {
     while (true) {
       const index = nextIndex;
@@ -631,6 +632,14 @@ async function runWithConcurrency(tasks: BenchTask[], args: BenchArgs): Promise<
   }
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
   return results;
+}
+
+function effectiveWorkerCount(tasks: BenchTask[], args: BenchArgs): number {
+  const requested = Math.max(1, Math.min(args.concurrency, tasks.length));
+  if (args.provider === "daytona" && tasks.some((task) => task.env_type === "harbor_swesmith")) {
+    return 1;
+  }
+  return requested;
 }
 
 function shellQuote(value: string): string {
