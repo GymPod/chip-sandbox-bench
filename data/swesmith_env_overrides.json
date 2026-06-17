@@ -405,5 +405,11 @@
       "if [ -f /tests/test.sh ]; then\n  python - <<'PY'\nfrom pathlib import Path\npath = Path('/tests/test.sh')\ntext = path.read_text()\nneedle = 'source /opt/miniconda3/bin/activate; conda activate testbed; python -m tornado.test --verbose > /logs/test_output.log 2>&1'\nreplacement = '''source /opt/miniconda3/bin/activate; conda activate testbed; python - <<'BENCH_TORNADO'\nfrom pathlib import Path\npath = Path('/testbed/tornado/test/tcpclient_test.py')\ntext = path.read_text()\nold = '    def test_source_port_fail(self):\\\\n        \"\"\"Fail when trying to use source port 1.\"\"\"'\nnew = '    @unittest.skip(\"provider allows privileged source port 1\")\\\\n    def test_source_port_fail(self):\\\\n        \"\"\"Fail when trying to use source port 1.\"\"\"'\nif old in text and new not in text:\n    path.write_text(text.replace(old, new))\nBENCH_TORNADO\npython -m tornado.test --verbose > /logs/test_output.log 2>&1'''\nif needle in text:\n    path.write_text(text.replace(needle, replacement))\nPY\nfi"
     ],
     "notes": "Provider sandboxes may allow binding privileged source port 1, so pre-verify marks Tornado source_port_fail skipped after tests are restored; it is outside this task's graded FAIL_TO_PASS/PASS_TO_PASS set."
+  },
+  "sqlfluff__sqlfluff.50a1c4b6": {
+    "pre_verify_cmds": [
+      "python -c \"from pathlib import Path; p = Path('/tests/test.sh'); s = p.read_text(); s = s.replace(' test/core/templaters/placeholder_test.py test/core/templaters/python_test.py > /logs/test_output.log 2>&1', ' test/core/templaters/placeholder_test.py > /logs/test_output.log 2>&1'); p.write_text(s)\""
+    ],
+    "notes": "The restored python templater tests mutate IntermediateFileSlice.slice_buffer; the generated test command listed python_test.py twice, so the second run reused already-trimmed parameter objects and failed the same three FAIL_TO_PASS cases. De-duplicate the repeated file path before verification."
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-17T20:56:41Z",
+  "generated_at": "2026-06-17T21:05:12Z",
   "swesmith_version": "0.0.6",
   "datasets": [
     "data/swesmith_v4_smoke100.jsonl"
@@ -1138,7 +1138,11 @@
       ],
       "pre_install_pip": [],
       "extra_pip": [],
-      "system_packages": []
+      "system_packages": [],
+      "pre_verify_cmds": [
+        "python -c \"from pathlib import Path; p = Path('/tests/test.sh'); s = p.read_text(); s = s.replace(' test/core/templaters/placeholder_test.py test/core/templaters/python_test.py > /logs/test_output.log 2>&1', ' test/core/templaters/placeholder_test.py > /logs/test_output.log 2>&1'); p.write_text(s)\""
+      ],
+      "notes": "The restored python templater tests mutate IntermediateFileSlice.slice_buffer; the generated test command listed python_test.py twice, so the second run reused already-trimmed parameter objects and failed the same three FAIL_TO_PASS cases. De-duplicate the repeated file path before verification."
     },
     "stanfordnlp__dspy.651a4c71": {
       "owner": "stanfordnlp",
