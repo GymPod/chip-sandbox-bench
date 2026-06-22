@@ -22,6 +22,7 @@ daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 - [Failure modes and trade-offs](failure-modes-tradeoffs.md): resolved clusters and remaining comparison caveats.
 - [Per-task failure audit](per-task-failure-audit.md): current no-failure state plus historical cluster summary.
 - [Cost estimate caveats](cost-estimate-caveats.md): reliability audit for the dollar estimates and underlying result data.
+- [Modal/Daytona cost inversion](modal-daytona-cost-inversion.md): why Modal can be faster but still show a higher estimated cost, including effective $/sandbox-hour.
 
 ## Notes
 
