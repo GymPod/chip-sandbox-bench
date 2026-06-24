@@ -24,6 +24,7 @@ aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
 - [Per-task failure audit](per-task-failure-audit.md): current no-failure state plus historical cluster summary.
 - [Cost estimate caveats](cost-estimate-caveats.md): reliability audit for the dollar estimates and underlying result data.
 - [AWS MicroVM cost reduction sample](aws-microvm-cost-reduction-sample.md): sample evidence for the 20%+ AWS estimator reduction.
+- [Dynamic limits and optimization strategy](dynamic-limits-and-optimization-strategy.md): observation-backed resource limits, auto-suspend thresholds, and broader cost/performance strategies.
 - [Modal/Daytona cost inversion](modal-daytona-cost-inversion.md): why Modal can be faster but still show a higher estimated cost, including effective $/sandbox-hour.
 
 ## Notes
@@ -31,4 +32,5 @@ aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
 - The comparison is solver-independent cold-gold runnability evidence.
 - The timing rollups are stitched from full and focused reruns. Use a fresh synchronized matrix before making strict wall-clock claims.
 - The dollar figures are harness estimates, not reconciled provider billing data. AWS MicroVM dollars use memory-derived billable vCPU with public US East (N. Virginia) ARM MicroVM runtime rates and exclude snapshot read/write/storage and data transfer. See [cost estimate caveats](cost-estimate-caveats.md).
+- New benchmark rows include `static_estimated_cost_usd`, `adaptive_estimated_cost_usd`, and resource observation fields. The checked-in adaptive AWS config lowers the 100-task SWE-Smith per-second resource rate by 39.7% versus the static baseline.
 - Vercel and AWS MicroVMs use manifest-driven fallback environment reconstruction for SWE-Smith tasks; Modal and Daytona use native task Docker images.

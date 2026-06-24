@@ -26,6 +26,7 @@ The runner maps SWE-Smith tasks to `/testbed`. Modal and Daytona can use the tas
 
 - `swesmith_env_manifests.json`: generated, one entry per repo in the SWE-Smith dataset. Each entry records the mirror repo, the exact Python version, the install commands from the SWE-Smith profile the task Docker image was built from, plus any extra pip/system deps and resource overrides. The TypeScript runner uses this to reconstruct task environments on providers that cannot run the task Docker image.
 - `swesmith_env_overrides.json`: hand-maintained, narrow per-repo overrides merged into the generated manifest (e.g. CPU torch wheel index for fvcore/MONAI, pandas source-build requirements, higher memory/disk for heavy repos).
+- `resource_policy.json`: checked-in adaptive resource policy used by `bench.ts` for `--resource-policy adaptive` execution and for per-task adaptive price estimates. It lowers default AWS MicroVM memory to 1 GB, keeps known heavy SWE-Smith repos at their higher resource tiers, and preserves `--resource-policy static` for fixed-resource provider comparisons.
 
 Regenerate after dataset or override changes:
 

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "default_policy": "adaptive",
+  "provider_defaults": {
+    "local": {
+      "cpu": 2,
+      "memoryGb": 2,
+      "diskGb": 10
+    },
+    "vercel": {
+      "cpu": 2,
+      "memoryGb": 2,
+      "diskGb": 10
+    },
+    "modal": {
+      "cpu": 2,
+      "memoryGb": 2,
+      "diskGb": 10
+    },
+    "daytona": {
+      "cpu": 2,
+      "memoryGb": 2,
+      "diskGb": 10
+    },
+    "aws-microvm": {
+      "cpu": 2,
+      "memoryGb": 1,
+      "diskGb": 10
+    }
+  },
+  "env_type_defaults": {
+    "terminalbench": {
+      "aws-microvm": {
+        "memoryGb": 1
+      },
+      "all": {
+        "memoryGb": 2
+      }
+    },
+    "harbor_swesmith": {
+      "aws-microvm": {
+        "memoryGb": 1
+      },
+      "all": {
+        "memoryGb": 2
+      }
+    }
+  },
+  "repo_overrides": {
+    "facebookresearch__fvcore.a491d5b9": {
+      "all": {
+        "memoryGb": 8,
+        "diskGb": 20
+      }
+    },
+    "Project-MONAI__MONAI.a09c1f08": {
+      "all": {
+        "memoryGb": 8,
+        "diskGb": 20
+      }
+    },
+    "pandas-dev__pandas.95280573": {
+      "all": {
+        "cpu": 4,
+        "memoryGb": 8,
+        "diskGb": 20
+      }
+    },
+    "dask__dask.5f61e423": {
+      "all": {
+        "memoryGb": 4
+      }
+    },
+    "getmoto__moto.694ce1f4": {
+      "all": {
+        "memoryGb": 4
+      }
+    },
+    "iterative__dvc.1d6ea681": {
+      "all": {
+        "memoryGb": 4
+      }
+    },
+    "sunpy__sunpy.f8edfd5c": {
+      "all": {
+        "memoryGb": 4
+      }
+    }
+  }
+}

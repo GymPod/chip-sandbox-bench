@@ -39,7 +39,7 @@ function parseArgs(argv: string[]): PrewarmArgs {
     values.set(argv[index], argv[index + 1]);
   }
   const provider = (values.get("--provider") ?? "modal") as "vercel" | "modal" | "daytona" | "aws-microvm";
-  const defaultMemoryGb = provider === "aws-microvm" ? "2" : "4";
+  const defaultMemoryGb = provider === "aws-microvm" ? "1" : "4";
   return {
     provider,
     runtime: values.get("--runtime") ?? "python:3.13",

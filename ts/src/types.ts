@@ -14,6 +14,18 @@ export type CommandResult = {
   stdout: string;
   stderr: string;
   returnCode: number;
+  usage?: CommandUsage;
+};
+
+export type CommandUsage = {
+  wall_seconds?: number;
+  user_cpu_seconds?: number;
+  system_cpu_seconds?: number;
+  peak_rss_kb?: number;
+  stdout_bytes?: number;
+  stderr_bytes?: number;
+  timed_out?: boolean;
+  signal?: string;
 };
 
 export type ProviderRunTrace = {
@@ -30,6 +42,7 @@ export type Provider = {
 export type ProviderName = "local" | "vercel" | "modal" | "daytona" | "aws-microvm";
 export type RunMode = "cold" | "warm";
 export type RunKind = "verifier" | "solve";
+export type ResourcePolicyName = "static" | "observe" | "adaptive";
 
 export type TaskEnv = {
   envType: string;
@@ -69,5 +82,8 @@ export type BenchArgs = {
   cpu: number;
   memoryGb: number;
   diskGb: number;
+  resourcePolicy: ResourcePolicyName;
+  resourceConfigPath?: string;
+  resourceObservationsOutput?: string;
   output?: string;
 };

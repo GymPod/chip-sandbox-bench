@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { ProviderName, RunMode } from "./types";
+import { loadResourcePolicyConfig } from "./resource_policy";
+import type { ProviderName, ResourcePolicyName, RunMode } from "./types";
 
 type MatrixProvider = Exclude<ProviderName, "local">;
 
@@ -23,6 +24,8 @@ type MatrixArgs = {
   cpu: number;
   memoryGb: number;
   diskGb: number;
+  resourcePolicy: ResourcePolicyName;
+  resourceConfigPath?: string;
   solveCommandFile: string;
   forwardEnv: string[];
   prewarmProfile: string;
@@ -71,6 +74,8 @@ function parseArgs(argv: string[]): MatrixArgs {
   }
   const providers = parseList(values.get("--providers") ?? "all", ALL_PROVIDERS);
   const modes = parseList(values.get("--modes") ?? "cold,warm", ALL_MODES);
+  const resourceConfigPath = values.get("--resource-config") ?? process.env.BENCH_RESOURCE_CONFIG;
+  const resourceConfig = loadResourcePolicyConfig(resourceConfigPath);
   return {
     providers,
     modes,
@@ -90,6 +95,10 @@ function parseArgs(argv: string[]): MatrixArgs {
     cpu: Number.parseInt(values.get("--cpu") ?? "2", 10),
     memoryGb: Number.parseInt(values.get("--memory-gb") ?? "4", 10),
     diskGb: Number.parseInt(values.get("--disk-gb") ?? "10", 10),
+    resourcePolicy: parseResourcePolicy(
+      values.get("--resource-policy") ?? process.env.BENCH_RESOURCE_POLICY ?? resourceConfig.default_policy ?? "adaptive"
+    ),
+    resourceConfigPath,
     solveCommandFile: resolve(values.get("--solve-command-file") ?? resolve(import.meta.dir, "../../scripts/openrouter_solver.sh")),
     forwardEnv: parseForwardEnv(values.get("--forward-env")),
     prewarmProfile: values.get("--prewarm-profile") ?? "terminalbench-smoke",
@@ -105,6 +114,13 @@ function parseArgs(argv: string[]): MatrixArgs {
     awsMicrovmExecutionRoleArn: values.get("--aws-microvm-execution-role-arn") ?? process.env.AWS_MICROVM_EXECUTION_ROLE_ARN,
     output: values.get("--output")
   };
+}
+
+function parseResourcePolicy(value: string): ResourcePolicyName {
+  if (value === "static" || value === "observe" || value === "adaptive") {
+    return value;
+  }
+  throw new Error(`Unsupported resource policy: ${value}`);
 }
 
 function parseOptionalInt(value: string | undefined): number | undefined {
@@ -185,6 +201,9 @@ function buildRunSpecs(args: MatrixArgs): RunSpec[] {
         String(args.memoryGb),
         "--disk-gb",
         String(args.diskGb),
+        "--resource-policy",
+        args.resourcePolicy,
+        ...(args.resourceConfigPath ? ["--resource-config", args.resourceConfigPath] : []),
         "--forward-env",
         args.forwardEnv.join(","),
         "--solve-command-file",
@@ -209,12 +228,20 @@ function taskConcurrencyFor(provider: MatrixProvider, args: MatrixArgs): number 
   }
   if (provider === "aws-microvm") {
     const accountMemoryGb = envNumber("AWS_MICROVM_ACCOUNT_MEMORY_GB", 4);
-    const memoryCap = Math.max(1, Math.floor(accountMemoryGb / args.memoryGb / modeCount));
+    const memoryCap = Math.max(1, Math.floor(accountMemoryGb / concurrencyMemoryGb(provider, args) / modeCount));
     return args.awsMicrovmConcurrency ?? Math.min(args.concurrency, memoryCap);
   }
   const cpuCap = Math.floor(10 / args.cpu / modeCount);
-  const memoryCap = Math.floor(10 / args.memoryGb / modeCount);
+  const memoryCap = Math.floor(10 / concurrencyMemoryGb(provider, args) / modeCount);
   return args.daytonaConcurrency ?? Math.min(args.concurrency, Math.max(1, Math.min(cpuCap, memoryCap)));
+}
+
+function concurrencyMemoryGb(provider: MatrixProvider, args: MatrixArgs): number {
+  if (args.resourcePolicy !== "adaptive") {
+    return args.memoryGb;
+  }
+  const config = loadResourcePolicyConfig(args.resourceConfigPath);
+  return config.provider_defaults?.[provider]?.memoryGb ?? args.memoryGb;
 }
 
 function envNumber(name: string, fallback: number): number {

@@ -91,7 +91,7 @@ Provider cost ranking | Medium-low | The ranking is useful as a rough signal, bu
 - The latest 100-task run reused a prebuilt MicroVM image. Image creation, snapshot read/write/storage, and any control-plane, data transfer, or network-connector charges are not included in the run-level sandbox estimate.
 - The previous compute-only estimate was `$1.0501`, split into `$0.8813` requested-CPU and `$0.1688` memory. Using AWS MicroVM billable vCPU derived from memory reduces the same sample to about `$0.8063`, split into `$0.6375` vCPU and `$0.1688` memory.
 - AWS MicroVMs currently reconstruct SWE-Smith task environments from manifests, like Vercel/local, rather than consuming each task Docker image directly.
-- Several tasks request more than the base `--memory-gb 2`; AWS cost estimates must use per-task recorded `task_memory_gb`, with billable vCPU calculated as `task_memory_gb / 2`, rather than the command-line default.
+- Static AWS comparisons still use the base `--memory-gb 2`, while adaptive runs use `data/resource_policy.json` and may lower the effective task memory to 1 GB or 4 GB. AWS cost estimates must use per-task recorded `task_memory_gb`, with billable vCPU calculated as `task_memory_gb / 2`, rather than assuming a single command-line default.
 
 ## What Would Make This Decision-Grade
 

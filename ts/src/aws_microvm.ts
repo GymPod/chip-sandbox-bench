@@ -369,7 +369,8 @@ export class AwsMicrovmSandbox {
           return {
             stdout: String(parsed.stdout ?? ""),
             stderr: String(parsed.stderr ?? ""),
-            returnCode: Number(parsed.returnCode ?? 1)
+            returnCode: Number(parsed.returnCode ?? 1),
+            usage: isCommandUsage(parsed.usage) ? parsed.usage : undefined
           };
         }
         if (parsed.error) {
@@ -774,6 +775,10 @@ function formatError(error: unknown): string {
 
 function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function isCommandUsage(value: unknown): CommandResult["usage"] | undefined {
+  return typeof value === "object" && value !== null ? (value as CommandResult["usage"]) : undefined;
 }
 
 class AwsMicrovmHttpError extends Error {

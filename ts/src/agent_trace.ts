@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { CommandResult, Provider, ProviderRunTrace } from "./types";
+import type { CommandResult, CommandUsage, Provider, ProviderRunTrace } from "./types";
 
 export type AgentTraceEvent = {
   index: number;
@@ -16,6 +16,7 @@ export type AgentTraceEvent = {
   command_length?: number;
   command_sha256?: string;
   return_code?: number;
+  command_usage?: CommandUsage;
   error?: string;
 };
 
@@ -130,7 +131,12 @@ export class AgentTraceRecorder {
         ...(idleGapSeconds === undefined ? {} : { idle_gap_seconds: idleGapSeconds }),
         ...(commandIdleGapSeconds === undefined ? {} : { command_idle_gap_seconds: commandIdleGapSeconds }),
         ...metadata,
-        ...(isCommandResult(result) ? { return_code: result.returnCode } : {})
+        ...(isCommandResult(result)
+          ? {
+              return_code: result.returnCode,
+              ...(result.usage ? { command_usage: result.usage } : {})
+            }
+          : {})
       };
       this.events.push(event);
       this.lastCompletedWallMs = completedAt.getTime();

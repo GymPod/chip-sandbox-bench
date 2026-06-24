@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import resource
 import subprocess
 import threading
 import time
@@ -105,6 +106,7 @@ class RunnerHandler(BaseHTTPRequestHandler):
                 "stdout": "",
                 "stderr": "",
                 "returnCode": None,
+                "usage": None,
             }
         thread = threading.Thread(target=self.run_job, args=(job_id, command, cwd, timeout), daemon=True)
         thread.start()
@@ -150,6 +152,7 @@ class RunnerHandler(BaseHTTPRequestHandler):
             "startedAt": job.get("startedAt"),
             "completedAt": job.get("completedAt"),
             "returnCode": job.get("returnCode"),
+            "usage": job.get("usage"),
             "stdoutBytes": safe_file_size(job.get("stdoutPath")),
             "stderrBytes": safe_file_size(job.get("stderrPath")),
         }
@@ -185,6 +188,7 @@ class RunnerHandler(BaseHTTPRequestHandler):
                         "stdout": read_output(job.get("stdoutPath")),
                         "stderr": read_output(job.get("stderrPath")),
                         "returnCode": result["returnCode"],
+                        "usage": result.get("usage"),
                     }
                 )
 
@@ -198,6 +202,8 @@ class RunnerHandler(BaseHTTPRequestHandler):
         return json.loads(body.decode("utf-8"))
 
     def run_shell(self, command, cwd, timeout, stdout_path=None, stderr_path=None):
+        started = time.monotonic()
+        usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
         stdout_path = stdout_path or str(JOB_DIR / f"{uuid.uuid4().hex}.stdout")
         stderr_path = stderr_path or str(JOB_DIR / f"{uuid.uuid4().hex}.stderr")
         try:
@@ -218,12 +224,18 @@ class RunnerHandler(BaseHTTPRequestHandler):
                 "stdout": read_output(stdout_path),
                 "stderr": read_output(stderr_path),
                 "returnCode": completed.returncode,
+                "usage": command_usage(started, usage_before, stdout_path, stderr_path),
             }
         except subprocess.TimeoutExpired as exc:
             stdout = read_output(stdout_path)
             stderr = read_output(stderr_path)
             stderr = f"{stderr}\nCommand timed out after {timeout}s".strip()
-            return {"stdout": stdout, "stderr": stderr, "returnCode": 124}
+            return {
+                "stdout": stdout,
+                "stderr": stderr,
+                "returnCode": 124,
+                "usage": command_usage(started, usage_before, stdout_path, stderr_path, timed_out=True),
+            }
 
     def respond_json(self, payload, status=200):
         body = json_bytes(payload)
@@ -255,6 +267,19 @@ def safe_file_size(raw_path):
         return path.stat().st_size
     except FileNotFoundError:
         return 0
+
+
+def command_usage(started, usage_before, stdout_path, stderr_path, timed_out=False):
+    usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return {
+        "wall_seconds": max(0, time.monotonic() - started),
+        "user_cpu_seconds": max(0, usage_after.ru_utime - usage_before.ru_utime),
+        "system_cpu_seconds": max(0, usage_after.ru_stime - usage_before.ru_stime),
+        "peak_rss_kb": usage_after.ru_maxrss,
+        "stdout_bytes": safe_file_size(stdout_path),
+        "stderr_bytes": safe_file_size(stderr_path),
+        "timed_out": timed_out,
+    }
 
 
 if __name__ == "__main__":

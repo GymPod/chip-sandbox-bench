@@ -92,17 +92,22 @@ export class LocalProvider implements Provider {
   async start(): Promise<void> {}
 
   async run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
+    const started = performance.now();
     const workdir = cwd ? join(this.root, cwd.replace(/^\//, "")) : this.root;
     await $`mkdir -p ${workdir}`.quiet();
     const proc = Bun.spawn(["/bin/sh", "-lc", this.localize(command)], { cwd: workdir, stdout: "pipe", stderr: "pipe" });
-    const timeout = setTimeout(() => proc.kill(), timeoutSeconds * 1000);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      proc.kill();
+    }, timeoutSeconds * 1000);
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
       proc.exited
     ]);
     clearTimeout(timeout);
-    return { stdout, stderr, returnCode: exitCode };
+    return withUsage(stdout, stderr, exitCode, started, timedOut);
   }
 
   async stop(): Promise<void> {
@@ -142,6 +147,7 @@ export class VercelSdkProvider implements Provider {
   }
 
   async run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
+    const usageStarted = performance.now();
     if (!this.sandbox) {
       throw new Error("Vercel sandbox not started");
     }
@@ -153,20 +159,20 @@ export class VercelSdkProvider implements Provider {
       detached: true,
       signal: AbortSignal.timeout(60_000)
     });
-    const started = performance.now();
-    while ((performance.now() - started) / 1000 < timeoutSeconds) {
-      const remainingMs = Math.max(1000, timeoutSeconds * 1000 - (performance.now() - started));
+    const pollStarted = performance.now();
+    while ((performance.now() - pollStarted) / 1000 < timeoutSeconds) {
+      const remainingMs = Math.max(1000, timeoutSeconds * 1000 - (performance.now() - pollStarted));
       const waitMs = Math.min(60_000, remainingMs);
       try {
         const finished = await commandProcess.wait({ signal: AbortSignal.timeout(waitMs) });
         const [stdout, stderr] = await Promise.all([this.commandOutput(finished, "stdout"), this.commandOutput(finished, "stderr")]);
-        return { stdout, stderr, returnCode: finished.exitCode };
+        return withUsage(stdout, stderr, finished.exitCode, usageStarted);
       } catch {
         await sleep(2000);
       }
     }
     await commandProcess.kill("SIGTERM", { abortSignal: AbortSignal.timeout(60_000) }).catch(() => {});
-    return { stdout: "", stderr: `Command timed out after ${timeoutSeconds}s`, returnCode: 124 };
+    return withUsage("", `Command timed out after ${timeoutSeconds}s`, 124, usageStarted, true);
   }
 
   private async commandOutput(
@@ -244,6 +250,7 @@ export class ModalProvider implements Provider {
   }
 
   async run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
+    const started = performance.now();
     if (!this.sandbox) {
       throw new Error("Modal sandbox not started");
     }
@@ -259,7 +266,7 @@ export class ModalProvider implements Provider {
           process.stderr.readText(),
           process.wait()
         ]);
-        return { stdout, stderr, returnCode };
+        return withUsage(stdout, stderr, returnCode, started);
       })(),
       (timeoutSeconds + 30) * 1000,
       `Modal command timed out after ${timeoutSeconds}s`
@@ -329,6 +336,7 @@ export class DaytonaProvider implements Provider {
   }
 
   async run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
+    const started = performance.now();
     if (!this.sandbox) {
       throw new Error("Daytona sandbox not started");
     }
@@ -338,7 +346,12 @@ export class DaytonaProvider implements Provider {
         return {
           stdout: response.artifacts?.stdout ?? response.result ?? "",
           stderr: "",
-          returnCode: response.exitCode ?? 0
+          returnCode: response.exitCode ?? 0,
+          usage: {
+            wall_seconds: (performance.now() - started) / 1000,
+            stdout_bytes: Buffer.byteLength(response.artifacts?.stdout ?? response.result ?? "", "utf8"),
+            stderr_bytes: 0
+          }
         };
       })(),
       (timeoutSeconds + 30) * 1000,
@@ -439,6 +452,20 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number, message: stri
       clearTimeout(timeout);
     }
   });
+}
+
+function withUsage(stdout: string, stderr: string, returnCode: number, started: number, timedOut = false): CommandResult {
+  return {
+    stdout,
+    stderr,
+    returnCode,
+    usage: {
+      wall_seconds: (performance.now() - started) / 1000,
+      stdout_bytes: Buffer.byteLength(stdout, "utf8"),
+      stderr_bytes: Buffer.byteLength(stderr, "utf8"),
+      ...(timedOut ? { timed_out: true } : {})
+    }
+  };
 }
 
 export function makeProvider(

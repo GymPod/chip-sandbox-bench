@@ -33,7 +33,7 @@ Useful runtime controls:
 - `AWS_MICROVM_EGRESS_CONNECTORS`, default `INTERNET_EGRESS`
 - `AWS_MICROVM_ESTIMATE_VCPU_SECOND_USD`, `AWS_MICROVM_ESTIMATE_GB_SECOND_USD`, `AWS_MICROVM_ESTIMATE_SNAPSHOT_WRITE_GB_USD`, `AWS_MICROVM_ESTIMATE_SNAPSHOT_READ_GB_USD`, and `AWS_MICROVM_ESTIMATE_SNAPSHOT_STORAGE_GB_MONTH_USD` override lifecycle cost estimates.
 
-The AWS MicroVM `bench` and `prewarm` commands default `--memory-gb` to `2`, while the other providers keep the repo-wide `4` GB default. The AWS runtime estimate derives billable vCPU from memory at `memoryGb / 2`, so the default AWS benchmark shape is a 2 GB / 1 billable-vCPU MicroVM unless a task requests more memory.
+The AWS MicroVM static `bench` default keeps `--memory-gb 2` for fixed-resource comparisons, but the checked-in adaptive resource config lowers the effective AWS default to 1 GB. The AWS `prewarm` command also defaults to 1 GB so newly built adaptive images do not bake in a 2 GB minimum. The AWS runtime estimate derives billable vCPU from memory at `memoryGb / 2`.
 
 ## Image Creation
 
@@ -45,7 +45,7 @@ bun run prewarm \
   --provider aws-microvm \
   --name code-sandbox-bench-runner-YYYYMMDD \
   --timeout-seconds 900 \
-  --memory-gb 2 \
+  --memory-gb 1 \
   --aws-region us-east-1 \
   --aws-bucket <artifact-bucket> \
   --aws-build-role-arn <build-role-arn> \

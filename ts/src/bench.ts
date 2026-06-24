@@ -3,8 +3,20 @@ import { dirname, resolve } from "node:path";
 import { AgentTraceRecorder, summarizeAgentTraces, TracedProvider, type AgentTrace } from "./agent_trace";
 import { loadTasks } from "./dataset";
 import { makeProvider, writeText } from "./providers";
+import {
+  buildResourceObservation,
+  loadResourcePolicyConfig,
+  recommendAdaptiveResources,
+  resolveResourceSpec,
+  resourceRetryDecision,
+  type AdaptiveResourceRecommendation,
+  type ResourceObservation,
+  type ResourcePolicyConfig,
+  type ResourceRetryDecision,
+  type ResourceSpec
+} from "./resource_policy";
 import { resolveTaskEnv } from "./task_env";
-import type { BenchArgs, BenchTask, CommandResult, Provider, ProviderName, RunKind, RunMode, TaskEnv } from "./types";
+import type { BenchArgs, BenchTask, CommandResult, Provider, ProviderName, ResourcePolicyName, RunKind, RunMode, TaskEnv } from "./types";
 
 const basePrepareCommand = `
 set -eu
@@ -40,6 +52,11 @@ function parseArgs(argv: string[]): BenchArgs {
   }
   const provider = (values.get("--provider") ?? "local") as BenchArgs["provider"];
   const mode = parseRunMode(values.get("--mode"));
+  const resourceConfigPath = values.get("--resource-config") ?? process.env.BENCH_RESOURCE_CONFIG;
+  const resourceConfig = loadResourcePolicyConfig(resourceConfigPath);
+  const resourcePolicy = parseResourcePolicy(
+    values.get("--resource-policy") ?? process.env.BENCH_RESOURCE_POLICY ?? resourceConfig.default_policy ?? "adaptive"
+  );
   const defaultMemoryGb = provider === "aws-microvm" ? "2" : "4";
   return {
     provider,
@@ -64,6 +81,9 @@ function parseArgs(argv: string[]): BenchArgs {
     cpu: Number.parseInt(values.get("--cpu") ?? "2", 10),
     memoryGb: Number.parseInt(values.get("--memory-gb") ?? defaultMemoryGb, 10),
     diskGb: Number.parseInt(values.get("--disk-gb") ?? "10", 10),
+    resourcePolicy,
+    resourceConfigPath,
+    resourceObservationsOutput: values.get("--resource-observations-output"),
     output: values.get("--output")
   };
 }
@@ -77,6 +97,13 @@ function parseRunMode(value: string | undefined): RunMode {
     return value ?? "cold";
   }
   throw new Error(`Unsupported run mode: ${value}`);
+}
+
+function parseResourcePolicy(value: string): ResourcePolicyName {
+  if (value === "static" || value === "observe" || value === "adaptive") {
+    return value;
+  }
+  throw new Error(`Unsupported resource policy: ${value}`);
 }
 
 function parseForwardEnv(value: string | undefined): string[] {
@@ -378,8 +405,10 @@ const MAX_TRANSIENT_TASK_ATTEMPTS = 5;
 async function runTask(args: BenchArgs, task: BenchTask): Promise<Record<string, unknown>> {
   const retryErrors: string[] = [];
   let totalElapsedSeconds = 0;
+  const resourceConfig = loadResourcePolicyConfig(args.resourceConfigPath);
+  let resourceRetry: ResourceRetryDecision | undefined;
   for (let attempt = 1; attempt <= MAX_TRANSIENT_TASK_ATTEMPTS; attempt += 1) {
-    const result = await runTaskAttempt(args, task);
+    const result = await runTaskAttempt(args, task, resourceConfig, resourceRetry?.next);
     totalElapsedSeconds += Number(result.elapsed_seconds ?? 0);
     if (attempt > 1) {
       result.task_attempts = attempt;
@@ -389,6 +418,16 @@ async function runTask(args: BenchArgs, task: BenchTask): Promise<Record<string,
       result.elapsed_seconds = totalElapsedSeconds;
     }
     if (!isTransientTaskFailure(args, result) || attempt === MAX_TRANSIENT_TASK_ATTEMPTS) {
+      if (args.resourcePolicy === "adaptive" && result.passed === false && !resourceRetry) {
+        const retry = resourceRetryDecision(result.adaptive_resource_recommendation as AdaptiveResourceRecommendation, 0);
+        if (retry) {
+          resourceRetry = retry;
+          retryErrors.push(`resource retry: ${retry.reason}`);
+          console.warn(`retrying ${task.task_id} on ${args.provider} with adaptive resources: ${retry.reason}`);
+          await sleep(2000);
+          continue;
+        }
+      }
       return result;
     }
     retryErrors.push(String(result.stderr_tail ?? ""));
@@ -431,7 +470,12 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<string, unknown>> {
+async function runTaskAttempt(
+  args: BenchArgs,
+  task: BenchTask,
+  resourceConfig: ResourcePolicyConfig,
+  retryResourceSpec?: ResourceSpec
+): Promise<Record<string, unknown>> {
   const taskEnv = resolveTaskEnv(task, args.runtime, args.provider);
   const solveCommand = resolveSolveCommand(args);
   const traceRecorder = new AgentTraceRecorder(args.provider, task.task_id);
@@ -450,10 +494,19 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
       phases[`${name}_seconds`] = (performance.now() - phaseStarted) / 1000;
     }
   }
-  const cpu = Math.max(args.cpu, taskEnv.resources?.cpu ?? 0);
-  const memoryGb = Math.max(args.memoryGb, taskEnv.resources?.memoryGb ?? 0);
-  const requestedDiskGb = Math.max(args.diskGb, taskEnv.resources?.diskGb ?? 0);
+  const baseResourceSpec = {
+    cpu: args.cpu,
+    memoryGb: args.memoryGb,
+    diskGb: args.diskGb,
+    timeoutSeconds: args.timeoutSeconds
+  };
+  const resourceSpec = resolveResourceSpec(args.provider, args.resourcePolicy, baseResourceSpec, taskEnv, resourceConfig);
+  const executionSpec = retryResourceSpec ?? resourceSpec.effective;
+  const requestedDiskGb = executionSpec.diskGb;
   const diskGb = args.provider === "daytona" ? Math.min(requestedDiskGb, 10) : requestedDiskGb;
+  const cpu = executionSpec.cpu;
+  const memoryGb = executionSpec.memoryGb;
+  const timeoutSeconds = executionSpec.timeoutSeconds;
   try {
     const baseProvider = makeProvider(args.provider, {
       runtime: taskEnv.runtime ?? args.runtime,
@@ -474,15 +527,15 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
     provider = activeProvider;
     await timed("start", () => activeProvider.start());
     await timed("upload", () =>
-      writeText(activeProvider, "/tmp/task.tar.gz.b64", task.task_files.content, args.timeoutSeconds, {
+      writeText(activeProvider, "/tmp/task.tar.gz.b64", task.task_files.content, timeoutSeconds, {
         label: "upload_task_archive"
       })
     );
     const prepare = await timed("prepare", () =>
-      activeProvider.run(prepareCommandFor(taskEnv, args.provider), undefined, args.timeoutSeconds, { label: "prepare" })
+      activeProvider.run(prepareCommandFor(taskEnv, args.provider), undefined, timeoutSeconds, { label: "prepare" })
     );
     if (prepare.returnCode === 0) {
-      await timed("instruction_write", () => writeTaskInstructions(activeProvider, task, taskEnv, args.timeoutSeconds));
+      await timed("instruction_write", () => writeTaskInstructions(activeProvider, task, taskEnv, timeoutSeconds));
       if (solveCommand) {
         const solveStarted = performance.now();
         solveResult = await timed("solve", () =>
@@ -496,7 +549,7 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
         solveElapsedSeconds = (performance.now() - solveStarted) / 1000;
       }
       result = await timed("verify", () =>
-        activeProvider.run(verifyCommandFor(taskEnv), taskEnv.verifierCwd, args.timeoutSeconds, { label: "verify" })
+        activeProvider.run(verifyCommandFor(taskEnv), taskEnv.verifierCwd, timeoutSeconds, { label: "verify" })
       );
     } else {
       result = prepare;
@@ -521,6 +574,34 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
   }
   traceRecorder.finish();
   const elapsedSeconds = (performance.now() - started) / 1000;
+  const agentTrace = traceRecorder.snapshot();
+  const staticDiskGb = args.provider === "daytona" ? Math.min(resourceSpec.requested.diskGb, 10) : resourceSpec.requested.diskGb;
+  const staticEstimatedCostUsd = estimateCost(
+    args.provider,
+    elapsedSeconds,
+    resourceSpec.requested.cpu,
+    resourceSpec.requested.memoryGb,
+    staticDiskGb
+  );
+  const estimatedCostUsd = estimateCost(args.provider, elapsedSeconds, cpu, memoryGb, diskGb);
+  const adaptiveDiskGb = args.provider === "daytona" ? Math.min(resourceSpec.adaptive.diskGb, 10) : resourceSpec.adaptive.diskGb;
+  const adaptiveEstimatedCostUsd = estimateCost(
+    args.provider,
+    elapsedSeconds,
+    resourceSpec.adaptive.cpu,
+    resourceSpec.adaptive.memoryGb,
+    adaptiveDiskGb
+  );
+  const resourceObservation = buildResourceObservation(
+    args.provider,
+    args.resourcePolicy,
+    { cpu, memoryGb, diskGb, timeoutSeconds },
+    agentTrace,
+    result.returnCode,
+    result.returnCode === 0,
+    result.stderr
+  );
+  const adaptiveRecommendation = recommendAdaptiveResources(resourceObservation);
   const item: Record<string, unknown> = {
     task_id: task.task_id,
     task_repo: taskEnv.repoKey,
@@ -535,8 +616,22 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
     passed: result.returnCode === 0,
     return_code: result.returnCode,
     elapsed_seconds: elapsedSeconds,
+    estimated_cost_usd: estimatedCostUsd,
+    static_estimated_cost_usd: staticEstimatedCostUsd,
+    adaptive_estimated_cost_usd: adaptiveEstimatedCostUsd,
+    adaptive_cost_delta_usd: adaptiveEstimatedCostUsd - staticEstimatedCostUsd,
+    adaptive_cost_reduction_pct:
+      staticEstimatedCostUsd > 0 ? ((staticEstimatedCostUsd - adaptiveEstimatedCostUsd) / staticEstimatedCostUsd) * 100 : undefined,
+    resource_policy: args.resourcePolicy,
+    requested_resources: resourceSpec.requested,
+    adaptive_resources: resourceSpec.adaptive,
+    effective_resources: { cpu, memoryGb, diskGb, timeoutSeconds },
+    resource_resolution_reasons: resourceSpec.reasons,
+    resource_observation: resourceObservation,
+    adaptive_resource_recommendation: adaptiveRecommendation,
+    ...(retryResourceSpec ? { resource_retry: { resources: retryResourceSpec } } : {}),
     phases,
-    agent_trace: traceRecorder.snapshot(),
+    agent_trace: agentTrace,
     ...providerMetadata,
     stdout_tail: result.stdout.slice(-2000),
     stderr_tail: result.stderr.slice(-2000)
@@ -611,18 +706,24 @@ function taskEnvCounts(tasks: BenchTask[]): Record<string, number> {
   }, {});
 }
 
-function estimateRunCost(args: BenchArgs, results: Record<string, unknown>[]): number {
+function estimateRunCost(results: Record<string, unknown>[]): number {
   return results.reduce((sum, item) => {
-    return (
-      sum +
-      estimateCost(
-        args.provider,
-        Number(item.elapsed_seconds ?? 0),
-        Number(item.task_cpu ?? args.cpu),
-        Number(item.task_memory_gb ?? args.memoryGb),
-        Number(item.task_disk_gb ?? args.diskGb)
-      )
-    );
+    const value = item.estimated_cost_usd;
+    return sum + (typeof value === "number" ? value : 0);
+  }, 0);
+}
+
+function estimateStaticRunCost(results: Record<string, unknown>[]): number {
+  return results.reduce((sum, item) => {
+    const value = item.static_estimated_cost_usd;
+    return sum + (typeof value === "number" ? value : 0);
+  }, 0);
+}
+
+function estimateAdaptiveRunCost(results: Record<string, unknown>[]): number {
+  return results.reduce((sum, item) => {
+    const value = item.adaptive_estimated_cost_usd;
+    return sum + (typeof value === "number" ? value : 0);
   }, 0);
 }
 
@@ -631,17 +732,25 @@ async function main(): Promise<void> {
   const tasks = loadTasks(args.dataset, args.taskIndex, args.taskLimit);
   const kind: RunKind = resolveSolveCommand(args) ? "solve" : "verifier";
   const results = await runWithConcurrency(tasks, args);
+  const estimatedCostUsd = estimateRunCost(results);
+  const staticEstimatedCostUsd = estimateStaticRunCost(results);
+  const adaptiveEstimatedCostUsd = estimateAdaptiveRunCost(results);
   const summary = {
     provider: args.provider,
     mode: args.mode,
     kind,
     dataset: args.dataset,
     runtime: args.runtime,
+    resource_policy: args.resourcePolicy,
+    resource_config: args.resourceConfigPath ?? DEFAULT_RESOURCE_CONFIG_LABEL,
     task_env_counts: taskEnvCounts(tasks),
     task_count: results.length,
     solve_enabled: kind === "solve",
     passed: results.filter((item) => item.passed).length,
-    estimated_cost_usd: estimateRunCost(args, results),
+    estimated_cost_usd: estimatedCostUsd,
+    static_estimated_cost_usd: staticEstimatedCostUsd,
+    adaptive_estimated_cost_usd: adaptiveEstimatedCostUsd,
+    adaptive_cost_reduction_pct: adaptiveCostReductionPct(staticEstimatedCostUsd, adaptiveEstimatedCostUsd),
     aws_microvm_lifecycle_cost_usd: awsMicrovmLifecycleCost(results),
     agent_trace_summary: summarizeAgentTraces(
       results.map((item) => item.agent_trace).filter((trace): trace is AgentTrace => isAgentTrace(trace))
@@ -653,10 +762,28 @@ async function main(): Promise<void> {
     mkdirSync(dirname(args.output), { recursive: true });
     writeFileSync(args.output, output);
   }
+  if (args.resourceObservationsOutput) {
+    writeResourceObservations(args.resourceObservationsOutput, results);
+  }
   console.log(output);
   if (summary.passed !== summary.task_count) {
     process.exitCode = 1;
   }
+}
+
+const DEFAULT_RESOURCE_CONFIG_LABEL = "data/resource_policy.json";
+
+function adaptiveCostReductionPct(estimated: number, adaptive: number): number | undefined {
+  return estimated > 0 ? ((estimated - adaptive) / estimated) * 100 : undefined;
+}
+
+function writeResourceObservations(path: string, results: Record<string, unknown>[]): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const lines = results
+    .map((item) => item.resource_observation)
+    .filter(Boolean)
+    .map((item) => JSON.stringify(item));
+  writeFileSync(path, `${lines.join("\n")}${lines.length > 0 ? "\n" : ""}`);
 }
 
 function isAgentTrace(value: unknown): value is AgentTrace {
