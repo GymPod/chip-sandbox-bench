@@ -55,27 +55,115 @@ AWS_MICROVM_IMAGE_VERSION=...
 
 Lifecycle hooks are disabled by default for the MVP image. Set `AWS_MICROVM_ENABLE_HOOKS=1` to include `/ready`, `/validate`, `/run`, `/resume`, and `/terminate` hooks exposed by the runner.
 
-## Command Invocation
+## Runtime Lifecycle
 
-The MicroVM image runs a Python HTTP command runner on port `8080`.
+The AWS provider has two layers:
 
-`AwsMicrovmSandbox.start()`:
+- AWS Lambda MicroVM control-plane calls in `ts/src/aws_microvm.ts`.
+- A repo-owned Python command runner in `ts/aws-microvm-runner/server.py`, baked into the MicroVM image and listening on port `8080`.
 
-1. Calls `RunMicrovm`.
-2. Creates a port-scoped auth token with `CreateMicrovmAuthToken`.
-3. Polls `/health` through the MicroVM HTTPS endpoint.
+Most benchmark commands do not call an AWS "exec" API. AWS starts and exposes the MicroVM; after that, command execution is an authenticated HTTPS request to `server.py` inside the MicroVM.
 
-`run(command, cwd, timeoutSeconds)` uses asynchronous command jobs:
+### Start
 
-1. `POST /commands` with `{ command, cwd, timeoutSeconds }`.
-2. Poll `GET /commands/<jobId>` until `status == "completed"`.
-3. Return `{ stdout, stderr, returnCode }`.
+`bench.ts` creates the provider and times `activeProvider.start()`. For `aws-microvm`, this calls:
 
-The async job shape avoids holding a single HTTPS request open for long dependency installs.
+```text
+bench.ts
+  -> makeProvider("aws-microvm")
+  -> AwsMicrovmProvider.start()
+  -> AwsMicrovmSandbox.start()
+```
 
-Command output is written to files under `/tmp/code-sandbox-bench-jobs` inside the MicroVM and read back from the job status endpoint. This avoids keeping long prepare/install output in the runner process memory.
+`AwsMicrovmSandbox.start()` then:
 
-During job polling, retryable proxy and service errors such as HTTP 5xx, 408, 409, 429, and network timeouts are retried until the command timeout expires. During start, `ServiceQuotaExceededException` is retried because AWS can keep account memory quota reserved briefly after the previous MicroVM terminates.
+1. Calls `RunMicrovm` with the configured image id/version, optional execution role ARN, duration, idle policy, ingress connectors, egress connectors, logging, and a unique client token.
+2. Retries `ServiceQuotaExceededException` until `AWS_MICROVM_START_TIMEOUT_SECONDS` expires. This handles the case where AWS still has memory quota reserved for a recently terminated MicroVM.
+3. Stores the returned `microvmId` and HTTPS `endpoint`.
+4. Calls `GetMicrovm` while waiting so the endpoint can be refreshed if AWS reports a newer value.
+5. Creates a port-scoped token with `CreateMicrovmAuthToken` for port `8080`.
+6. Polls `GET /health` through the MicroVM endpoint until `server.py` responds.
+
+The `/health` handler lives in `server.py` and returns `{"ok": true}`. This is the first point where the harness proves that the in-VM runner, not just the AWS resource, is ready.
+
+### Harness Commands
+
+Every harness phase after start goes through the common `Provider.run(command, cwd, timeoutSeconds)` contract:
+
+```text
+upload task archive
+prepare environment
+write task instructions
+solve
+verify
+```
+
+For AWS MicroVMs, `AwsMicrovmProvider.run()` delegates to `AwsMicrovmSandbox.run()`, which sends the command to `server.py`:
+
+1. Ensure `microvmId` and endpoint are present.
+2. Create or reuse a cached `CreateMicrovmAuthToken` value.
+3. `POST /commands` to the MicroVM endpoint with:
+
+```json
+{
+  "command": "<shell command>",
+  "cwd": "/workspace",
+  "timeoutSeconds": 300
+}
+```
+
+4. `server.py` validates that `command` is non-empty and that `cwd`, when provided, is an absolute path.
+5. `server.py` creates a job id, records job metadata in memory, creates stdout/stderr file paths under `/tmp/code-sandbox-bench-jobs`, and starts a daemon thread.
+6. The daemon thread runs:
+
+```text
+/bin/sh -lc <command>
+```
+
+with `cwd` or `/`, the MicroVM environment, and the requested subprocess timeout.
+
+7. stdout and stderr are written directly to job files instead of being retained in request memory.
+8. The TypeScript provider polls `GET /commands/<jobId>` until `status == "completed"`.
+9. `server.py` reads the tail of the stdout/stderr files, capped by `AWS_MICROVM_RUNNER_MAX_OUTPUT_BYTES`, and returns `{ stdout, stderr, returnCode }`.
+
+The async job shape avoids holding one HTTPS request open for long dependency installs. It also lets the TypeScript side survive retryable proxy and service errors while polling: HTTP 5xx, 408, 409, 429, and network timeouts are retried until the command timeout budget is exhausted.
+
+`server.py` still contains a synchronous `POST /run-command` endpoint, but the benchmark provider uses `/commands` plus `/commands/<jobId>` for normal task execution.
+
+### Lifecycle Hooks
+
+Lifecycle hooks are separate from benchmark command execution. When `AWS_MICROVM_ENABLE_HOOKS=1` is set during image creation, `CreateMicrovmImage` includes `/ready`, `/validate`, `/run`, `/resume`, and `/terminate` hooks under the AWS Lambda MicroVM runtime prefix:
+
+```text
+/aws/lambda-microvms/runtime/v1/<hook>
+```
+
+`server.py` currently responds to those hook POSTs with a simple JSON acknowledgement. The harness does not depend on the hooks for task upload, prepare, solve, verify, or cleanup.
+
+### Stop
+
+After each task, `bench.ts` calls the provider cleanup path. For AWS MicroVMs:
+
+```text
+AwsMicrovmProvider.stop()
+  -> AwsMicrovmSandbox.stop()
+  -> TerminateMicrovm
+```
+
+The provider clears its local `microvmId`, endpoint, and cached auth token before sending `TerminateMicrovm`. `ResourceNotFound` during termination is ignored because the desired final state is already reached.
+
+## Comparison With SDK-Managed Providers
+
+AWS MicroVMs expose a lower-level lifecycle than the other SDKs used by this harness. The harness owns more of the command execution protocol.
+
+| Provider | Start path | Command path | Stop path | Harness-owned runner? |
+| --- | --- | --- | --- | --- |
+| AWS MicroVM | `RunMicrovm`, then `GetMicrovm`, `CreateMicrovmAuthToken`, `GET /health` | Authenticated HTTPS to `server.py`: `POST /commands`, poll `GET /commands/<jobId>` | `TerminateMicrovm` | Yes. `server.py` validates commands, spawns `/bin/sh -lc`, stores output files, and reports job status. |
+| Daytona | `client.create(...)` from image or snapshot | `sandbox.process.executeCommand(command, cwd, undefined, timeoutSeconds)` | `client.delete(sandbox)` and client dispose | No. The Daytona SDK/service owns process execution and output transport. |
+| Modal | `client.sandboxes.create(...)` after app/image setup | `sandbox.exec(["/bin/sh", "-lc", command], ...)` and SDK stream reads | `sandbox.terminate()` | No. The Modal SDK/service owns process execution and stream handling. |
+| Vercel | `VercelSandbox.create(...)` from runtime or snapshot | `sandbox.runCommand(...)`, wait, then read SDK stdout/stderr | `sandbox.stop({ blocking: true })` | No. The Vercel SDK/service owns process execution and stream handling. |
+
+The important distinction is where `run(command)` lands. Daytona, Modal, and Vercel provide command execution as SDK primitives. AWS Lambda MicroVMs provide MicroVM lifecycle, endpoint access, and proxy auth; this repo supplies the in-VM command API with `server.py`.
 
 ## Task Environments
 
