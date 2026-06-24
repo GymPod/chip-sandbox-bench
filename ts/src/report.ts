@@ -40,7 +40,8 @@ type LoadedRun = {
   data: BenchFile;
 };
 
-const PROVIDERS: ReportProvider[] = ["vercel", "modal", "daytona"];
+const PROVIDERS: ReportProvider[] = ["vercel", "modal", "daytona", "aws-microvm"];
+const INTERNAL_DISCOUNT_PROVIDERS = new Set<ReportProvider>(["vercel", "daytona", "aws-microvm"]);
 const MODES: RunMode[] = ["cold", "warm"];
 const PHASES = [
   "start_seconds",
@@ -128,6 +129,13 @@ function fmtMoney(value: number | undefined): string {
   return value === undefined || Number.isNaN(value) ? "-" : `$${value.toFixed(4)}`;
 }
 
+function fmtPercentHigher(value: number | undefined, baseline: number | undefined): string {
+  if (value === undefined || baseline === undefined || Number.isNaN(value) || Number.isNaN(baseline) || baseline <= 0) {
+    return "-";
+  }
+  return `${(((value / baseline) - 1) * 100).toFixed(0)}%`;
+}
+
 function fmtDelta(value: number | undefined): string {
   if (value === undefined || Number.isNaN(value)) {
     return "-";
@@ -135,13 +143,28 @@ function fmtDelta(value: number | undefined): string {
   return `${value >= 0 ? "+" : "-"}$${Math.abs(value).toFixed(4)}`;
 }
 
+function internalComputeCost(provider: ReportProvider, estimatedProviderCost: number | undefined): number | undefined {
+  if (estimatedProviderCost === undefined || Number.isNaN(estimatedProviderCost)) {
+    return undefined;
+  }
+  return INTERNAL_DISCOUNT_PROVIDERS.has(provider) ? estimatedProviderCost * 0.2 : estimatedProviderCost;
+}
+
 function phaseMean(results: BenchResult[], phase: string): number | undefined {
   const values = results.map((result) => result.phases?.[phase]).filter((value): value is number => typeof value === "number");
   return values.length === 0 ? undefined : mean(values);
 }
 
-function summaryRow(run: LoadedRun): string {
+function awsInternalComputeCost(runs: LoadedRun[], mode: RunMode): number | undefined {
+  const awsRun = runs.find((run) => run.spec.provider === "aws-microvm" && run.spec.mode === mode);
+  return awsRun ? internalComputeCost(awsRun.data.provider, awsRun.data.estimated_cost_usd) : undefined;
+}
+
+function summaryRow(run: LoadedRun, runs: LoadedRun[]): string {
   const elapsed = run.data.results.map((result) => result.elapsed_seconds);
+  const providerCost = run.data.estimated_cost_usd;
+  const internalCost = internalComputeCost(run.data.provider, providerCost);
+  const awsInternalCost = awsInternalComputeCost(runs, run.spec.mode);
   return [
     run.data.provider,
     run.spec.mode,
@@ -150,7 +173,9 @@ function summaryRow(run: LoadedRun): string {
     fmtSeconds(mean(elapsed)),
     fmtSeconds(median(elapsed)),
     fmtSeconds(percentile(elapsed, 95)),
-    fmtMoney(run.data.estimated_cost_usd)
+    fmtMoney(providerCost),
+    fmtMoney(internalCost),
+    fmtPercentHigher(internalCost, awsInternalCost)
   ].join(" | ");
 }
 
@@ -292,9 +317,9 @@ async function main(): Promise<void> {
     "",
     "## Solve Rollup",
     "",
-    "provider | mode | passed | total seconds | mean seconds | median seconds | p95 seconds | estimated provider cost",
-    "--- | --- | ---: | ---: | ---: | ---: | ---: | ---:",
-    ...runs.map(summaryRow),
+    "provider | mode | passed | total seconds | mean seconds | median seconds | p95 seconds | estimated provider cost | estimated internal compute cost | % higher",
+    "--- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---:",
+    ...runs.map((run) => summaryRow(run, runs)),
     "",
     "## Mean Phase Seconds",
     "",
@@ -326,6 +351,7 @@ async function main(): Promise<void> {
     "## Notes",
     "",
     "- Per-task rows intentionally omit per-task price; provider cost is reported only at run level.",
+    "- Estimated internal compute cost applies an 80% discount to Vercel, Daytona, and AWS MicroVM estimated provider cost; `% higher` compares that internal compute cost to AWS MicroVM for the same mode.",
     "- The matrix runner caps Modal and Daytona task concurrency by default to avoid known provider rate, CPU, and memory limits while still running all provider/mode runs concurrently.",
     "- For task-Docker datasets such as SWE-Smith, the matrix runner does not reuse generic Modal or Daytona warm artifacts because each task needs its own image.",
     "- Vercel cannot consume the per-task Docker image directly; SWE-Smith Vercel runs require an equivalent task-compatible runtime or snapshot.",

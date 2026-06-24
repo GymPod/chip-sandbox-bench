@@ -14,12 +14,12 @@ This page compares Vercel, Modal, Daytona, and AWS Lambda MicroVMs on the full 1
 
 ## Head-To-Head Rollup
 
-provider | passed | observed task seconds | mean seconds | median seconds | p95 seconds | estimated provider cost
---- | ---: | ---: | ---: | ---: | ---: | ---:
-vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
-modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
-daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
-aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
+provider | passed | observed task seconds | mean seconds | median seconds | p95 seconds | estimated provider cost | estimated internal compute cost | % higher
+--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---:
+vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458 | $0.3092 | 92%
+modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200 | $1.3200 | 719%
+daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465 | $0.1893 | 17%
+aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063 | $0.1613 | 0%
 
 ## Interpretation
 
@@ -30,6 +30,7 @@ aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
 - Modal sits between Vercel and Daytona on estimated provider cost in this evidence set.
 - Daytona has the lowest estimated provider cost among the 100/100 native task-Docker provider rows.
 - AWS MicroVM observed task seconds are close to Vercel's in this run. The AWS MicroVM estimate uses memory-derived billable vCPU and public runtime compute rates only; snapshot read/write/storage and data transfer are excluded.
+- Estimated internal compute cost applies an 80% discount to Vercel, Daytona, and AWS MicroVM estimated provider cost; `% higher` compares that internal compute cost to AWS MicroVM.
 - Because this table stitches full and focused reruns, use it for runnability and rough head-to-head shape; run a fresh synchronized matrix before making strict speed claims.
 - Treat estimated provider cost as directional only. See [cost estimate caveats](cost-estimate-caveats.md).
 

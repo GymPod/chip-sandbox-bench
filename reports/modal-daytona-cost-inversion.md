@@ -20,11 +20,13 @@ Effective rate is calculated from the existing report values:
 effective $/sandbox-hour = estimated provider cost / observed task seconds * 3600
 ```
 
-provider | observed task seconds | estimated provider cost | effective $/sandbox-hour
---- | ---: | ---: | ---:
-vercel | 14356.6 | $1.5458 | $0.3876
-modal | 17397.9 | $1.3200 | $0.2731
-daytona | 19006.8 | $0.9465 | $0.1793
+`% higher` compares estimated internal compute cost to the latest AWS MicroVM internal compute estimate of `$0.1613`.
+
+provider | observed task seconds | estimated provider cost | estimated internal compute cost | % higher | effective $/sandbox-hour
+--- | ---: | ---: | ---: | ---: | ---:
+vercel | 14356.6 | $1.5458 | $0.3092 | 92% | $0.3876
+modal | 17397.9 | $1.3200 | $1.3200 | 719% | $0.2731
+daytona | 19006.8 | $0.9465 | $0.1893 | 17% | $0.1793
 
 ## Why Modal Costs More Here
 

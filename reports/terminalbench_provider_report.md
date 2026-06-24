@@ -8,12 +8,12 @@ This report set now tracks the 100-task SWE-Smith cold-gold runnability comparis
 
 Vercel, Modal, and Daytona have passing evidence for all 100 tasks in `data/swesmith_v4_smoke100.jsonl`. A fresh AWS Lambda MicroVM run using the reused `code-sandbox-bench-runner-20260624-gym-platform-2` image passed 97/100 tasks.
 
-provider | passed | observed task seconds | mean seconds | median seconds | p95 seconds | estimated provider cost
---- | ---: | ---: | ---: | ---: | ---: | ---:
-vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
-modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
-daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
-aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
+provider | passed | observed task seconds | mean seconds | median seconds | p95 seconds | estimated provider cost | estimated internal compute cost | % higher
+--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---:
+vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458 | $0.3092 | 92%
+modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200 | $1.3200 | 719%
+daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465 | $0.1893 | 17%
+aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063 | $0.1613 | 0%
 
 ## Report Index
 
@@ -32,5 +32,6 @@ aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
 - The comparison is solver-independent cold-gold runnability evidence.
 - The timing rollups are stitched from full and focused reruns. Use a fresh synchronized matrix before making strict wall-clock claims.
 - The dollar figures are harness estimates, not reconciled provider billing data. AWS MicroVM dollars use memory-derived billable vCPU with public US East (N. Virginia) ARM MicroVM runtime rates and exclude snapshot read/write/storage and data transfer. See [cost estimate caveats](cost-estimate-caveats.md).
+- Estimated internal compute cost applies an 80% discount to Vercel, Daytona, and AWS MicroVM estimated provider cost; `% higher` compares that internal compute cost to AWS MicroVM.
 - New benchmark rows include `static_estimated_cost_usd`, `adaptive_estimated_cost_usd`, and resource observation fields. The checked-in adaptive AWS config lowers the 100-task SWE-Smith per-second resource rate by 39.7% versus the static baseline.
 - Vercel and AWS MicroVMs use manifest-driven fallback environment reconstruction for SWE-Smith tasks; Modal and Daytona use native task Docker images.
