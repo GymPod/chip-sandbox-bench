@@ -3,10 +3,24 @@ import {
   CreateMicrovmAuthTokenCommand,
   GetMicrovmCommand,
   LambdaMicrovmsClient,
+  ResumeMicrovmCommand,
   RunMicrovmCommand,
+  SuspendMicrovmCommand,
   TerminateMicrovmCommand
 } from "@aws-sdk/client-lambda-microvms";
 import type { CommandResult } from "./types";
+
+export type AwsMicrovmSessionMode = "terminate" | "auto-suspend" | "explicit-suspend";
+
+export type AwsMicrovmKnownState =
+  | "NOT_STARTED"
+  | "PENDING"
+  | "RUNNING"
+  | "SUSPENDING"
+  | "SUSPENDED"
+  | "TERMINATING"
+  | "TERMINATED"
+  | "UNKNOWN";
 
 export type AwsMicrovmIdlePolicy = {
   maxIdleDurationSeconds: number;
@@ -14,21 +28,36 @@ export type AwsMicrovmIdlePolicy = {
   autoResumeEnabled: boolean;
 };
 
+export type AwsMicrovmPricingConfig = {
+  vcpuSecondUsd: number;
+  gbSecondUsd: number;
+  snapshotWriteGbUsd: number;
+  snapshotReadGbUsd: number;
+  snapshotStorageGbMonthUsd: number;
+};
+
 export type AwsMicrovmSandboxConfig = {
   region: string;
   imageIdentifier: string;
   imageVersion?: string;
   executionRoleArn?: string;
+  cpu: number;
+  memoryGb: number;
   port: number;
   authTokenExpirationMinutes: number;
   maximumDurationInSeconds: number;
   idlePolicy: AwsMicrovmIdlePolicy;
+  sessionMode: AwsMicrovmSessionMode;
   ingressNetworkConnectors: string[];
   egressNetworkConnectors: string[];
   logGroup?: string;
   clientTokenPrefix: string;
   startTimeoutSeconds: number;
   quotaRetryDelaySeconds: number;
+  firstRequestTimeoutSeconds: number;
+  resumeTimeoutSeconds: number;
+  resumeCheckAfterIdleSeconds: number;
+  pricing: AwsMicrovmPricingConfig;
 };
 
 export type AwsMicrovmSandboxEnvOptions = {
@@ -36,48 +65,222 @@ export type AwsMicrovmSandboxEnvOptions = {
   imageVersion?: string;
   executionRoleArn?: string;
   timeoutSeconds: number;
+  cpu: number;
+  memoryGb: number;
+};
+
+export type AwsMicrovmLifecycleEvent = {
+  event: "run_microvm" | "ready" | "resume" | "suspend" | "terminate" | "state_refresh" | "command";
+  reason?: string;
+  state?: AwsMicrovmKnownState;
+  started_at: string;
+  completed_at: string;
+  duration_seconds: number;
+  idle_gap_seconds?: number;
+  error?: string;
+};
+
+export type AwsMicrovmLifecycleCost = {
+  running_seconds: number;
+  suspended_seconds: number;
+  suspend_count: number;
+  resume_count: number;
+  launch_snapshot_read_gb: number;
+  suspend_snapshot_write_gb: number;
+  resume_snapshot_read_gb: number;
+  running_compute_usd: number;
+  snapshot_write_usd: number;
+  snapshot_read_usd: number;
+  suspended_storage_usd: number;
+  total_usd: number;
+};
+
+export type AwsMicrovmTelemetry = {
+  session_mode: AwsMicrovmSessionMode;
+  microvm_id?: string;
+  image_identifier: string;
+  image_version?: string;
+  last_known_state: AwsMicrovmKnownState;
+  command_count: number;
+  resume_attempts: number;
+  resume_count: number;
+  suspend_count: number;
+  terminate_count: number;
+  auto_resume_retry_count: number;
+  first_request_timeout_seconds: number;
+  resume_timeout_seconds: number;
+  last_command_completed_at?: string;
+  lifecycle_events: AwsMicrovmLifecycleEvent[];
+  lifecycle_cost: AwsMicrovmLifecycleCost;
+  pricing: AwsMicrovmPricingConfig;
 };
 
 export class AwsMicrovmSandbox {
   private readonly client: LambdaMicrovmsClient;
   private microvmId: string | undefined;
+  private lastMicrovmId: string | undefined;
   private endpoint: string | undefined;
   private authToken: string | undefined;
   private authTokenExpiresAt = 0;
+  private lastKnownState: AwsMicrovmKnownState = "NOT_STARTED";
+  private lastCommandCompletedAtMs: number | undefined;
+  private commandCount = 0;
+  private resumeAttempts = 0;
+  private resumeCount = 0;
+  private suspendCount = 0;
+  private terminateCount = 0;
+  private autoResumeRetryCount = 0;
+  private runningStartedAtMs: number | undefined;
+  private suspendedStartedAtMs: number | undefined;
+  private accumulatedRunningSeconds = 0;
+  private accumulatedSuspendedSeconds = 0;
+  private readonly lifecycleEvents: AwsMicrovmLifecycleEvent[] = [];
 
   constructor(private readonly config: AwsMicrovmSandboxConfig) {
     this.client = new LambdaMicrovmsClient({ region: config.region });
   }
 
   async start(): Promise<void> {
-    const response = await this.runMicrovmWithQuotaRetry();
+    const response = await this.recordLifecycle("run_microvm", "start", () => this.runMicrovmWithQuotaRetry());
     this.microvmId = required(response.microvmId, "RunMicrovm did not return a microvmId");
+    this.lastMicrovmId = this.microvmId;
     this.endpoint = required(response.endpoint, "RunMicrovm did not return an endpoint");
-    await this.waitForReady();
+    this.lastKnownState = "RUNNING";
+    this.markRunning();
+    await this.recordLifecycle("ready", "start", () => this.waitForReady());
   }
 
   async run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
     if (!this.microvmId || !this.endpoint) {
       throw new Error("AWS MicroVM sandbox not started");
     }
-    return await this.postCommand(command, cwd, timeoutSeconds);
+    await this.ensureRunnableBeforeCommand();
+    const idleGapSeconds =
+      this.lastCommandCompletedAtMs === undefined ? undefined : Math.max(0, (Date.now() - this.lastCommandCompletedAtMs) / 1000);
+    const result = await this.recordLifecycle("command", "run", () => this.postCommand(command, cwd, timeoutSeconds), {
+      idleGapSeconds
+    });
+    this.commandCount += 1;
+    this.lastCommandCompletedAtMs = Date.now();
+    return result;
+  }
+
+  async suspend(reason = "manual"): Promise<void> {
+    if (!this.microvmId || isSuspendedOrTerminated(this.lastKnownState)) {
+      return;
+    }
+    await this.refreshState("before-suspend").catch(() => undefined);
+    if (!this.microvmId || isSuspendedOrTerminated(this.lastKnownState)) {
+      return;
+    }
+    const microvmIdentifier = this.microvmId;
+    let suspendedByThisCall = false;
+    try {
+      await this.recordLifecycle("suspend", reason, () => this.client.send(new SuspendMicrovmCommand({ microvmIdentifier })));
+      suspendedByThisCall = true;
+    } catch (error) {
+      if (!isConflict(error)) {
+        throw error;
+      }
+      await this.refreshState("suspend-conflict").catch(() => undefined);
+      if (!isSuspended(this.lastKnownState)) {
+        throw error;
+      }
+    }
+    if (suspendedByThisCall) {
+      this.suspendCount += 1;
+    }
+    this.authToken = undefined;
+    await this.refreshState("after-suspend").catch(() => undefined);
+    this.lastKnownState = "SUSPENDED";
+    this.markSuspended();
+  }
+
+  async resume(reason = "manual"): Promise<void> {
+    if (!this.microvmId || isRunning(this.lastKnownState)) {
+      return;
+    }
+    await this.refreshState("before-resume").catch(() => undefined);
+    if (!this.microvmId || isRunning(this.lastKnownState)) {
+      return;
+    }
+    const microvmIdentifier = this.microvmId;
+    this.resumeAttempts += 1;
+    let resumedByThisCall = false;
+    try {
+      await this.recordLifecycle("resume", reason, () => this.client.send(new ResumeMicrovmCommand({ microvmIdentifier })));
+      resumedByThisCall = true;
+    } catch (error) {
+      if (!isConflict(error)) {
+        throw error;
+      }
+      await this.refreshState("resume-conflict").catch(() => undefined);
+      if (!isRunning(this.lastKnownState)) {
+        throw error;
+      }
+    }
+    if (resumedByThisCall) {
+      this.resumeCount += 1;
+    }
+    this.authToken = undefined;
+    await this.waitForRunningAfterResume();
+    await this.recordLifecycle("ready", "resume", () => this.waitForReady());
   }
 
   async stop(): Promise<void> {
     if (!this.microvmId) {
       return;
     }
+    if (this.config.sessionMode !== "terminate") {
+      await this.suspend("stop");
+      return;
+    }
+    await this.terminate("stop");
+  }
+
+  async terminate(reason = "manual"): Promise<void> {
+    if (!this.microvmId) {
+      return;
+    }
     const microvmIdentifier = this.microvmId;
-    this.microvmId = undefined;
-    this.endpoint = undefined;
-    this.authToken = undefined;
     try {
-      await this.client.send(new TerminateMicrovmCommand({ microvmIdentifier }));
+      await this.recordLifecycle("terminate", reason, () => this.client.send(new TerminateMicrovmCommand({ microvmIdentifier })));
+      this.terminateCount += 1;
+      this.lastKnownState = "TERMINATED";
+      this.markStopped();
     } catch (error) {
       if (!isResourceNotFound(error)) {
         throw error;
       }
+      this.lastKnownState = "TERMINATED";
+      this.markStopped();
     }
+    this.microvmId = undefined;
+    this.endpoint = undefined;
+    this.authToken = undefined;
+  }
+
+  telemetry(): AwsMicrovmTelemetry {
+    const lifecycleCost = this.lifecycleCost();
+    return {
+      session_mode: this.config.sessionMode,
+      microvm_id: this.microvmId ?? this.lastMicrovmId,
+      image_identifier: this.config.imageIdentifier,
+      image_version: this.config.imageVersion,
+      last_known_state: this.lastKnownState,
+      command_count: this.commandCount,
+      resume_attempts: this.resumeAttempts,
+      resume_count: this.resumeCount,
+      suspend_count: this.suspendCount,
+      terminate_count: this.terminateCount,
+      auto_resume_retry_count: this.autoResumeRetryCount,
+      first_request_timeout_seconds: this.config.firstRequestTimeoutSeconds,
+      resume_timeout_seconds: this.config.resumeTimeoutSeconds,
+      last_command_completed_at: this.lastCommandCompletedAtMs ? new Date(this.lastCommandCompletedAtMs).toISOString() : undefined,
+      lifecycle_events: this.lifecycleEvents,
+      lifecycle_cost: lifecycleCost,
+      pricing: this.config.pricing
+    };
   }
 
   private async runMicrovmWithQuotaRetry(): Promise<{
@@ -118,7 +321,7 @@ export class AwsMicrovmSandbox {
     let lastError: unknown;
     while (performance.now() - started < timeoutMs) {
       try {
-        await this.refreshEndpoint();
+        await this.refreshState("wait-ready");
         await this.authedFetch("/health", {
           method: "GET",
           signal: AbortSignal.timeout(10_000)
@@ -132,24 +335,22 @@ export class AwsMicrovmSandbox {
     throw new Error(`AWS MicroVM did not become ready: ${formatError(lastError)}`);
   }
 
-  private async refreshEndpoint(): Promise<void> {
+  private async refreshState(reason: string): Promise<void> {
     if (!this.microvmId) {
       return;
     }
-    const response = await this.client.send(new GetMicrovmCommand({ microvmIdentifier: this.microvmId }));
+    const response = await this.recordLifecycle("state_refresh", reason, () =>
+      this.client.send(new GetMicrovmCommand({ microvmIdentifier: this.microvmId }))
+    );
     if (response.endpoint) {
       this.endpoint = response.endpoint;
     }
+    this.setKnownState(normalizeMicrovmState(response.state));
   }
 
   private async postCommand(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
     const started = performance.now();
-    const startResponse = await this.authedFetch("/commands", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ command, cwd, timeoutSeconds }),
-      signal: AbortSignal.timeout(15_000)
-    });
+    const startResponse = await this.startCommandWithResumeRetry(command, cwd, timeoutSeconds);
     const startedJob = (await startResponse.json()) as { jobId?: string; error?: string };
     if (!startedJob.jobId) {
       throw new Error(startedJob.error ?? "AWS MicroVM command did not return a jobId");
@@ -178,7 +379,7 @@ export class AwsMicrovmSandbox {
         if (!isRetryablePollError(error)) {
           throw error;
         }
-        await this.refreshEndpoint().catch(() => undefined);
+        await this.refreshState("poll-error").catch(() => undefined);
         this.authToken = undefined;
       }
       await sleep(2000);
@@ -188,6 +389,75 @@ export class AwsMicrovmSandbox {
       stderr: `Command timed out after ${timeoutSeconds}s${lastPollError ? `; last poll error: ${formatError(lastPollError)}` : ""}`,
       returnCode: 124
     };
+  }
+
+  private async startCommandWithResumeRetry(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<Response> {
+    const init = () => ({
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ command, cwd, timeoutSeconds }),
+      signal: AbortSignal.timeout(this.config.firstRequestTimeoutSeconds * 1000)
+    });
+    try {
+      return await this.authedFetch("/commands", init());
+    } catch (error) {
+      if (!this.shouldRetryFirstRequestAfterIdle(error)) {
+        throw error;
+      }
+      this.autoResumeRetryCount += 1;
+      await this.refreshState("first-request-error").catch(() => undefined);
+      if (this.lastKnownState === "SUSPENDED") {
+        await this.resume("first-request-retry");
+      }
+      this.authToken = undefined;
+      return await this.authedFetch("/commands", init());
+    }
+  }
+
+  private async ensureRunnableBeforeCommand(): Promise<void> {
+    if (this.config.sessionMode === "explicit-suspend") {
+      await this.refreshState("before-explicit-command").catch(() => undefined);
+      if (this.lastKnownState === "SUSPENDED" || this.lastKnownState === "SUSPENDING") {
+        await this.resume("before-command");
+      }
+      return;
+    }
+    const idleSeconds =
+      this.lastCommandCompletedAtMs === undefined ? 0 : Math.max(0, (Date.now() - this.lastCommandCompletedAtMs) / 1000);
+    if (this.config.sessionMode === "auto-suspend" && idleSeconds >= this.config.resumeCheckAfterIdleSeconds) {
+      await this.refreshState("before-auto-command").catch(() => undefined);
+    }
+  }
+
+  private async waitForRunningAfterResume(): Promise<void> {
+    const started = performance.now();
+    let lastError: unknown;
+    while ((performance.now() - started) / 1000 < this.config.resumeTimeoutSeconds) {
+      try {
+        await this.refreshState("wait-resume");
+        if (this.lastKnownState === "RUNNING") {
+          this.markRunning();
+          return;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+      await sleep(1000);
+    }
+    throw new Error(`AWS MicroVM did not resume within ${this.config.resumeTimeoutSeconds}s: ${formatError(lastError)}`);
+  }
+
+  private shouldRetryFirstRequestAfterIdle(error: unknown): boolean {
+    if (!isRetryablePollError(error)) {
+      return false;
+    }
+    if (this.config.sessionMode === "terminate") {
+      return false;
+    }
+    if (this.lastCommandCompletedAtMs === undefined) {
+      return true;
+    }
+    return (Date.now() - this.lastCommandCompletedAtMs) / 1000 >= this.config.resumeCheckAfterIdleSeconds;
   }
 
   private async authedFetch(path: string, init: RequestInit): Promise<Response> {
@@ -236,6 +506,118 @@ export class AwsMicrovmSandbox {
     const base = this.endpoint.startsWith("http") ? this.endpoint : `https://${this.endpoint}`;
     return new URL(path, base.endsWith("/") ? base : `${base}/`).toString();
   }
+
+  private async recordLifecycle<T>(
+    event: AwsMicrovmLifecycleEvent["event"],
+    reason: string,
+    action: () => Promise<T>,
+    options: { idleGapSeconds?: number } = {}
+  ): Promise<T> {
+    const startedAt = new Date();
+    const started = performance.now();
+    try {
+      const result = await action();
+      this.lifecycleEvents.push({
+        event,
+        reason,
+        state: this.lastKnownState,
+        started_at: startedAt.toISOString(),
+        completed_at: new Date().toISOString(),
+        duration_seconds: (performance.now() - started) / 1000,
+        ...(options.idleGapSeconds === undefined ? {} : { idle_gap_seconds: options.idleGapSeconds })
+      });
+      return result;
+    } catch (error) {
+      this.lifecycleEvents.push({
+        event,
+        reason,
+        state: this.lastKnownState,
+        started_at: startedAt.toISOString(),
+        completed_at: new Date().toISOString(),
+        duration_seconds: (performance.now() - started) / 1000,
+        ...(options.idleGapSeconds === undefined ? {} : { idle_gap_seconds: options.idleGapSeconds }),
+        error: formatError(error)
+      });
+      throw error;
+    }
+  }
+
+  private setKnownState(state: AwsMicrovmKnownState): void {
+    if (state === this.lastKnownState) {
+      return;
+    }
+    this.lastKnownState = state;
+    if (state === "RUNNING") {
+      this.markRunning();
+    } else if (state === "SUSPENDED") {
+      this.markSuspended();
+    } else if (state === "TERMINATED" || state === "TERMINATING") {
+      this.markStopped();
+    }
+  }
+
+  private markRunning(): void {
+    if (this.runningStartedAtMs !== undefined) {
+      return;
+    }
+    if (this.suspendedStartedAtMs !== undefined) {
+      this.accumulatedSuspendedSeconds += Math.max(0, (Date.now() - this.suspendedStartedAtMs) / 1000);
+      this.suspendedStartedAtMs = undefined;
+    }
+    this.runningStartedAtMs = Date.now();
+  }
+
+  private markSuspended(): void {
+    if (this.runningStartedAtMs !== undefined) {
+      this.accumulatedRunningSeconds += Math.max(0, (Date.now() - this.runningStartedAtMs) / 1000);
+      this.runningStartedAtMs = undefined;
+    }
+    this.suspendedStartedAtMs ??= Date.now();
+  }
+
+  private markStopped(): void {
+    if (this.runningStartedAtMs !== undefined) {
+      this.accumulatedRunningSeconds += Math.max(0, (Date.now() - this.runningStartedAtMs) / 1000);
+      this.runningStartedAtMs = undefined;
+    }
+    if (this.suspendedStartedAtMs !== undefined) {
+      this.accumulatedSuspendedSeconds += Math.max(0, (Date.now() - this.suspendedStartedAtMs) / 1000);
+      this.suspendedStartedAtMs = undefined;
+    }
+  }
+
+  private lifecycleCost(): AwsMicrovmLifecycleCost {
+    const now = Date.now();
+    const runningSeconds =
+      this.accumulatedRunningSeconds +
+      (this.runningStartedAtMs === undefined ? 0 : Math.max(0, (now - this.runningStartedAtMs) / 1000));
+    const suspendedSeconds =
+      this.accumulatedSuspendedSeconds +
+      (this.suspendedStartedAtMs === undefined ? 0 : Math.max(0, (now - this.suspendedStartedAtMs) / 1000));
+    const runningComputeUsd =
+      runningSeconds * (this.config.cpu * this.config.pricing.vcpuSecondUsd + this.config.memoryGb * this.config.pricing.gbSecondUsd);
+    const launchSnapshotReadGb = this.config.memoryGb;
+    const suspendSnapshotWriteGb = this.suspendCount * this.config.memoryGb;
+    const resumeSnapshotReadGb = this.resumeCount * this.config.memoryGb;
+    const snapshotWriteUsd = suspendSnapshotWriteGb * this.config.pricing.snapshotWriteGbUsd;
+    const snapshotReadUsd = (launchSnapshotReadGb + resumeSnapshotReadGb) * this.config.pricing.snapshotReadGbUsd;
+    const suspendedStorageUsd =
+      this.config.memoryGb * (suspendedSeconds / (30 * 24 * 3600)) * this.config.pricing.snapshotStorageGbMonthUsd;
+    return {
+      running_seconds: runningSeconds,
+      suspended_seconds: suspendedSeconds,
+      suspend_count: this.suspendCount,
+      resume_count: this.resumeCount,
+      launch_snapshot_read_gb: launchSnapshotReadGb,
+      suspend_snapshot_write_gb: suspendSnapshotWriteGb,
+      resume_snapshot_read_gb: resumeSnapshotReadGb,
+      running_compute_usd: runningComputeUsd,
+      snapshot_write_usd: snapshotWriteUsd,
+      snapshot_read_usd: snapshotReadUsd,
+      suspended_storage_usd: suspendedStorageUsd,
+      total_usd: runningComputeUsd + snapshotWriteUsd + snapshotReadUsd + suspendedStorageUsd
+    };
+  }
 }
 
 export function awsMicrovmConfigFromEnv(options: AwsMicrovmSandboxEnvOptions): AwsMicrovmSandboxConfig {
@@ -249,21 +631,36 @@ export function awsMicrovmConfigFromEnv(options: AwsMicrovmSandboxEnvOptions): A
     Math.max(180, Math.min(3600, options.timeoutSeconds + 180))
   );
   const port = envInt("AWS_MICROVM_PORT", 8080);
+  const sessionMode = envSessionMode("AWS_MICROVM_SESSION_MODE", "terminate");
+  const idlePolicy =
+    sessionMode === "terminate"
+      ? {
+          maxIdleDurationSeconds: envInt("AWS_MICROVM_MAX_IDLE_DURATION_SECONDS", 120),
+          suspendedDurationSeconds: envInt("AWS_MICROVM_SUSPENDED_DURATION_SECONDS", 0),
+          autoResumeEnabled: envBool("AWS_MICROVM_AUTO_RESUME", false)
+        }
+      : {
+          maxIdleDurationSeconds: envInt("AWS_MICROVM_MAX_IDLE_DURATION_SECONDS", 300),
+          suspendedDurationSeconds: envInt("AWS_MICROVM_SUSPENDED_DURATION_SECONDS", 25_200),
+          autoResumeEnabled: envBool("AWS_MICROVM_AUTO_RESUME", sessionMode === "auto-suspend")
+        };
   return {
     region,
     imageIdentifier,
     imageVersion: options.imageVersion ?? process.env.AWS_MICROVM_IMAGE_VERSION,
     executionRoleArn: options.executionRoleArn ?? process.env.AWS_MICROVM_EXECUTION_ROLE_ARN,
+    cpu: options.cpu,
+    memoryGb: options.memoryGb,
     port,
     authTokenExpirationMinutes: envInt("AWS_MICROVM_AUTH_TOKEN_MINUTES", 30),
     maximumDurationInSeconds,
     startTimeoutSeconds: envInt("AWS_MICROVM_START_TIMEOUT_SECONDS", 600),
     quotaRetryDelaySeconds: envInt("AWS_MICROVM_QUOTA_RETRY_SECONDS", 15),
-    idlePolicy: {
-      maxIdleDurationSeconds: envInt("AWS_MICROVM_MAX_IDLE_DURATION_SECONDS", 120),
-      suspendedDurationSeconds: envInt("AWS_MICROVM_SUSPENDED_DURATION_SECONDS", 0),
-      autoResumeEnabled: envBool("AWS_MICROVM_AUTO_RESUME", false)
-    },
+    firstRequestTimeoutSeconds: envInt("AWS_MICROVM_FIRST_REQUEST_TIMEOUT_SECONDS", sessionMode === "terminate" ? 15 : 60),
+    resumeTimeoutSeconds: envInt("AWS_MICROVM_RESUME_TIMEOUT_SECONDS", 120),
+    resumeCheckAfterIdleSeconds: envInt("AWS_MICROVM_RESUME_CHECK_AFTER_IDLE_SECONDS", 60),
+    sessionMode,
+    idlePolicy,
     ingressNetworkConnectors: envList("AWS_MICROVM_INGRESS_CONNECTORS", [
       `arn:aws:lambda:${region}:aws:network-connector:aws-network-connector:ALL_INGRESS`
     ]),
@@ -271,7 +668,14 @@ export function awsMicrovmConfigFromEnv(options: AwsMicrovmSandboxEnvOptions): A
       `arn:aws:lambda:${region}:aws:network-connector:aws-network-connector:INTERNET_EGRESS`
     ]),
     logGroup: process.env.AWS_MICROVM_LOG_GROUP,
-    clientTokenPrefix: process.env.AWS_MICROVM_CLIENT_TOKEN_PREFIX ?? "code-sandbox-bench"
+    clientTokenPrefix: process.env.AWS_MICROVM_CLIENT_TOKEN_PREFIX ?? "code-sandbox-bench",
+    pricing: {
+      vcpuSecondUsd: envNumber("AWS_MICROVM_ESTIMATE_VCPU_SECOND_USD", envNumber("AWS_MICROVM_ESTIMATE_VCPU_HOUR_USD", 0) / 3600 || 0.0000276944),
+      gbSecondUsd: envNumber("AWS_MICROVM_ESTIMATE_GB_SECOND_USD", envNumber("AWS_MICROVM_ESTIMATE_GB_HOUR_USD", 0) / 3600 || 0.0000036667),
+      snapshotWriteGbUsd: envNumber("AWS_MICROVM_ESTIMATE_SNAPSHOT_WRITE_GB_USD", 0.0038),
+      snapshotReadGbUsd: envNumber("AWS_MICROVM_ESTIMATE_SNAPSHOT_READ_GB_USD", 0.00155),
+      snapshotStorageGbMonthUsd: envNumber("AWS_MICROVM_ESTIMATE_SNAPSHOT_STORAGE_GB_MONTH_USD", 0.08)
+    }
   };
 }
 
@@ -286,6 +690,19 @@ function envBool(name: string, fallback: boolean): boolean {
     return fallback;
   }
   return value === "1" || value.toLowerCase() === "true";
+}
+
+function envNumber(name: string, fallback: number): number {
+  const value = process.env[name];
+  return value === undefined ? fallback : Number.parseFloat(value);
+}
+
+function envSessionMode(name: string, fallback: AwsMicrovmSessionMode): AwsMicrovmSessionMode {
+  const value = process.env[name] ?? fallback;
+  if (value === "terminate" || value === "auto-suspend" || value === "explicit-suspend") {
+    return value;
+  }
+  throw new Error(`${name} must be one of terminate, auto-suspend, explicit-suspend`);
 }
 
 function envList(name: string, fallback: string[]): string[] {
@@ -312,6 +729,36 @@ function isResourceNotFound(error: unknown): boolean {
 
 function isQuotaExceeded(error: unknown): boolean {
   return error instanceof Error && error.name === "ServiceQuotaExceededException";
+}
+
+function isConflict(error: unknown): boolean {
+  return error instanceof Error && error.name === "ConflictException";
+}
+
+function isRunning(state: AwsMicrovmKnownState): boolean {
+  return state === "RUNNING";
+}
+
+function isSuspended(state: AwsMicrovmKnownState): boolean {
+  return state === "SUSPENDED";
+}
+
+function isSuspendedOrTerminated(state: AwsMicrovmKnownState): boolean {
+  return state === "SUSPENDED" || state === "TERMINATED";
+}
+
+function normalizeMicrovmState(state: string | undefined): AwsMicrovmKnownState {
+  if (
+    state === "PENDING" ||
+    state === "RUNNING" ||
+    state === "SUSPENDING" ||
+    state === "SUSPENDED" ||
+    state === "TERMINATING" ||
+    state === "TERMINATED"
+  ) {
+    return state;
+  }
+  return "UNKNOWN";
 }
 
 function formatError(error: unknown): string {

@@ -52,4 +52,6 @@ The trace records lifecycle and command timing so idle gaps between commands can
 
 The summary buckets command-to-command idle gaps with `over_10s`, `over_60s`, and `over_300s` counters for auto-suspend threshold analysis.
 
+AWS MicroVM result rows may also include `aws_microvm`, with lifecycle state, suspend/resume counts, lifecycle events, and `lifecycle_cost` buckets for running compute, snapshot read/write, suspended storage, and total estimated cost.
+
 Result JSON may include output tails from task logs. Do not store secrets in task output or forwarded environment values.

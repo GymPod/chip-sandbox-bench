@@ -24,6 +24,7 @@ export type Provider = {
   start(): Promise<void>;
   run(command: string, cwd: string | undefined, timeoutSeconds: number, trace?: ProviderRunTrace): Promise<CommandResult>;
   stop(): Promise<void>;
+  metadata?(): Record<string, unknown>;
 };
 
 export type ProviderName = "local" | "vercel" | "modal" | "daytona" | "aws-microvm";

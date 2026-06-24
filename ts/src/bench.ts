@@ -429,6 +429,7 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
   let solveElapsedSeconds: number | undefined;
   let solveResult: CommandResult | undefined;
   let result: CommandResult = { stdout: "", stderr: "", returnCode: 1 };
+  let providerMetadata: Record<string, unknown> = {};
   const phases: Record<string, number> = {};
   async function timed<T>(name: string, action: () => Promise<T>): Promise<T> {
     const phaseStarted = performance.now();
@@ -496,7 +497,9 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
     if (providerToStop) {
       try {
         await timed("stop", () => providerToStop.stop());
+        providerMetadata = providerToStop.metadata?.() ?? {};
       } catch (error) {
+        providerMetadata = providerToStop.metadata?.() ?? {};
         result = {
           stdout: result.stdout,
           stderr: `${result.stderr}\nstop failed:\n${formatError(error)}`.trim(),
@@ -523,6 +526,7 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
     elapsed_seconds: elapsedSeconds,
     phases,
     agent_trace: traceRecorder.snapshot(),
+    ...providerMetadata,
     stdout_tail: result.stdout.slice(-2000),
     stderr_tail: result.stderr.slice(-2000)
   };
@@ -627,6 +631,7 @@ async function main(): Promise<void> {
     solve_enabled: kind === "solve",
     passed: results.filter((item) => item.passed).length,
     estimated_cost_usd: estimateRunCost(args, results),
+    aws_microvm_lifecycle_cost_usd: awsMicrovmLifecycleCost(results),
     agent_trace_summary: summarizeAgentTraces(
       results.map((item) => item.agent_trace).filter((trace): trace is AgentTrace => isAgentTrace(trace))
     ),
@@ -645,6 +650,20 @@ async function main(): Promise<void> {
 
 function isAgentTrace(value: unknown): value is AgentTrace {
   return typeof value === "object" && value !== null && (value as AgentTrace).schema_version === 1 && Array.isArray((value as AgentTrace).events);
+}
+
+function awsMicrovmLifecycleCost(results: Record<string, unknown>[]): number | undefined {
+  let total = 0;
+  let found = false;
+  for (const item of results) {
+    const aws = item.aws_microvm as { lifecycle_cost?: { total_usd?: unknown } } | undefined;
+    const value = aws?.lifecycle_cost?.total_usd;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      total += value;
+      found = true;
+    }
+  }
+  return found ? total : undefined;
 }
 
 async function runWithConcurrency(tasks: BenchTask[], args: BenchArgs): Promise<Record<string, unknown>[]> {

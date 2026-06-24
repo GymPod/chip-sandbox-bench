@@ -357,9 +357,12 @@ export class DaytonaProvider implements Provider {
 
 export class AwsMicrovmProvider implements Provider {
   private sandbox: AwsMicrovmSandbox | undefined;
+  private lastMetadata: Record<string, unknown> = {};
 
   constructor(
     private readonly timeoutSeconds: number,
+    private readonly cpu: number,
+    private readonly memoryGb: number,
     private readonly imageIdentifier: string | undefined,
     private readonly imageVersion: string | undefined,
     private readonly executionRoleArn: string | undefined
@@ -371,7 +374,9 @@ export class AwsMicrovmProvider implements Provider {
         imageIdentifier: this.imageIdentifier,
         imageVersion: this.imageVersion,
         executionRoleArn: this.executionRoleArn,
-        timeoutSeconds: this.timeoutSeconds
+        timeoutSeconds: this.timeoutSeconds,
+        cpu: this.cpu,
+        memoryGb: this.memoryGb
       })
     );
     await this.sandbox.start();
@@ -387,8 +392,13 @@ export class AwsMicrovmProvider implements Provider {
   async stop(): Promise<void> {
     if (this.sandbox) {
       await this.sandbox.stop();
+      this.lastMetadata = { aws_microvm: this.sandbox.telemetry() };
       this.sandbox = undefined;
     }
+  }
+
+  metadata(): Record<string, unknown> {
+    return this.sandbox ? { aws_microvm: this.sandbox.telemetry() } : this.lastMetadata;
   }
 }
 
@@ -467,6 +477,8 @@ export function makeProvider(
   if (name === "aws-microvm") {
     return new AwsMicrovmProvider(
       options.timeoutSeconds,
+      options.cpu,
+      options.memoryGb,
       options.awsMicrovmImageId,
       options.awsMicrovmImageVersion,
       options.awsMicrovmExecutionRoleArn

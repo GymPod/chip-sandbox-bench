@@ -20,13 +20,18 @@ Useful runtime controls:
 - `AWS_MICROVM_MAX_DURATION_SECONDS`, defaulting to `timeoutSeconds + 180` with a 3600s cap
 - `AWS_MICROVM_START_TIMEOUT_SECONDS`, default `600`
 - `AWS_MICROVM_QUOTA_RETRY_SECONDS`, default `15`
-- `AWS_MICROVM_MAX_IDLE_DURATION_SECONDS`, default `120`
-- `AWS_MICROVM_SUSPENDED_DURATION_SECONDS`, default `0`
-- `AWS_MICROVM_AUTO_RESUME`, default `false`
+- `AWS_MICROVM_SESSION_MODE`, default `terminate`; supported values: `terminate`, `auto-suspend`, `explicit-suspend`
+- `AWS_MICROVM_MAX_IDLE_DURATION_SECONDS`, default `120` in `terminate` mode and `300` in session modes
+- `AWS_MICROVM_SUSPENDED_DURATION_SECONDS`, default `0` in `terminate` mode and `25200` in session modes
+- `AWS_MICROVM_AUTO_RESUME`, default `false` in `terminate` / `explicit-suspend` and `true` in `auto-suspend`
+- `AWS_MICROVM_FIRST_REQUEST_TIMEOUT_SECONDS`, default `15` in `terminate` mode and `60` in session modes
+- `AWS_MICROVM_RESUME_TIMEOUT_SECONDS`, default `120`
+- `AWS_MICROVM_RESUME_CHECK_AFTER_IDLE_SECONDS`, default `60`
 - `AWS_MICROVM_ACCOUNT_MEMORY_GB`, default `4`
 - `AWS_MICROVM_MAX_CONCURRENCY`, default `1` in `bench.ts`
 - `AWS_MICROVM_INGRESS_CONNECTORS`, default `ALL_INGRESS`
 - `AWS_MICROVM_EGRESS_CONNECTORS`, default `INTERNET_EGRESS`
+- `AWS_MICROVM_ESTIMATE_VCPU_SECOND_USD`, `AWS_MICROVM_ESTIMATE_GB_SECOND_USD`, `AWS_MICROVM_ESTIMATE_SNAPSHOT_WRITE_GB_USD`, `AWS_MICROVM_ESTIMATE_SNAPSHOT_READ_GB_USD`, and `AWS_MICROVM_ESTIMATE_SNAPSHOT_STORAGE_GB_MONTH_USD` override lifecycle cost estimates.
 
 ## Image Creation
 
@@ -53,7 +58,7 @@ AWS_MICROVM_IMAGE_ID=...
 AWS_MICROVM_IMAGE_VERSION=...
 ```
 
-Lifecycle hooks are disabled by default for the MVP image. Set `AWS_MICROVM_ENABLE_HOOKS=1` to include `/ready`, `/validate`, `/run`, `/resume`, and `/terminate` hooks exposed by the runner.
+Lifecycle hooks are disabled by default for the MVP image. Set `AWS_MICROVM_ENABLE_HOOKS=1` to include `/ready`, `/validate`, `/run`, `/resume`, `/suspend`, and `/terminate` hooks exposed by the runner.
 
 ## Runtime Lifecycle
 
@@ -143,15 +148,25 @@ The trace records:
 
 Raw command text is intentionally not stored because solver commands can contain forwarded environment values. Use the idle-gap buckets in `agent_trace_summary` (`over_10s`, `over_60s`, `over_300s`) when evaluating whether auto-suspend thresholds are worthwhile for coding-agent traffic.
 
+### Session Modes
+
+`AWS_MICROVM_SESSION_MODE=terminate` preserves existing benchmark behavior: `stop()` calls `TerminateMicrovm`, releases quota, and leaves no suspended session behind.
+
+`AWS_MICROVM_SESSION_MODE=auto-suspend` keeps the MicroVM identity alive across calls to `stop()` by explicitly suspending instead of terminating. Its idle policy enables AWS auto-resume, so the next request to the endpoint can wake the MicroVM. The provider uses a longer first-request timeout in this mode and retries one transient first-request failure after refreshing state, endpoint, and auth token.
+
+`AWS_MICROVM_SESSION_MODE=explicit-suspend` also suspends on `stop()`, but it resumes through `ResumeMicrovm` before the next command when the state is `SUSPENDED`. This is useful for product paths that know they are parking a session and want resume latency measured separately from command runtime.
+
+Both session modes emit an `aws_microvm` object in each benchmark row with lifecycle events, state, suspend/resume counts, and estimated lifecycle cost buckets.
+
 ### Lifecycle Hooks
 
-Lifecycle hooks are separate from benchmark command execution. When `AWS_MICROVM_ENABLE_HOOKS=1` is set during image creation, `CreateMicrovmImage` includes `/ready`, `/validate`, `/run`, `/resume`, and `/terminate` hooks under the AWS Lambda MicroVM runtime prefix:
+Lifecycle hooks are separate from benchmark command execution. When `AWS_MICROVM_ENABLE_HOOKS=1` is set during image creation, `CreateMicrovmImage` includes `/ready`, `/validate`, `/run`, `/resume`, `/suspend`, and `/terminate` hooks under the AWS Lambda MicroVM runtime prefix:
 
 ```text
 /aws/lambda-microvms/runtime/v1/<hook>
 ```
 
-`server.py` currently responds to those hook POSTs with a simple JSON acknowledgement. The harness does not depend on the hooks for task upload, prepare, solve, verify, or cleanup.
+`server.py` handles those hook POSTs by ensuring runtime directories exist, validating basic runner readiness, persisting job metadata under `/tmp/code-sandbox-bench-jobs/jobs.json`, and flushing filesystem buffers on `/suspend` and `/terminate`. The harness does not depend on the hooks for task upload, prepare, solve, verify, or cleanup, but session-mode images should enable them.
 
 ### Stop
 
@@ -163,7 +178,7 @@ AwsMicrovmProvider.stop()
   -> TerminateMicrovm
 ```
 
-The provider clears its local `microvmId`, endpoint, and cached auth token before sending `TerminateMicrovm`. `ResourceNotFound` during termination is ignored because the desired final state is already reached.
+In `terminate` mode, the provider clears its endpoint and cached auth token before sending `TerminateMicrovm`. `ResourceNotFound` during termination is ignored because the desired final state is already reached. In session modes, `stop()` suspends instead of terminating; use the reaper or direct `terminate()` cleanup path for abandoned sessions.
 
 ## Comparison With SDK-Managed Providers
 
@@ -252,12 +267,38 @@ Additional clean task:
 
 Clean-pass count excluding the suspicious bottlepy row: `10`.
 
+## Session Smoke And Reaper
+
+Use the session smoke script to validate suspend/resume behavior and state preservation for a session image:
+
+```bash
+cd ts
+AWS_MICROVM_SESSION_MODE=explicit-suspend \
+bun run aws:session-smoke \
+  --aws-microvm-image-id "$AWS_MICROVM_IMAGE_ID" \
+  --aws-microvm-image-version "$AWS_MICROVM_IMAGE_VERSION" \
+  --memory-gb 2 \
+  --output ../results/aws-session-smoke.json
+```
+
+The smoke writes a file in `/workspace`, suspends/resumes, verifies the file survives, emits `aws_microvm.lifecycle_events`, and terminates by default. Add `--keep-session` only when intentionally inspecting a suspended MicroVM.
+
+Use the reaper to inspect or terminate abandoned sessions for an image:
+
+```bash
+cd ts
+bun run aws:reaper --image-id "$AWS_MICROVM_IMAGE_ID"
+bun run aws:reaper --image-id "$AWS_MICROVM_IMAGE_ID" --max-suspended-age-seconds 25200 --execute
+```
+
+The reaper defaults to dry-run. It uses `startedAt` as the available age signal because the list API does not expose `suspendedAt`.
+
 ## Cost Guardrails
 
-The provider sets short task-level maximum duration and immediate termination in `stop()`. For live sweeps:
+The provider sets short task-level maximum duration and immediate termination in `stop()` unless `AWS_MICROVM_SESSION_MODE` opts into session behavior. For live sweeps:
 
 - Keep `AWS_MICROVM_MAX_CONCURRENCY` low until account quotas and pricing are confirmed.
 - The current account showed a 4 GB base allocated memory limit. With `--memory-gb 4`, run sequentially or request a quota increase.
 - Use one prebuilt image for a whole run instead of rebuilding per task.
 - Prefer `AWS_MICROVM_SUSPENDED_DURATION_SECONDS=0` for benchmark tasks so idle MicroVMs terminate rather than persist.
-- The harness reports AWS MicroVM estimated cost only when `AWS_MICROVM_ESTIMATE_VCPU_HOUR_USD` and `AWS_MICROVM_ESTIMATE_GB_HOUR_USD` are supplied, because the public pricing page did not expose MicroVM-specific rates during this implementation pass.
+- Benchmark rows include `aws_microvm.lifecycle_cost` with running compute, launch snapshot read, suspend snapshot write, resume snapshot read, suspended storage, and total estimates. Override the default US East example rates with the `AWS_MICROVM_ESTIMATE_*` variables when using another region or negotiated pricing.

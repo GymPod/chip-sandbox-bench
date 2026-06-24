@@ -181,6 +181,10 @@ export class TracedProvider implements Provider {
   async stop(): Promise<void> {
     await this.recorder.lifecycle("stop", () => this.provider.stop());
   }
+
+  metadata(): Record<string, unknown> {
+    return this.provider.metadata?.() ?? {};
+  }
 }
 
 export function summarizeAgentTraces(traces: AgentTrace[]): AgentTraceRunSummary {

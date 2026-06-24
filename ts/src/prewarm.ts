@@ -274,6 +274,8 @@ function awsMicrovmHooks(args: PrewarmArgs) {
       runTimeoutInSeconds: 60,
       resume: "ENABLED" as const,
       resumeTimeoutInSeconds: 60,
+      suspend: "ENABLED" as const,
+      suspendTimeoutInSeconds: 60,
       terminate: "ENABLED" as const,
       terminateTimeoutInSeconds: 30
     }

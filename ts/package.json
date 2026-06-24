@@ -9,6 +9,8 @@
     "report": "bun src/report.ts",
     "triage": "bun src/triage.ts",
     "prewarm": "bun src/prewarm.ts",
+    "aws:session-smoke": "bun src/aws_session_smoke.ts",
+    "aws:reaper": "bun src/aws_microvm_reaper.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

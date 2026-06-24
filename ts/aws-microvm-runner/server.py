@@ -15,6 +15,8 @@ MAX_BODY_BYTES = int(os.environ.get("AWS_MICROVM_RUNNER_MAX_BODY_BYTES", str(4 *
 MAX_OUTPUT_BYTES = int(os.environ.get("AWS_MICROVM_RUNNER_MAX_OUTPUT_BYTES", str(2 * 1024 * 1024)))
 LIFECYCLE_PREFIX = "/aws/lambda-microvms/runtime/v1/"
 JOB_DIR = Path(os.environ.get("AWS_MICROVM_RUNNER_JOB_DIR", "/tmp/code-sandbox-bench-jobs"))
+JOB_MANIFEST = JOB_DIR / "jobs.json"
+LIFECYCLE_LOG = JOB_DIR / "lifecycle.jsonl"
 JOBS = {}
 JOBS_LOCK = threading.Lock()
 
@@ -53,7 +55,7 @@ class RunnerHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path.startswith(LIFECYCLE_PREFIX):
-            self.respond_json({"ok": True, "hook": self.path.removeprefix(LIFECYCLE_PREFIX)})
+            self.handle_lifecycle_hook(self.path.removeprefix(LIFECYCLE_PREFIX).strip("/"))
             return
         if self.path == "/commands":
             try:
@@ -107,6 +109,55 @@ class RunnerHandler(BaseHTTPRequestHandler):
         thread = threading.Thread(target=self.run_job, args=(job_id, command, cwd, timeout), daemon=True)
         thread.start()
         return job_id
+
+    def handle_lifecycle_hook(self, hook):
+        try:
+            ensure_runtime_dirs()
+            if hook == "validate":
+                result = self.run_shell("python3 --version >/dev/null && test -d /workspace && test -d /logs", "/", 10)
+                if result["returnCode"] != 0:
+                    self.record_lifecycle(hook, {"ok": False, "stderr": result["stderr"]})
+                    self.respond_json({"ok": False, "hook": hook, "stderr": result["stderr"]}, status=500)
+                    return
+            if hook in {"suspend", "terminate"}:
+                self.persist_jobs()
+                if hasattr(os, "sync"):
+                    os.sync()
+            if hook == "resume":
+                self.persist_jobs()
+            payload = {"ok": True, "hook": hook, "jobCount": self.job_count()}
+            self.record_lifecycle(hook, payload)
+            self.respond_json(payload)
+        except Exception as exc:
+            self.respond_json({"ok": False, "hook": hook, "error": f"{type(exc).__name__}: {exc}"}, status=500)
+
+    def job_count(self):
+        with JOBS_LOCK:
+            return len(JOBS)
+
+    def persist_jobs(self):
+        with JOBS_LOCK:
+            jobs = [self.serializable_job(job) for job in JOBS.values()]
+        JOB_DIR.mkdir(parents=True, exist_ok=True)
+        tmp_path = JOB_MANIFEST.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps({"savedAt": time.time(), "jobs": jobs}, separators=(",", ":")), encoding="utf-8")
+        tmp_path.replace(JOB_MANIFEST)
+
+    def serializable_job(self, job):
+        return {
+            "jobId": job.get("jobId"),
+            "status": job.get("status"),
+            "startedAt": job.get("startedAt"),
+            "completedAt": job.get("completedAt"),
+            "returnCode": job.get("returnCode"),
+            "stdoutBytes": safe_file_size(job.get("stdoutPath")),
+            "stderrBytes": safe_file_size(job.get("stderrPath")),
+        }
+
+    def record_lifecycle(self, hook, payload):
+        JOB_DIR.mkdir(parents=True, exist_ok=True)
+        with LIFECYCLE_LOG.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps({"time": time.time(), "hook": hook, "payload": payload}, separators=(",", ":")) + "\n")
 
     def get_job(self, raw_job_id):
         job_id = unquote(raw_job_id)
@@ -184,12 +235,26 @@ class RunnerHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    JOB_DIR.mkdir(parents=True, exist_ok=True)
-    for path in ("/workspace", "/testbed", "/tests", "/solution", "/logs", "/tmp/tb"):
-        Path(path).mkdir(parents=True, exist_ok=True)
+    ensure_runtime_dirs()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), RunnerHandler)
     print(f"code-sandbox-bench MicroVM runner listening on {PORT}", flush=True)
     server.serve_forever()
+
+
+def ensure_runtime_dirs():
+    JOB_DIR.mkdir(parents=True, exist_ok=True)
+    for path in ("/workspace", "/testbed", "/tests", "/solution", "/logs", "/tmp/tb"):
+        Path(path).mkdir(parents=True, exist_ok=True)
+
+
+def safe_file_size(raw_path):
+    if not raw_path:
+        return 0
+    path = Path(str(raw_path))
+    try:
+        return path.stat().st_size
+    except FileNotFoundError:
+        return 0
 
 
 if __name__ == "__main__":
