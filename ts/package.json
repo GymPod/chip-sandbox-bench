@@ -12,7 +12,8 @@
     "prewarm": "bun src/prewarm.ts",
     "aws:session-smoke": "bun src/aws_session_smoke.ts",
     "aws:reaper": "bun src/aws_microvm_reaper.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:playwright": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-lambda-microvms": "^3.1075.0",
@@ -23,6 +24,7 @@
     "modal": "^0.7.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "typescript": "^5.8.3"
   }
 }

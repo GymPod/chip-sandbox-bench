@@ -86,4 +86,7 @@ bun run triage ../results/ts-vercel-cold-solve-all-*.json --output ../reports/ge
 
 ```bash
 bun run typecheck
+bun run test:playwright
 ```
+
+Live AWS MicroVM and Daytona SDK contract checks are skipped by default. Run them with `SDK_CONTRACT_LIVE=1` plus the provider credentials and image settings required by `tests/live_sdk_contract.spec.ts`.

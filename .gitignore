@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 node_modules/
 dist/
+ts/test-results/
+ts/playwright-report/
 results/*
 !results/README.md
 *.pyc

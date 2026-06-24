@@ -12,6 +12,12 @@ import type { CommandResult } from "./types";
 
 type EnvSource = Record<string, string | undefined>;
 
+export type AwsMicrovmControlPlane = {
+  send(command: unknown): Promise<unknown>;
+};
+
+export type AwsMicrovmControlPlaneFactory = (region: string) => AwsMicrovmControlPlane;
+
 export type AwsMicrovmSessionMode = "terminate" | "auto-suspend" | "explicit-suspend";
 
 export type AwsMicrovmKnownState =
@@ -60,6 +66,9 @@ export type AwsMicrovmSandboxConfig = {
   resumeTimeoutSeconds: number;
   resumeCheckAfterIdleSeconds: number;
   pricing: AwsMicrovmPricingConfig;
+  controlPlane?: AwsMicrovmControlPlane;
+  fetch?: typeof fetch;
+  sleep?: (milliseconds: number) => Promise<void>;
 };
 
 export type AwsMicrovmSandboxEnvOptions = {
@@ -84,6 +93,10 @@ export type AwsMicrovmClientOptions = {
   cpu?: number;
   memoryGb?: number;
   env?: EnvSource;
+  controlPlane?: AwsMicrovmControlPlane;
+  controlPlaneFactory?: AwsMicrovmControlPlaneFactory;
+  fetch?: typeof fetch;
+  sleep?: (milliseconds: number) => Promise<void>;
 };
 
 export type AwsMicrovmCreateResources = {
@@ -203,7 +216,7 @@ export class AwsMicrovm {
     const resources = params.resources ?? {};
     const imageIdentifier = params.imageIdentifier ?? params.image ?? this.options.imageIdentifier ?? this.options.image;
     const memoryGb = resources.memoryGb ?? resources.memory ?? this.options.memoryGb ?? 2;
-    return awsMicrovmConfigFromEnv(
+    const config = awsMicrovmConfigFromEnv(
       {
         region: this.options.region,
         imageIdentifier,
@@ -217,6 +230,12 @@ export class AwsMicrovm {
       },
       this.env
     );
+    return {
+      ...config,
+      controlPlane: this.options.controlPlane ?? this.options.controlPlaneFactory?.(config.region),
+      fetch: this.options.fetch,
+      sleep: this.options.sleep
+    };
   }
 }
 
@@ -244,7 +263,9 @@ class AwsMicrovmProcess implements AwsMicrovmProcessApi {
 
 export class AwsMicrovmSandbox {
   readonly process: AwsMicrovmProcessApi = new AwsMicrovmProcess(this);
-  private readonly client: LambdaMicrovmsClient;
+  private readonly controlPlane: AwsMicrovmControlPlane;
+  private readonly fetchImpl: typeof fetch;
+  private readonly sleepImpl: (milliseconds: number) => Promise<void>;
   private microvmId: string | undefined;
   private lastMicrovmId: string | undefined;
   private endpoint: string | undefined;
@@ -265,7 +286,16 @@ export class AwsMicrovmSandbox {
   private readonly lifecycleEvents: AwsMicrovmLifecycleEvent[] = [];
 
   constructor(private readonly config: AwsMicrovmSandboxConfig) {
-    this.client = new LambdaMicrovmsClient({ region: config.region });
+    if (config.controlPlane) {
+      this.controlPlane = config.controlPlane;
+    } else {
+      const client = new LambdaMicrovmsClient({ region: config.region });
+      this.controlPlane = {
+        send: (command) => client.send(command as never) as Promise<unknown>
+      };
+    }
+    this.fetchImpl = config.fetch ?? fetch;
+    this.sleepImpl = config.sleep ?? sleep;
   }
 
   async start(): Promise<void> {
@@ -304,7 +334,7 @@ export class AwsMicrovmSandbox {
     const microvmIdentifier = this.microvmId;
     let suspendedByThisCall = false;
     try {
-      await this.recordLifecycle("suspend", reason, () => this.client.send(new SuspendMicrovmCommand({ microvmIdentifier })));
+      await this.recordLifecycle("suspend", reason, () => this.controlPlane.send(new SuspendMicrovmCommand({ microvmIdentifier })));
       suspendedByThisCall = true;
     } catch (error) {
       if (!isConflict(error)) {
@@ -336,7 +366,7 @@ export class AwsMicrovmSandbox {
     this.resumeAttempts += 1;
     let resumedByThisCall = false;
     try {
-      await this.recordLifecycle("resume", reason, () => this.client.send(new ResumeMicrovmCommand({ microvmIdentifier })));
+      await this.recordLifecycle("resume", reason, () => this.controlPlane.send(new ResumeMicrovmCommand({ microvmIdentifier })));
       resumedByThisCall = true;
     } catch (error) {
       if (!isConflict(error)) {
@@ -372,7 +402,7 @@ export class AwsMicrovmSandbox {
     }
     const microvmIdentifier = this.microvmId;
     try {
-      await this.recordLifecycle("terminate", reason, () => this.client.send(new TerminateMicrovmCommand({ microvmIdentifier })));
+      await this.recordLifecycle("terminate", reason, () => this.controlPlane.send(new TerminateMicrovmCommand({ microvmIdentifier })));
       this.terminateCount += 1;
       this.lastKnownState = "TERMINATED";
       this.markStopped();
@@ -419,7 +449,7 @@ export class AwsMicrovmSandbox {
     let lastError: unknown;
     while ((performance.now() - started) / 1000 < this.config.startTimeoutSeconds) {
       try {
-        return await this.client.send(
+        return (await this.controlPlane.send(
           new RunMicrovmCommand({
             imageIdentifier: this.config.imageIdentifier,
             imageVersion: this.config.imageVersion,
@@ -431,13 +461,13 @@ export class AwsMicrovmSandbox {
             logging: this.config.logGroup ? { cloudWatch: { logGroup: this.config.logGroup } } : undefined,
             clientToken: `${this.config.clientTokenPrefix}-${randomUUID()}`
           })
-        );
+        )) as { microvmId?: string; endpoint?: string };
       } catch (error) {
         lastError = error;
         if (!isQuotaExceeded(error)) {
           throw error;
         }
-        await sleep(this.config.quotaRetryDelaySeconds * 1000);
+        await this.sleepImpl(this.config.quotaRetryDelaySeconds * 1000);
       }
     }
     throw new Error(`AWS MicroVM start timed out waiting for quota: ${formatError(lastError)}`);
@@ -457,7 +487,7 @@ export class AwsMicrovmSandbox {
         return;
       } catch (error) {
         lastError = error;
-        await sleep(2000);
+        await this.sleepImpl(2000);
       }
     }
     throw new Error(`AWS MicroVM did not become ready: ${formatError(lastError)}`);
@@ -467,9 +497,9 @@ export class AwsMicrovmSandbox {
     if (!this.microvmId) {
       return;
     }
-    const response = await this.recordLifecycle("state_refresh", reason, () =>
-      this.client.send(new GetMicrovmCommand({ microvmIdentifier: this.microvmId }))
-    );
+    const response = (await this.recordLifecycle("state_refresh", reason, () =>
+      this.controlPlane.send(new GetMicrovmCommand({ microvmIdentifier: this.microvmId }))
+    )) as { endpoint?: string; state?: string };
     if (response.endpoint) {
       this.endpoint = response.endpoint;
     }
@@ -511,7 +541,7 @@ export class AwsMicrovmSandbox {
         await this.refreshState("poll-error").catch(() => undefined);
         this.authToken = undefined;
       }
-      await sleep(2000);
+      await this.sleepImpl(2000);
     }
     return {
       stdout: "",
@@ -571,7 +601,7 @@ export class AwsMicrovmSandbox {
       } catch (error) {
         lastError = error;
       }
-      await sleep(1000);
+      await this.sleepImpl(1000);
     }
     throw new Error(`AWS MicroVM did not resume within ${this.config.resumeTimeoutSeconds}s: ${formatError(lastError)}`);
   }
@@ -591,7 +621,7 @@ export class AwsMicrovmSandbox {
 
   private async authedFetch(path: string, init: RequestInit): Promise<Response> {
     const token = await this.getAuthToken();
-    const response = await fetch(this.url(path), {
+    const response = await this.fetchImpl(this.url(path), {
       ...init,
       headers: {
         ...Object.fromEntries(new Headers(init.headers).entries()),
@@ -612,13 +642,13 @@ export class AwsMicrovmSandbox {
     if (!this.microvmId) {
       throw new Error("AWS MicroVM sandbox not started");
     }
-    const response = await this.client.send(
+    const response = (await this.controlPlane.send(
       new CreateMicrovmAuthTokenCommand({
         microvmIdentifier: this.microvmId,
         expirationInMinutes: this.config.authTokenExpirationMinutes,
         allowedPorts: [{ port: this.config.port }]
       })
-    );
+    )) as { authToken?: { "X-aws-proxy-auth"?: string } };
     const token = response.authToken?.["X-aws-proxy-auth"];
     if (!token) {
       throw new Error("CreateMicrovmAuthToken did not return X-aws-proxy-auth");
