@@ -37,19 +37,20 @@
   },
   "pandas-dev__pandas.95280573": {
     "pre_install_pip": [
-      "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy<2 versioneer[toml] python-dateutil pytz hypothesis pytest-xdist"
+      "meson-python>=0.13.1 meson>=1.2.1 ninja cython>=3.1 numpy<2 versioneer[toml] python-dateutil pytz hypothesis pytest-xdist pyreadstat==1.2.8"
     ],
     "resources": {
       "cpu": 4,
       "memoryGb": 8,
       "diskGb": 20
     },
-    "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml. NumPy must stay <2 for this pandas C-API era, and Arrow tests require pre-pyarrow-20 behavior for skew/decimal semantics.",
+    "notes": "Profile builds pandas from source with --no-build-isolation; build requirements normally come from the conda env yml. NumPy must stay <2 for this pandas C-API era, and Arrow tests require pre-pyarrow-20 behavior for skew/decimal semantics. pyreadstat is pinned for read_stata coverage in pandas IO tests on fallback runtimes.",
     "extra_pip": [
-      "pyarrow==19.0.1"
+      "pyarrow==19.0.1",
+      "pyreadstat==1.2.8"
     ],
     "pre_verify_cmds": [
-      "for PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'meson-python>=0.13.1' 'meson>=1.2.1' ninja 'cython>=3.1' 'numpy<2' versioneer[toml] python-dateutil pytz hypothesis pytest-xdist 'pyarrow==19.0.1' || echo \"bench-pre-verify-cmd-failed: pandas build deps for $PYTHON\"\n  fi\ndone"
+      "for PYTHON in /opt/miniconda3/envs/testbed/bin/python /opt/testbed-venv/bin/python; do\n  if [ -x \"$PYTHON\" ]; then\n    \"$PYTHON\" -m pip install 'meson-python>=0.13.1' 'meson>=1.2.1' ninja 'cython>=3.1' 'numpy<2' versioneer[toml] python-dateutil pytz hypothesis pytest-xdist 'pyarrow==19.0.1' 'pyreadstat==1.2.8' || echo \"bench-pre-verify-cmd-failed: pandas build deps for $PYTHON\"\n  fi\ndone"
     ]
   },
   "dask__dask.5f61e423": {
@@ -221,7 +222,10 @@
     "resources": {
       "memoryGb": 8
     },
-    "notes": "dvc/ignore.py imports the private pathspec _DIR_MARK symbol, which moved after 0.10.x."
+    "notes": "dvc/ignore.py imports the private pathspec _DIR_MARK symbol, which moved after 0.10.x. Raises the verifier NOFILE soft limit so DVC stage/cache tests can open their expected file descriptor fan-out on AWS MicroVMs.",
+    "pre_verify_cmds": [
+      "ulimit -n 65535 2>/dev/null || ulimit -n 4096 2>/dev/null || echo \"bench-pre-verify-cmd-failed: raise nofile limit\""
+    ]
   },
   "sunpy__sunpy.f8edfd5c": {
     "resources": {

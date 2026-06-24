@@ -363,8 +363,14 @@ export function verifyCommandFor(taskEnv: TaskEnv): string {
   const preVerifyLines = guardedShellLines(taskEnv.manifest?.pre_verify_cmds, "pre-verify");
   return `
 set +e
+ulimit -n 65535 2>/dev/null || ulimit -n 4096 2>/dev/null || true
+if [ ! -x /opt/verifier-venv/bin/pytest ] && [ -x /opt/testbed-venv/bin/pytest ]; then
+  mkdir -p /opt/verifier-venv/bin
+  ln -sf /opt/testbed-venv/bin/pytest /opt/verifier-venv/bin/pytest
+fi
 ${preVerifyLines}
 cat > /tmp/bench-verify.sh <<'BENCH_EOF_VERIFY'
+ulimit -n 65535 2>/dev/null || ulimit -n 4096 2>/dev/null || true
 export PYTHONPATH=/testbed/src:\${PYTHONPATH:-}
 if [ -x /tests/test.sh ] || [ -f /tests/test.sh ]; then
   bash /tests/test.sh
