@@ -15,6 +15,10 @@ npm install
 - `bun run prewarm`: create or test warm artifacts where supported.
 - `bun run report`: generate a raw markdown report from result JSON files.
 - `bun run resource:report`: aggregate resource observation JSONL/result JSON into resource suggestions.
+- `bun run policy:compare`: replay result timings through two resource policy configs and project cost deltas.
+- `bun run canary:validate`: compare candidate canary results against baseline results with cost, pass-rate, and wall-time guardrails.
+- `bun run cost:goal-audit`: audit whether projection, observations, and canary validation prove the active cost-reduction goal.
+- `bun run cost:canary-loop`: dry-run or execute the full candidate matrix, resource aggregation, canary validation, and goal audit sequence.
 - `bun run triage`: classify failed tasks from result JSON files into provider-transport, environment-fidelity, patch-application, timeout, and real-test-failure buckets.
 
 ## Local Smoke
@@ -52,6 +56,58 @@ bun run resource:report --results-dir ../results/resource-observations --output 
 ```
 
 `src/bench.ts` records keyed resource observations when `--resource-observations-output` is set. `src/matrix.ts` writes those files under `--resource-observations-dir` by default. The report command also accepts benchmark result JSON files and extracts embedded `resource_observation` rows.
+
+When observations include CPU seconds, peak RSS, or disk high-water marks, `resource:report` can recommend smaller CPU, memory, and disk envelopes for cleanly passing tasks. Resource failures still recommend upward retry tiers.
+
+## Resource Policy Cost Comparison
+
+```bash
+bun run policy:compare -- --results ../results/ts-vercel-warm-solve-all-20260528.json,../results/ts-modal-warm-solve-all-20260528.json,../results/ts-daytona-warm-solve-all-20260528.json --dataset ../data/terminalbench_2026_03_05_smoke16.jsonl --baseline-config ../data/resource_policy_before_cpu1_20260624.json --candidate-config ../data/resource_policy.json --output ../reports/generated-policy-cost-comparison.md
+```
+
+`src/policy_compare.ts` holds observed task elapsed seconds constant, resolves each task under the baseline and candidate resource configs, and replays both envelopes through the same provider cost model used by `src/bench.ts`. Use it before promoting generated resource suggestions so every policy change has an explicit projected cost delta.
+
+## Canary Validation
+
+After running a candidate provider canary with the proposed resource policy, compare it to the matching baseline results:
+
+```bash
+bun run canary:validate -- --baseline-results ../results/ts-vercel-warm-solve-all-20260528.json --candidate-results ../results/ts-vercel-warm-solve-all-cpu1-canary.json --min-reduction-pct 20 --max-pass-drop 0 --max-wall-ratio 1.2 --output ../reports/generated-canary-validation.md
+```
+
+`src/canary_validate.ts` compares overlapping task IDs, so a small candidate canary can be checked against a larger baseline run. It fails nonzero when the actual candidate result misses the cost-reduction target, loses too many passing tasks, or gets too slow.
+
+## Goal Audit
+
+After generating policy comparison, resource report, and canary validation JSON files, run:
+
+```bash
+bun run cost:goal-audit -- --policy-comparison ../reports/generated-policy-cost-comparison-20260624.json --resource-report ../reports/generated-local-resource-observations-20260624.json --canary-validation ../reports/generated-canary-validation.json --min-reduction-pct 20 --min-observations 1 --output ../reports/generated-cost-goal-audit.md
+```
+
+`src/cost_goal_audit.ts` fails nonzero until all required evidence is present. It is intentionally stricter than the projection report: projected savings alone are not enough to complete the goal without passing remote canary validation.
+
+## Canary Loop
+
+To generate the exact command sequence without spending provider budget:
+
+```bash
+bun run cost:canary-loop -- --baseline-results ../results/ts-vercel-warm-solve-all-20260528.json,../results/ts-modal-warm-solve-all-20260528.json,../results/ts-daytona-warm-solve-all-20260528.json --baseline-config ../data/resource_policy_before_cpu1_20260624.json --providers vercel,modal,daytona --modes warm --task-limit 3 --output ../reports/generated-cost-canary-loop-dry-run.md
+```
+
+The dry-run report includes provider credential preflight by default. To execute it after provider credentials are loaded, add `--run true`. If preflight fails in run mode, the loop writes a JSON artifact and exits nonzero before launching the candidate matrix. Use `--preflight false` only when intentionally validating outside the built-in credential checks.
+
+The loop defaults to `scripts/openrouter_solver.sh` because the current solve baselines were produced through the OpenRouter solver. It also infers OpenRouter baselines from existing result tails and fails preflight if the candidate solver does not match. In run mode it performs a live, one-token OpenRouter check before launching provider sandboxes so expired, blocked, or budget-exceeded keys do not spend provider budget. Override `--solve-command-file` only when the baseline and candidate results should intentionally use a different solver contract.
+
+The preflight checks the providers selected for the loop:
+
+- Vercel: `VERCEL_TOKEN` or `VERCEL_ACCESS_TOKEN` or `VERCEL_API_KEY`, plus `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID`.
+- Modal: `MODAL_TOKEN_ID` plus `MODAL_TOKEN_SECRET`, or a local Modal config at `~/.modal.toml`.
+- Daytona: `DAYTONA_API_KEY`.
+- AWS MicroVM: `AWS_MICROVM_IMAGE_ID` or `AWS_MICROVM_IMAGE_ARN`, plus an AWS credential source such as `AWS_PROFILE`, static key envs, or web identity envs.
+- OpenRouter solver: `OPENROUTER_API_KEY` when `scripts/openrouter_solver.sh` is selected.
+
+When preflight passes, the loop runs `matrix`, aggregates only that canary's observation JSONL files, runs `policy:compare`, validates actual candidate result files, and then runs `cost:goal-audit`.
 
 How it works:
 

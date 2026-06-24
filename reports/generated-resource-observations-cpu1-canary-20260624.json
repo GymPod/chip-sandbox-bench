@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-24T23:31:02.304Z",
+  "observation_count": 9,
+  "group_count": 9,
+  "min_samples": 1,
+  "groups": [
+    {
+      "key": "daytona|terminalbench|R_package_dependency_missing_medium|python:3.13|no-image|no-manifest",
+      "provider": "daytona",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 4.049536666,
+      "p95_disk_gb": 0.07142257690429688,
+      "p95_prepare_seconds": 1.5230237500000077,
+      "p95_verify_seconds": 0.6474953749999987,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "daytona|terminalbench|Rscript_segfault_debugging_hard|python:3.13|no-image|no-manifest",
+      "provider": "daytona",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 4.2700553759999895,
+      "p95_disk_gb": 0.0714874267578125,
+      "p95_prepare_seconds": 1.9287921250000073,
+      "p95_verify_seconds": 0.5230997919999936,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "daytona|terminalbench|Rscript_segfault_debugging_medium|python:3.13|no-image|no-manifest",
+      "provider": "daytona",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 5.227747627999969,
+      "p95_disk_gb": 0.07143402099609375,
+      "p95_prepare_seconds": 2.0543025000000052,
+      "p95_verify_seconds": 1.4194811250000057,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "modal|terminalbench|R_package_dependency_missing_medium|python:3.13|im-PN0mo0YJNhDkPn6VWNCLz4|no-manifest",
+      "provider": "modal",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "image_id": "im-PN0mo0YJNhDkPn6VWNCLz4",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 10.948125706999999,
+      "p95_disk_gb": 0.00006198883056640625,
+      "p95_prepare_seconds": 4.557251167000001,
+      "p95_verify_seconds": 1.2430211659999986,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "modal|terminalbench|Rscript_segfault_debugging_hard|python:3.13|im-PN0mo0YJNhDkPn6VWNCLz4|no-manifest",
+      "provider": "modal",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "image_id": "im-PN0mo0YJNhDkPn6VWNCLz4",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 7.296372208000003,
+      "p95_disk_gb": 0.000095367431640625,
+      "p95_prepare_seconds": 3.108501375,
+      "p95_verify_seconds": 0.6898728329999976,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "modal|terminalbench|Rscript_segfault_debugging_medium|python:3.13|im-PN0mo0YJNhDkPn6VWNCLz4|no-manifest",
+      "provider": "modal",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "image_id": "im-PN0mo0YJNhDkPn6VWNCLz4",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 10.065878832999992,
+      "p95_disk_gb": 0.0000743865966796875,
+      "p95_prepare_seconds": 2.8094854579999993,
+      "p95_verify_seconds": 1.896166416,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "vercel|terminalbench|R_package_dependency_missing_medium|python3.13|snap_TkzxZLA3B7Jij3GonaqFkUFhSo2K|no-manifest",
+      "provider": "vercel",
+      "env_type": "terminalbench",
+      "runtime": "python3.13",
+      "image_id": "snap_TkzxZLA3B7Jij3GonaqFkUFhSo2K",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 10.481181458999997,
+      "p95_disk_gb": 0.07057952880859375,
+      "p95_prepare_seconds": 1.022454041,
+      "p95_verify_seconds": 0.48114670900000056,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "vercel|terminalbench|Rscript_segfault_debugging_hard|python3.13|snap_TkzxZLA3B7Jij3GonaqFkUFhSo2K|no-manifest",
+      "provider": "vercel",
+      "env_type": "terminalbench",
+      "runtime": "python3.13",
+      "image_id": "snap_TkzxZLA3B7Jij3GonaqFkUFhSo2K",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 10.498415917000003,
+      "p95_disk_gb": 0.070648193359375,
+      "p95_prepare_seconds": 1.0477023749999999,
+      "p95_verify_seconds": 0.4792972499999996,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    },
+    {
+      "key": "vercel|terminalbench|Rscript_segfault_debugging_medium|python3.13|snap_TkzxZLA3B7Jij3GonaqFkUFhSo2K|no-manifest",
+      "provider": "vercel",
+      "env_type": "terminalbench",
+      "runtime": "python3.13",
+      "image_id": "snap_TkzxZLA3B7Jij3GonaqFkUFhSo2K",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 10.31938037499999,
+      "p95_disk_gb": 0.07059478759765625,
+      "p95_prepare_seconds": 1.2112529580000009,
+      "p95_verify_seconds": 0.8252788340000007,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    }
+  ],
+  "suggested_config": {
+    "schema_version": 1,
+    "default_policy": "adaptive",
+    "provider_defaults": {},
+    "env_type_defaults": {
+      "terminalbench": {
+        "daytona": {
+          "cpu": 1,
+          "memoryGb": 2,
+          "diskGb": 10,
+          "timeoutSeconds": 900
+        },
+        "modal": {
+          "cpu": 1,
+          "memoryGb": 2,
+          "diskGb": 10,
+          "timeoutSeconds": 900
+        },
+        "vercel": {
+          "cpu": 1,
+          "memoryGb": 2,
+          "diskGb": 10,
+          "timeoutSeconds": 900
+        }
+      }
+    },
+    "repo_overrides": {}
+  }
+}

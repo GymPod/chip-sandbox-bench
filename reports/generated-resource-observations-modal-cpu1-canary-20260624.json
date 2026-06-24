@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-24T23:00:26.498Z",
+  "observation_count": 1,
+  "group_count": 1,
+  "min_samples": 1,
+  "groups": [
+    {
+      "key": "modal|terminalbench|R_package_dependency_missing_medium|python:3.13|no-image|no-manifest",
+      "provider": "modal",
+      "env_type": "terminalbench",
+      "runtime": "python:3.13",
+      "sample_count": 1,
+      "pass_count": 0,
+      "failure_counts": {
+        "none": 1
+      },
+      "p95_wall_seconds": 6.540857791999999,
+      "p95_disk_gb": 0.0000400543212890625,
+      "p95_prepare_seconds": 4.021981791,
+      "p95_verify_seconds": 0.11305899999999929,
+      "recommended": {
+        "cpu": 1,
+        "memoryGb": 2,
+        "diskGb": 10,
+        "timeoutSeconds": 900
+      },
+      "confidence": "low",
+      "reasons": [
+        "no_resource_pressure_observed"
+      ]
+    }
+  ],
+  "suggested_config": {
+    "schema_version": 1,
+    "default_policy": "adaptive",
+    "provider_defaults": {},
+    "env_type_defaults": {
+      "terminalbench": {
+        "modal": {
+          "cpu": 1,
+          "memoryGb": 2,
+          "diskGb": 10,
+          "timeoutSeconds": 900
+        }
+      }
+    },
+    "repo_overrides": {}
+  }
+}

@@ -3,22 +3,22 @@
   "default_policy": "adaptive",
   "provider_defaults": {
     "local": {
-      "cpu": 1,
+      "cpu": 2,
       "memoryGb": 2,
       "diskGb": 10
     },
     "vercel": {
-      "cpu": 1,
+      "cpu": 2,
       "memoryGb": 2,
       "diskGb": 10
     },
     "modal": {
-      "cpu": 1,
+      "cpu": 2,
       "memoryGb": 2,
       "diskGb": 10
     },
     "daytona": {
-      "cpu": 1,
+      "cpu": 2,
       "memoryGb": 2,
       "diskGb": 10
     },
@@ -49,14 +49,12 @@
   "repo_overrides": {
     "facebookresearch__fvcore.a491d5b9": {
       "all": {
-        "cpu": 2,
         "memoryGb": 8,
         "diskGb": 20
       }
     },
     "Project-MONAI__MONAI.a09c1f08": {
       "all": {
-        "cpu": 2,
         "memoryGb": 8,
         "diskGb": 20
       }

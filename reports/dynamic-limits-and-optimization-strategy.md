@@ -23,7 +23,7 @@ The first product version should run in `observe` mode when validating a new wor
 - `matrix.ts` has static provider concurrency caps. AWS caps by `AWS_MICROVM_ACCOUNT_MEMORY_GB / --memory-gb`; Daytona caps by assumed account CPU and memory.
 - `report.ts` classifies some provider limit failures from stderr, mostly Daytona CPU/memory and rate-limit strings.
 - AWS MicroVM is the best first place to add in-guest usage telemetry because this repo owns `ts/aws-microvm-runner/server.py`.
-- `data/resource_policy.json` directly configures adaptive defaults: AWS MicroVMs use 1 GB by default, other remote providers use 2 GB, and known heavy SWE-Smith repos keep their higher resource tiers.
+- `data/resource_policy.json` directly configures adaptive defaults: AWS MicroVMs use 1 GB by default; local, Vercel, Modal, and Daytona default to 1 CPU / 2 GB; and known heavy SWE-Smith repos keep higher resource tiers.
 
 ## Implemented Config
 
@@ -36,6 +36,17 @@ resource change | task count
 8 GB -> 8 GB | 7
 
 Using the current AWS MicroVM memory-derived vCPU formula, that lowers the per-second resource rate for this task set by 39.7% versus the static `--memory-gb 2` plus manifest-override baseline. The 8 GB -> 4 GB bucket covers memory-heavy repos that can retry upward on a clear memory signal; build-heavy repos such as Pandas, MONAI, and FVCore stay at 8 GB.
+
+The next checked-in reduction is a CPU-1 default for local, Vercel, Modal, and Daytona, with explicit CPU floors for Pandas, MONAI, and FVCore. Replaying the existing 16-task TerminalBench warm solve evidence through `policy:compare` projects another 39.9% provider-cost reduction for Vercel, Modal, and Daytona under unchanged elapsed times:
+
+provider | baseline cost | candidate cost | reduction
+--- | ---: | ---: | ---:
+Vercel | $0.1118 | $0.0638 | 42.9%
+Modal | $0.0766 | $0.0480 | 37.3%
+Daytona | $0.0574 | $0.0357 | 37.7%
+Total | $0.2457 | $0.1476 | 39.9%
+
+This clears the 20% projection target, but provider-side canary runs are still required before treating it as fully validated because the local provider does not enforce CPU limits.
 
 ## Dynamic Resource Envelope
 
@@ -254,8 +265,12 @@ One global resource policy will overfit one workload and hurt another.
 5. In `observe`, emit recommended envelopes and adaptive prices without changing resources. Done for pricing; execution remains static outside `adaptive`.
 6. In `adaptive`, apply checked-in config recommendations with caps and one bounded resource retry on clear resource failures. Done.
 7. Replace provider concurrency constants with an adaptive limiter that records quota/rate-limit feedback. Done for task concurrency through persisted AIMD state.
-8. Make AWS auto-suspend thresholds derive from observed idle gaps, resume probability, snapshot IO cost, and measured resume latency.
-9. Promote stable recommendations into checked-in manifests only after repeated samples. Partially done: `resource_report.ts` emits a suggested config after a configurable sample threshold; applying it remains a review step.
+8. Add a policy comparison loop that replays observed timings through baseline and candidate resource configs before promotion. Done through `bun run policy:compare`.
+9. Add a canary validator that compares fresh candidate result files against baseline files with cost-reduction, pass-rate, and wall-time guardrails. Done through `bun run canary:validate`.
+10. Add a final goal-audit command that fails until projection, observations, and canary validation all prove the target. Done through `bun run cost:goal-audit`.
+11. Add a dry-run-safe canary loop that runs the candidate matrix, resource aggregation, policy comparison, canary validation, and goal audit with deterministic artifact names. Done through `bun run cost:canary-loop`.
+12. Make AWS auto-suspend thresholds derive from observed idle gaps, resume probability, snapshot IO cost, and measured resume latency.
+13. Promote stable recommendations into checked-in manifests only after repeated samples. Partially done: `resource_report.ts` emits a suggested config after a configurable sample threshold and can now recommend lower CPU, memory, and disk tiers from clean observations with CPU/RSS/disk high-water data; applying it remains a review step.
 
 ## Guardrails
 

@@ -237,6 +237,22 @@ export function recommendAdaptiveResources(observation: ResourceObservation): Ad
     reasons.push("observed_peak_rss");
   }
 
+  if (observation.passed && observation.failure_class === "none") {
+    const cpuFromUsage = cpuRecommendationFromUsage(observation, requested);
+    if (cpuFromUsage !== undefined && cpuFromUsage < recommended.cpu) {
+      recommended.cpu = cpuFromUsage;
+      confidence = "medium";
+      reasons.push("observed_cpu_seconds");
+    }
+
+    const diskFromUsage = diskRecommendationFromUsage(observation);
+    if (diskFromUsage !== undefined && diskFromUsage < recommended.diskGb) {
+      recommended.diskGb = diskFromUsage;
+      confidence = "medium";
+      reasons.push("observed_disk_high_water");
+    }
+  }
+
   if (observation.failure_class === "memory_limit") {
     recommended.memoryGb = nextTier(requested.memoryGb, memoryTiers);
     confidence = "high";
@@ -348,10 +364,32 @@ function memoryTiersForProvider(provider: ProviderName): number[] {
 function isCpuSaturated(observation: ResourceObservation): boolean {
   const user = observation.usage.user_cpu_seconds ?? 0;
   const system = observation.usage.system_cpu_seconds ?? 0;
+  const requested = observation.effective ?? observation.requested;
   if (observation.usage.wall_seconds <= 0 || user + system <= 0) {
     return false;
   }
-  return (user + system) / observation.usage.wall_seconds >= observation.requested.cpu * 0.85;
+  return (user + system) / observation.usage.wall_seconds >= requested.cpu * 0.85;
+}
+
+function cpuRecommendationFromUsage(observation: ResourceObservation, requested: ResourceSpec): number | undefined {
+  if (observation.provider === "aws-microvm") {
+    return undefined;
+  }
+  const user = observation.usage.user_cpu_seconds ?? 0;
+  const system = observation.usage.system_cpu_seconds ?? 0;
+  const wall = observation.usage.wall_seconds;
+  if (requested.cpu <= 1 || wall <= 0 || user + system <= 0) {
+    return undefined;
+  }
+  return roundUpTier(Math.max(1, ((user + system) / wall) * 1.5), CPU_TIERS);
+}
+
+function diskRecommendationFromUsage(observation: ResourceObservation): number | undefined {
+  const totalGb = observation.disk_usage?.total_gb;
+  if (totalGb === undefined || !Number.isFinite(totalGb)) {
+    return undefined;
+  }
+  return roundUpTier(Math.max(10, totalGb * 1.4), DISK_TIERS_GB);
 }
 
 function roundUpTier(value: number, tiers: number[]): number {

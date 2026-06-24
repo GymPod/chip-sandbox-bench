@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-24T23:00:26.902Z",
+  "min_reduction_pct": 20,
+  "max_pass_drop": 0,
+  "max_wall_ratio": 1.2,
+  "passed": false,
+  "total_baseline_cost_usd": 0.0029456859303846,
+  "total_candidate_cost_usd": 0.00024519596675145,
+  "total_reduction_pct": 91.67609947067791,
+  "validations": [
+    {
+      "key": "modal|warm|solve",
+      "baseline_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-20260528.json",
+      "candidate_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-modal-cpu1-canary-20260624.json",
+      "provider": "modal",
+      "mode": "warm",
+      "kind": "solve",
+      "matched_tasks": 1,
+      "baseline_passed": 1,
+      "candidate_passed": 0,
+      "pass_drop": 1,
+      "baseline_elapsed_seconds": 44.429652042,
+      "candidate_elapsed_seconds": 7.396560083000001,
+      "wall_ratio": 0.16647801058644177,
+      "baseline_cost_usd": 0.0029456859303846,
+      "candidate_cost_usd": 0.00024519596675145,
+      "reduction_pct": 91.67609947067791,
+      "candidate_observations": 1,
+      "passed": false,
+      "failures": [
+        "pass drop 1 above 0"
+      ]
+    }
+  ]
+}

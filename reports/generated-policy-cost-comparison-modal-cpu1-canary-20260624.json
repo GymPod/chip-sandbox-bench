@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-24T23:00:26.673Z",
+  "dataset": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/terminalbench_2026_03_05_smoke16.jsonl",
+  "baseline_config": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/resource_policy_before_cpu1_20260624.json",
+  "candidate_config": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/resource_policy.json",
+  "resource_policy": "adaptive",
+  "total_baseline_cost_usd": 0.07655933002036404,
+  "total_candidate_cost_usd": 0.0480125196779241,
+  "total_reduction_pct": 37.287173666288304,
+  "runs": [
+    {
+      "path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-20260528.json",
+      "provider": "modal",
+      "task_count": 16,
+      "passed": 11,
+      "input_estimated_cost_usd": 0.0960250393558482,
+      "baseline_cost_usd": 0.07655933002036404,
+      "candidate_cost_usd": 0.0480125196779241,
+      "reduction_usd": 0.028546810342439936,
+      "reduction_pct": 37.287173666288304,
+      "resource_change_counts": {
+        "2 CPU / 2 GB / 10 GB / 180s -> 1 CPU / 2 GB / 10 GB / 180s": 16
+      },
+      "tasks": [
+        {
+          "task_id": "R_package_dependency_missing_medium",
+          "passed": true,
+          "elapsed_seconds": 44.429652042,
+          "baseline_cost_usd": 0.00234855140694012,
+          "candidate_cost_usd": 0.0014728429651923,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "Rscript_segfault_debugging_hard",
+          "passed": true,
+          "elapsed_seconds": 118.71208175,
+          "baseline_cost_usd": 0.006275120641305,
+          "candidate_cost_usd": 0.0039353055100125,
+          "reduction_pct": 37.287173666288304,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "Rscript_segfault_debugging_medium",
+          "passed": true,
+          "elapsed_seconds": 56.402211958,
+          "baseline_cost_usd": 0.00298142092409988,
+          "candidate_cost_usd": 0.0018697333264077,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "a_b_testing_models_hard",
+          "passed": true,
+          "elapsed_seconds": 51.20937937499999,
+          "baseline_cost_usd": 0.0027069277937624993,
+          "candidate_cost_usd": 0.0016975909262812497,
+          "reduction_pct": 37.287173666288304,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "a_b_testing_models_medium",
+          "passed": true,
+          "elapsed_seconds": 79.84627374999998,
+          "baseline_cost_usd": 0.004220674030424999,
+          "candidate_cost_usd": 0.0026469039748124993,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "a_star_pathfinding_hard",
+          "passed": false,
+          "elapsed_seconds": 75.983812958,
+          "baseline_cost_usd": 0.00401650435295988,
+          "candidate_cost_usd": 0.0025188633995577,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "a_star_pathfinding_medium",
+          "passed": true,
+          "elapsed_seconds": 97.37609925,
+          "baseline_cost_usd": 0.005147300606355,
+          "candidate_cost_usd": 0.0032280176901375,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "aar_android_library_packaging_hard",
+          "passed": false,
+          "elapsed_seconds": 101.72344462500003,
+          "baseline_cost_usd": 0.005377101282877501,
+          "candidate_cost_usd": 0.0033721321893187507,
+          "reduction_pct": 37.28717366628832,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "aar_android_library_packaging_medium",
+          "passed": false,
+          "elapsed_seconds": 181.55352000000002,
+          "baseline_cost_usd": 0.009596919067200001,
+          "candidate_cost_usd": 0.006018499188,
+          "reduction_pct": 37.28717366628832,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "abc_synthesis_optimization_hard",
+          "passed": true,
+          "elapsed_seconds": 30.143716541,
+          "baseline_cost_usd": 0.00159339685635726,
+          "candidate_cost_usd": 0.00099926420333415,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "abc_synthesis_optimization_medium",
+          "passed": false,
+          "elapsed_seconds": 143.637860791,
+          "baseline_cost_usd": 0.00759269732141226,
+          "candidate_cost_usd": 0.0047615950852216505,
+          "reduction_pct": 37.287173666288304,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "abi_compliance_checker_tool_hard",
+          "passed": true,
+          "elapsed_seconds": 33.03697983299999,
+          "baseline_cost_usd": 0.0017463347539723793,
+          "candidate_cost_usd": 0.0010951758814639497,
+          "reduction_pct": 37.287173666288304,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "abi_compliance_checker_tool_medium",
+          "passed": true,
+          "elapsed_seconds": 63.32360183299996,
+          "baseline_cost_usd": 0.0033472855928923777,
+          "candidate_cost_usd": 0.0020991774007639488,
+          "reduction_pct": 37.287173666288304,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "acl2_induction_scheme_selection_hard",
+          "passed": true,
+          "elapsed_seconds": 148.35031400000003,
+          "baseline_cost_usd": 0.00784179759804,
+          "candidate_cost_usd": 0.004917812909100001,
+          "reduction_pct": 37.287173666288304,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "acl2_induction_scheme_selection_medium",
+          "passed": true,
+          "elapsed_seconds": 40.965183083000014,
+          "baseline_cost_usd": 0.002165419577767381,
+          "candidate_cost_usd": 0.0013579958192014505,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        },
+        {
+          "task_id": "aclocal_macro_not_found_hard",
+          "passed": false,
+          "elapsed_seconds": 181.647336625,
+          "baseline_cost_usd": 0.0096018782139975,
+          "candidate_cost_usd": 0.00602160920911875,
+          "reduction_pct": 37.28717366628831,
+          "baseline_resources": {
+            "cpu": 2,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          },
+          "candidate_resources": {
+            "cpu": 1,
+            "memoryGb": 2,
+            "diskGb": 10,
+            "timeoutSeconds": 180
+          }
+        }
+      ]
+    }
+  ]
+}

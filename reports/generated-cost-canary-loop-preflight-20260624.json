@@ -1,0 +1,205 @@
+{
+  "generated_at": "2026-06-24T23:05:33.125Z",
+  "suffix": "cpu1-canary-20260624",
+  "status": "preflight_failed",
+  "preflight": {
+    "enabled": true,
+    "passed": false,
+    "checks": [
+      {
+        "name": "vercel",
+        "passed": false,
+        "required": [
+          "VERCEL_TOKEN or VERCEL_ACCESS_TOKEN or VERCEL_API_KEY",
+          "VERCEL_TEAM_ID",
+          "VERCEL_PROJECT_ID"
+        ],
+        "present": [],
+        "missing": [
+          "VERCEL_TOKEN or VERCEL_ACCESS_TOKEN or VERCEL_API_KEY",
+          "VERCEL_TEAM_ID",
+          "VERCEL_PROJECT_ID"
+        ],
+        "warnings": []
+      },
+      {
+        "name": "modal",
+        "passed": true,
+        "required": [
+          "MODAL_TOKEN_ID + MODAL_TOKEN_SECRET or ~/.modal.toml"
+        ],
+        "present": [
+          "~/.modal.toml"
+        ],
+        "missing": [],
+        "warnings": []
+      },
+      {
+        "name": "daytona",
+        "passed": false,
+        "required": [
+          "DAYTONA_API_KEY"
+        ],
+        "present": [],
+        "missing": [
+          "DAYTONA_API_KEY"
+        ],
+        "warnings": []
+      },
+      {
+        "name": "solver-contract",
+        "passed": true,
+        "required": [
+          "candidate solver must match inferred OpenRouter baseline solver"
+        ],
+        "present": [
+          "baseline:openrouter",
+          "candidate:openrouter_solver.sh"
+        ],
+        "missing": [],
+        "warnings": []
+      },
+      {
+        "name": "openrouter-solver",
+        "passed": false,
+        "required": [
+          "OPENROUTER_API_KEY"
+        ],
+        "present": [],
+        "missing": [
+          "OPENROUTER_API_KEY"
+        ],
+        "warnings": []
+      }
+    ]
+  },
+  "candidate_results": [
+    "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-vercel-warm-solve-all-cpu1-canary-20260624.json",
+    "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-cpu1-canary-20260624.json",
+    "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-daytona-warm-solve-all-cpu1-canary-20260624.json"
+  ],
+  "steps": [
+    {
+      "name": "candidate_matrix",
+      "argv": [
+        "bun",
+        "src/matrix.ts",
+        "--providers",
+        "vercel,modal,daytona",
+        "--modes",
+        "warm",
+        "--dataset",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/terminalbench_2026_03_05_smoke16.jsonl",
+        "--task-index",
+        "all",
+        "--task-limit",
+        "3",
+        "--timeout-seconds",
+        "900",
+        "--solve-timeout-seconds",
+        "300",
+        "--concurrency",
+        "2",
+        "--run-concurrency",
+        "1",
+        "--resource-policy",
+        "adaptive",
+        "--resource-config",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/resource_policy.json",
+        "--solve-command-file",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/scripts/openrouter_solver.sh",
+        "--output-dir",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results",
+        "--resource-observations-dir",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/resource-observations",
+        "--suffix",
+        "cpu1-canary-20260624",
+        "--output",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/cost-canary-matrix-cpu1-canary-20260624.json"
+      ],
+      "output": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/cost-canary-matrix-cpu1-canary-20260624.json"
+    },
+    {
+      "name": "resource_report",
+      "argv": [
+        "bun",
+        "src/resource_report.ts",
+        "--input",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/resource-observations/ts-vercel-warm-solve-all-cpu1-canary-20260624.jsonl,/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/resource-observations/ts-modal-warm-solve-all-cpu1-canary-20260624.jsonl,/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/resource-observations/ts-daytona-warm-solve-all-cpu1-canary-20260624.jsonl",
+        "--min-samples",
+        "1",
+        "--format",
+        "json",
+        "--output",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-resource-observations-cpu1-canary-20260624.json",
+        "--suggested-config-output",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/generated-resource-policy-cpu1-canary-20260624.json"
+      ],
+      "output": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-resource-observations-cpu1-canary-20260624.json"
+    },
+    {
+      "name": "policy_compare",
+      "argv": [
+        "bun",
+        "src/policy_compare.ts",
+        "--results",
+        "../results/ts-vercel-warm-solve-all-20260528.json,../results/ts-modal-warm-solve-all-20260528.json,../results/ts-daytona-warm-solve-all-20260528.json",
+        "--dataset",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/terminalbench_2026_03_05_smoke16.jsonl",
+        "--baseline-config",
+        "../data/resource_policy_before_cpu1_20260624.json",
+        "--candidate-config",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/data/resource_policy.json",
+        "--format",
+        "json",
+        "--output",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-policy-cost-comparison-cpu1-canary-20260624.json"
+      ],
+      "output": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-policy-cost-comparison-cpu1-canary-20260624.json"
+    },
+    {
+      "name": "canary_validate",
+      "argv": [
+        "bun",
+        "src/canary_validate.ts",
+        "--baseline-results",
+        "../results/ts-vercel-warm-solve-all-20260528.json,../results/ts-modal-warm-solve-all-20260528.json,../results/ts-daytona-warm-solve-all-20260528.json",
+        "--candidate-results",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-vercel-warm-solve-all-cpu1-canary-20260624.json,/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-cpu1-canary-20260624.json,/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-daytona-warm-solve-all-cpu1-canary-20260624.json",
+        "--min-reduction-pct",
+        "20",
+        "--max-pass-drop",
+        "0",
+        "--max-wall-ratio",
+        "1.2",
+        "--format",
+        "json",
+        "--output",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-canary-validation-cpu1-canary-20260624.json"
+      ],
+      "output": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-canary-validation-cpu1-canary-20260624.json"
+    },
+    {
+      "name": "goal_audit",
+      "argv": [
+        "bun",
+        "src/cost_goal_audit.ts",
+        "--policy-comparison",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-policy-cost-comparison-cpu1-canary-20260624.json",
+        "--resource-report",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-resource-observations-cpu1-canary-20260624.json",
+        "--canary-validation",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-canary-validation-cpu1-canary-20260624.json",
+        "--min-reduction-pct",
+        "20",
+        "--min-observations",
+        "1",
+        "--format",
+        "json",
+        "--output",
+        "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-cost-goal-audit-cpu1-canary-20260624.json"
+      ],
+      "output": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/reports/generated-cost-goal-audit-cpu1-canary-20260624.json"
+    }
+  ]
+}

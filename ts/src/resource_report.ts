@@ -195,17 +195,16 @@ function aggregateGroup(group: ObservationGroup): AggregatedResourceSuggestion {
 }
 
 function combineRecommendations(observations: ResourceObservation[], recommendations: AdaptiveResourceRecommendation[]): ResourceSpec {
-  const effective = observations.map((observation) => observation.effective ?? observation.requested);
   const recommended = recommendations.map((recommendation) => recommendation.recommended);
   const diskFromUsage = observations
     .map((observation) => observation.disk_usage?.total_gb)
     .filter(isFiniteNumber)
     .map((gb) => roundUpTier(gb * 1.4, [10, 20, 40, 80]));
   return {
-    cpu: Math.max(...recommended.map((item) => item.cpu), ...effective.map((item) => item.cpu)),
-    memoryGb: Math.max(...recommended.map((item) => item.memoryGb), ...effective.map((item) => item.memoryGb)),
-    diskGb: Math.max(...recommended.map((item) => item.diskGb), ...effective.map((item) => item.diskGb), ...diskFromUsage),
-    timeoutSeconds: Math.max(...recommended.map((item) => item.timeoutSeconds), ...effective.map((item) => item.timeoutSeconds))
+    cpu: Math.max(...recommended.map((item) => item.cpu)),
+    memoryGb: Math.max(...recommended.map((item) => item.memoryGb)),
+    diskGb: Math.max(...recommended.map((item) => item.diskGb), ...diskFromUsage),
+    timeoutSeconds: Math.max(...recommended.map((item) => item.timeoutSeconds))
   };
 }
 

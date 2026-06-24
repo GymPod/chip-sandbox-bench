@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-24T23:31:02.437Z",
+  "min_reduction_pct": 20,
+  "max_pass_drop": 0,
+  "max_wall_ratio": 1.2,
+  "passed": false,
+  "total_baseline_cost_usd": 0.05450708938231867,
+  "total_candidate_cost_usd": 0.0063084149765787,
+  "total_reduction_pct": 88.42643214292588,
+  "validations": [
+    {
+      "key": "daytona|warm|solve",
+      "baseline_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-daytona-warm-solve-all-20260528.json",
+      "candidate_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-daytona-warm-solve-all-cpu1-canary-20260624.json",
+      "provider": "daytona",
+      "mode": "warm",
+      "kind": "solve",
+      "matched_tasks": 3,
+      "baseline_passed": 3,
+      "candidate_passed": 0,
+      "pass_drop": 3,
+      "baseline_elapsed_seconds": 328.31370649999997,
+      "candidate_elapsed_seconds": 147.171719709,
+      "wall_ratio": 0.44826553626995774,
+      "baseline_cost_usd": 0.015151677554974999,
+      "candidate_cost_usd": 0.00340702531126335,
+      "reduction_pct": 77.51387396608989,
+      "candidate_observations": 3,
+      "passed": false,
+      "failures": [
+        "pass drop 3 above 0"
+      ]
+    },
+    {
+      "key": "modal|warm|solve",
+      "baseline_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-20260528.json",
+      "candidate_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-modal-warm-solve-all-cpu1-canary-20260624.json",
+      "provider": "modal",
+      "mode": "warm",
+      "kind": "solve",
+      "matched_tasks": 3,
+      "baseline_passed": 3,
+      "candidate_passed": 0,
+      "pass_drop": 3,
+      "baseline_elapsed_seconds": 219.54394575,
+      "candidate_elapsed_seconds": 31.134882708999996,
+      "wall_ratio": 0.14181617535677363,
+      "baseline_cost_usd": 0.014555763603225,
+      "candidate_cost_usd": 0.0010321213618033499,
+      "reduction_pct": 92.90919123216132,
+      "candidate_observations": 3,
+      "passed": false,
+      "failures": [
+        "pass drop 3 above 0"
+      ]
+    },
+    {
+      "key": "vercel|warm|solve",
+      "baseline_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-vercel-warm-solve-all-20260528.json",
+      "candidate_path": "/Users/jaylast/.codex/worktrees/9a85/code-sandbox-bench/results/ts-vercel-warm-solve-all-cpu1-canary-20260624.json",
+      "provider": "vercel",
+      "mode": "warm",
+      "kind": "solve",
+      "matched_tasks": 3,
+      "baseline_passed": 2,
+      "candidate_passed": 0,
+      "pass_drop": 2,
+      "baseline_elapsed_seconds": 261.949100959,
+      "candidate_elapsed_seconds": 39.453555707999996,
+      "wall_ratio": 0.1506153507057664,
+      "baseline_cost_usd": 0.02479964822411867,
+      "candidate_cost_usd": 0.0018692683035120001,
+      "reduction_pct": 92.46252089296145,
+      "candidate_observations": 3,
+      "passed": false,
+      "failures": [
+        "pass drop 2 above 0"
+      ]
+    }
+  ]
+}
