@@ -14,7 +14,10 @@ Required inputs:
 - `AWS_REGION`, defaulting to `us-east-1`
 - `AWS_MICROVM_IMAGE_ID` or `--aws-microvm-image-id`
 - `AWS_MICROVM_IMAGE_VERSION` or `--aws-microvm-image-version`, optional but recommended for repeatability
-- `AWS_MICROVM_ARTIFACT_BUCKET` and `AWS_MICROVM_BUILD_ROLE_ARN` for `bun run prewarm --provider aws-microvm`
+- `AWS_MICROVM_BUILD_ROLE_ARN` for `bun run prewarm --provider aws-microvm`
+- One MicroVM image artifact source for `bun run prewarm --provider aws-microvm`:
+  - `AWS_MICROVM_CODE_ARTIFACT_URI` or `--aws-code-artifact-uri` for a prebuilt ECR image URI
+  - `AWS_MICROVM_ARTIFACT_BUCKET` or `--aws-bucket` for the default S3 zip upload path
 
 Useful runtime controls:
 
@@ -38,7 +41,7 @@ The AWS MicroVM static `bench` default keeps `--memory-gb 2` for fixed-resource 
 
 ## Image Creation
 
-Create the reusable runner image with:
+Create the reusable runner image with the default S3 artifact path:
 
 ```bash
 cd ts
@@ -59,6 +62,67 @@ The prewarm script packages `ts/aws-microvm-runner/`, uploads it to S3, calls `C
 AWS_REGION=...
 AWS_MICROVM_IMAGE_ID=...
 AWS_MICROVM_IMAGE_VERSION=...
+```
+
+To use ECR as the MicroVM code artifact, first build and push the runner image:
+
+```bash
+AWS_ACCOUNT_ID=<account-id>
+AWS_REGION=us-east-1
+ECR_REPO=code-sandbox-bench-runner
+ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO"
+
+aws ecr create-repository --repository-name "$ECR_REPO" --region "$AWS_REGION" || true
+aws ecr get-login-password --region "$AWS_REGION" \
+  | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+docker buildx build --platform linux/arm64 \
+  -t "$ECR_URI:YYYYMMDD" \
+  --push \
+  ts/aws-microvm-runner
+```
+
+Then create the MicroVM image from that ECR artifact:
+
+```bash
+cd ts
+bun run prewarm \
+  --provider aws-microvm \
+  --name code-sandbox-bench-runner-YYYYMMDD \
+  --timeout-seconds 900 \
+  --memory-gb 1 \
+  --aws-region us-east-1 \
+  --aws-code-artifact-uri <account-id>.dkr.ecr.us-east-1.amazonaws.com/code-sandbox-bench-runner:YYYYMMDD \
+  --aws-build-role-arn <build-role-arn> \
+  --output ../results/prewarm-aws-microvm.json
+```
+
+For repeatability, prefer an ECR digest URI after pushing:
+
+```text
+<account-id>.dkr.ecr.us-east-1.amazonaws.com/code-sandbox-bench-runner@sha256:<digest>
+```
+
+The command still calls `CreateMicrovmImage`, waits for `CREATED`, and emits:
+
+```text
+AWS_REGION=...
+AWS_MICROVM_IMAGE_ID=...
+AWS_MICROVM_IMAGE_VERSION=...
+```
+
+For private ECR repositories, the MicroVM build role must be able to pull the image:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "ecr:GetAuthorizationToken",
+    "ecr:BatchCheckLayerAvailability",
+    "ecr:GetDownloadUrlForLayer",
+    "ecr:BatchGetImage"
+  ],
+  "Resource": "*"
+}
 ```
 
 Lifecycle hooks are disabled by default for the MVP image. Set `AWS_MICROVM_ENABLE_HOOKS=1` to include `/ready`, `/validate`, `/run`, `/resume`, `/suspend`, and `/terminate` hooks exposed by the runner.

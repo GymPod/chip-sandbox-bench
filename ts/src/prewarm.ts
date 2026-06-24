@@ -28,6 +28,7 @@ type PrewarmArgs = {
   awsRegion: string;
   awsBucket?: string;
   awsArtifactPrefix: string;
+  awsCodeArtifactUri?: string;
   awsBaseImageArn?: string;
   awsBuildRoleArn?: string;
   output?: string;
@@ -53,6 +54,7 @@ function parseArgs(argv: string[]): PrewarmArgs {
     awsRegion: values.get("--aws-region") ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1",
     awsBucket: values.get("--aws-bucket") ?? process.env.AWS_MICROVM_ARTIFACT_BUCKET,
     awsArtifactPrefix: values.get("--aws-artifact-prefix") ?? process.env.AWS_MICROVM_ARTIFACT_PREFIX ?? "code-sandbox-bench/aws-microvm",
+    awsCodeArtifactUri: values.get("--aws-code-artifact-uri") ?? process.env.AWS_MICROVM_CODE_ARTIFACT_URI,
     awsBaseImageArn: values.get("--aws-base-image-arn") ?? process.env.AWS_MICROVM_BASE_IMAGE_ARN,
     awsBuildRoleArn: values.get("--aws-build-role-arn") ?? process.env.AWS_MICROVM_BUILD_ROLE_ARN,
     output: values.get("--output")
@@ -153,30 +155,21 @@ async function prewarmDaytona(args: PrewarmArgs): Promise<Record<string, unknown
 }
 
 async function prewarmAwsMicrovm(args: PrewarmArgs): Promise<Record<string, unknown>> {
-  if (!args.awsBucket) {
+  if (!args.awsCodeArtifactUri && !args.awsBucket) {
     throw new Error("AWS MicroVM prewarm requires --aws-bucket or AWS_MICROVM_ARTIFACT_BUCKET");
   }
   if (!args.awsBuildRoleArn) {
     throw new Error("AWS MicroVM prewarm requires --aws-build-role-arn or AWS_MICROVM_BUILD_ROLE_ARN");
   }
   const imageName = sanitizeAwsMicrovmImageName(args.name);
-  const archivePath = await packageAwsMicrovmRunner();
-  const s3 = new S3Client({ region: args.awsRegion });
+  let packagedArtifact: { uri: string; archivePath: string } | undefined;
   const lambdaMicrovms = new LambdaMicrovmsClient({ region: args.awsRegion });
-  const key = `${args.awsArtifactPrefix.replace(/\/+$/, "")}/${imageName}-${Date.now().toString(36)}.zip`;
   try {
     if (args.force) {
       await deleteAwsMicrovmImageIfExists(lambdaMicrovms, imageName);
     }
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: args.awsBucket,
-        Key: key,
-        Body: createReadStream(archivePath),
-        ContentType: "application/zip"
-      })
-    );
-    const codeArtifactUri = `s3://${args.awsBucket}/${key}`;
+    packagedArtifact = args.awsCodeArtifactUri ? undefined : await packageAndUploadAwsMicrovmRunner(args, imageName);
+    const codeArtifactUri = args.awsCodeArtifactUri ?? required(packagedArtifact?.uri, "AWS MicroVM code artifact URI was not prepared");
     const baseImageArn = args.awsBaseImageArn ?? `arn:aws:lambda:${args.awsRegion}:aws:microvm-image:al2023-1`;
     const created = await lambdaMicrovms.send(
       new CreateMicrovmImageCommand({
@@ -203,6 +196,7 @@ async function prewarmAwsMicrovm(args: PrewarmArgs): Promise<Record<string, unkn
       runtime: args.runtime,
       region: args.awsRegion,
       artifact_uri: codeArtifactUri,
+      artifact_source: args.awsCodeArtifactUri ? "provided" : "s3-upload",
       aws_microvm_image_id: imageArn,
       aws_microvm_image_version: image.latestActiveImageVersion,
       image_state: image.state,
@@ -213,7 +207,33 @@ async function prewarmAwsMicrovm(args: PrewarmArgs): Promise<Record<string, unkn
       ].filter(Boolean).join("\n")
     };
   } finally {
+    if (packagedArtifact) {
+      rmSync(dirname(packagedArtifact.archivePath), { recursive: true, force: true });
+    }
+  }
+}
+
+async function packageAndUploadAwsMicrovmRunner(
+  args: PrewarmArgs,
+  imageName: string
+): Promise<{ uri: string; archivePath: string }> {
+  const bucket = required(args.awsBucket, "AWS MicroVM S3 packaging requires --aws-bucket or AWS_MICROVM_ARTIFACT_BUCKET");
+  const archivePath = await packageAwsMicrovmRunner();
+  const key = `${args.awsArtifactPrefix.replace(/\/+$/, "")}/${imageName}-${Date.now().toString(36)}.zip`;
+  const s3 = new S3Client({ region: args.awsRegion });
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: createReadStream(archivePath),
+        ContentType: "application/zip"
+      })
+    );
+    return { uri: `s3://${bucket}/${key}`, archivePath };
+  } catch (error) {
     rmSync(dirname(archivePath), { recursive: true, force: true });
+    throw error;
   }
 }
 
