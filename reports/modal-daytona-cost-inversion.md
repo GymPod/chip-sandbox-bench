@@ -1,8 +1,10 @@
 # Modal/Daytona Cost Inversion
 
-Updated: 2026-06-22
+Updated: 2026-06-24
 
 This note explains why Modal can have lower elapsed task time than Daytona while still showing a higher estimated provider cost in the current SWE-Smith cold-gold report.
+
+AWS Lambda MicroVMs are not included in the Modal/Daytona inversion calculation below because this note focuses on those two native task-Docker providers. The latest AWS all-100 run now has a compute-only estimate of `$1.0501`; snapshot read/write/storage and data transfer are excluded.
 
 ## Bottom Line
 
@@ -52,6 +54,8 @@ This is not evidence of a spreadsheet typo by itself. It is a rate-and-weighting
 - The current report is stitched from local full and focused rerun artifacts, not one synchronized matrix run.
 
 For decision-grade pricing, rerun a fresh synchronized matrix and reconcile the harness estimates against provider billing exports.
+
+The latest AWS MicroVM run is useful for timing shape and compute-only cost shape: it passed 97/100 tasks with 14390.0 observed task seconds and an estimated runtime compute cost of `$1.0501`.
 
 ## Related Docs
 

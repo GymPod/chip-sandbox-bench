@@ -1,12 +1,12 @@
 # Cost Estimate Caveats
 
-Updated: 2026-06-17
+Updated: 2026-06-24
 
 This page audits the cost estimates in the provider reports. The estimates are useful for directional comparison, but they should not be treated as provider bills.
 
 ## Bottom Line
 
-The strongest current claim is runnability: Vercel, Modal, and Daytona each have 100/100 passing cold-gold evidence for `data/swesmith_v4_smoke100.jsonl`.
+The strongest current claim is runnability: Vercel, Modal, and Daytona each have 100/100 passing cold-gold evidence for `data/swesmith_v4_smoke100.jsonl`. AWS Lambda MicroVMs have a fresh 97/100 all-100 run using the reused `code-sandbox-bench-runner-20260624-gym-platform-2` image.
 
 The weakest current claim is exact spend. The dollar figures are local harness estimates calculated from selected result JSONs, not reconciled billing data from provider invoices or usage exports.
 
@@ -19,6 +19,7 @@ provider | selected tasks | observed task seconds | estimated cost | selected so
 Vercel | 100 | 14356.6 | $1.5458 | 56
 Modal | 100 | 17397.9 | $1.3200 | 13
 Daytona | 100 | 19006.8 | $0.9465 | 35
+AWS Lambda MicroVMs | 100 | 14390.0 | $1.0501 | 1
 
 Selection rule:
 
@@ -37,12 +38,16 @@ provider | harness formula
 Vercel | `(seconds / 3600) * (cpu * 0.128 + memoryGb * 0.0212) + 0.60 / 1_000_000`
 Modal | `seconds * ((cpu / 2) * 0.00003942 + memoryGb * 0.00000672)`
 Daytona | `seconds * (cpu * 0.000014 + memoryGb * 0.0000045 + max(0, diskGb - 5) * 0.00000003)`
+AWS Lambda MicroVMs | `(seconds / 3600) * (cpu * 0.09969984 + memoryGb * 0.01320012)`
+
+AWS Lambda MicroVMs use public US East (N. Virginia) ARM runtime rates from the AWS Lambda pricing page: `$0.0000276944` per vCPU-second and `$0.0000036667` per GB-second, converted to hourly values for the harness. The all-100 result JSON has been recomputed with those rates.
 
 ## Reliability
 
 claim | confidence | why
 --- | --- | ---
 100/100 runnability | High | The selected local result artifacts contain passing verifier results for all 100 tasks on all three providers.
+AWS MicroVM runnability | Medium | The fresh all-100 artifact passed 97/100 tasks; the three failures need focused reruns or verifier setup fixes before claiming parity with the other providers.
 Relative task-time shape | Medium-low | The data is stitched from full and focused reruns across different times and code states.
 Exact dollar estimates | Low | The estimates are formula-based and are not reconciled to provider usage exports or invoices.
 Provider cost ranking | Medium-low | The ranking is useful as a rough signal, but sensitive to billing details, cache state, and the stitched data selection.
@@ -57,6 +62,7 @@ Provider cost ranking | Medium-low | The ranking is useful as a rough signal, bu
 - Provider setup phases do not necessarily map cleanly to provider billing dimensions.
 - Model/API spend is excluded.
 - Network egress, image build, snapshot storage, registry transfer, volume, and account minimums are not modeled unless they are implicitly included in elapsed sandbox time.
+- AWS MicroVM image build cost, snapshot read/write/storage, network connector cost, and data transfer are not represented in the current AWS row.
 
 ## Provider-Specific Caveats
 
@@ -80,6 +86,13 @@ Provider cost ranking | Medium-low | The ranking is useful as a rough signal, bu
 - Daytona start time is a large portion of the selected elapsed time. Whether every part of that startup interval maps to billable sandbox resource time should be verified against billing exports.
 - Disk is capped to 10 GB in `bench.ts` for task runs, so requested disk values in some artifacts are normalized before costing.
 
+### AWS Lambda MicroVMs
+
+- The latest 100-task run reused a prebuilt MicroVM image. Image creation, snapshot read/write/storage, and any control-plane, data transfer, or network-connector charges are not included in the run-level sandbox estimate.
+- The compute-only estimate is `$1.0501`, split into `$0.8813` vCPU and `$0.1688` memory.
+- AWS MicroVMs currently reconstruct SWE-Smith task environments from manifests, like Vercel/local, rather than consuming each task Docker image directly.
+- Several tasks request more than the base `--memory-gb 2`; cost estimates must use per-task recorded `task_cpu` and `task_memory_gb` rather than the command-line defaults.
+
 ## What Would Make This Decision-Grade
 
 1. Check in a deterministic report generator and an input manifest with artifact filenames, checksums, provider, task id, commit, and timestamp.
@@ -89,4 +102,3 @@ Provider cost ranking | Medium-low | The ranking is useful as a rough signal, bu
 5. Split cost reporting by sandbox runtime, image build, snapshot/storage, network, retries, and failed attempts.
 6. For Vercel, use active CPU billing data rather than full wall-clock CPU.
 7. For Daytona, replace the hard-coded rates with a documented source or org billing export.
-

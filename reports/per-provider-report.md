@@ -1,6 +1,6 @@
 # Per-Provider Report
 
-Updated: 2026-06-17
+Updated: 2026-06-24
 
 This report summarizes current provider behavior on the 100-task SWE-Smith cold-gold runnability evidence set. Use [cross-vendor-comparison.md](cross-vendor-comparison.md) for the head-to-head rollup and [per-task-comparison.md](per-task-comparison.md) for task-level timings.
 
@@ -11,6 +11,7 @@ provider | passed | observed task seconds | mean seconds | median seconds | p95 
 vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
 modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
 daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
+aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $1.0501
 
 ## Vercel
 
@@ -32,6 +33,15 @@ daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 - Execution model: native task Docker image support for SWE-Smith task images.
 - Recent fixes addressed deterministic solve application, task image command fidelity, Pydantic uv pathing, Safety local DB/provider egress behavior, DSPy drift, and SQLFluff test command de-duplication.
 - Product fit: lowest estimated provider cost in the current stitched cold-gold evidence set, with native task-Docker fidelity.
+
+## AWS Lambda MicroVMs
+
+- Current evidence: 97/100 passing from `results/ts-aws-microvm-cold-gold-all100-gym-platform-20260624.json`.
+- Execution model: fresh per-task MicroVMs launched from the reused `code-sandbox-bench-runner-20260624-gym-platform-2` image, with manifest-driven SWE-Smith environment reconstruction inside each MicroVM.
+- Recent run shape: `--task-limit 100`, `--concurrency 10`, `--memory-gb 2`, `--cpu 2`, and `scripts/gold_solver.sh`.
+- Remaining failures: DVC hit an `RLIMIT_NOFILE` verifier setup issue, one Pandas row had two failing `read_stata` tests, and one Pandas row produced a green pytest log but returned `127` after the wrapper tried `/opt/verifier-venv/bin/pytest`.
+- Product fit: AWS MicroVM startup is fast and the run parallelized cleanly, but SWE-Smith currently uses fallback environment reconstruction rather than native per-task Docker images.
+- Cost note: AWS MicroVM estimated cost uses public US East (N. Virginia) ARM runtime rates: `$0.09969984` per vCPU-hour and `$0.01320012` per GB-hour. The resulting compute-only estimate is `$1.0501`, split into `$0.8813` vCPU and `$0.1688` memory. Snapshot read/write/storage and data transfer are excluded.
 
 ## Evidence Files
 
@@ -147,3 +157,7 @@ daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
 - `results/ts-daytona-cold-gold-rerun-task87-sqlfluff-dedupe-python-test.json`
 - `results/ts-daytona-cold-gold-rerun-task88-dspy-request-shim.json`
 - `results/ts-daytona-cold-gold-rerun-task89-dspy-request-shim.json`
+
+### AWS Lambda MicroVMs
+
+- `results/ts-aws-microvm-cold-gold-all100-gym-platform-20260624.json`
