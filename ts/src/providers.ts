@@ -6,7 +6,7 @@ import type { CommandResult, Provider, ProviderRunTrace } from "./types";
 import { Daytona, Image as DaytonaImage, type Sandbox as DaytonaSandbox } from "@daytona/sdk";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { ModalClient, type App, type Image as ModalImage, type Sandbox as ModalSandbox } from "modal";
-import { AwsMicrovmSandbox, awsMicrovmConfigFromEnv } from "./aws_microvm";
+import { AwsMicrovm, type AwsMicrovmSandbox } from "./aws_microvm";
 
 export type ProviderOptions = {
   runtime: string;
@@ -369,6 +369,7 @@ export class DaytonaProvider implements Provider {
 }
 
 export class AwsMicrovmProvider implements Provider {
+  private readonly client: AwsMicrovm;
   private sandbox: AwsMicrovmSandbox | undefined;
   private lastMetadata: Record<string, unknown> = {};
 
@@ -379,35 +380,59 @@ export class AwsMicrovmProvider implements Provider {
     private readonly imageIdentifier: string | undefined,
     private readonly imageVersion: string | undefined,
     private readonly executionRoleArn: string | undefined
-  ) {}
+  ) {
+    this.client = new AwsMicrovm({
+      imageIdentifier,
+      imageVersion,
+      executionRoleArn,
+      timeoutSeconds,
+      cpu,
+      memoryGb
+    });
+  }
 
   async start(): Promise<void> {
-    this.sandbox = new AwsMicrovmSandbox(
-      awsMicrovmConfigFromEnv({
-        imageIdentifier: this.imageIdentifier,
+    const sandboxName = `code-sandbox-bench-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    this.sandbox = await this.client.create(
+      {
+        name: sandboxName,
+        labels: {
+          app: "code-sandbox-bench"
+        },
+        image: this.imageIdentifier,
         imageVersion: this.imageVersion,
         executionRoleArn: this.executionRoleArn,
-        timeoutSeconds: this.timeoutSeconds,
-        cpu: this.cpu,
-        memoryGb: this.memoryGb
-      })
+        resources: {
+          cpu: this.cpu,
+          memory: this.memoryGb
+        },
+        autoStopInterval: 0,
+        autoDeleteInterval: 0
+      },
+      { timeout: this.timeoutSeconds }
     );
-    await this.sandbox.start();
   }
 
   async run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult> {
     if (!this.sandbox) {
       throw new Error("AWS MicroVM sandbox not started");
     }
-    return await this.sandbox.run(command, cwd, timeoutSeconds);
+    const response = await this.sandbox.process.executeCommand(command, cwd, undefined, timeoutSeconds);
+    return {
+      stdout: response.artifacts?.stdout ?? response.result ?? "",
+      stderr: response.artifacts?.stderr ?? "",
+      returnCode: response.exitCode ?? 0,
+      usage: response.usage
+    };
   }
 
   async stop(): Promise<void> {
     if (this.sandbox) {
-      await this.sandbox.stop();
+      await this.client.delete(this.sandbox);
       this.lastMetadata = { aws_microvm: this.sandbox.telemetry() };
       this.sandbox = undefined;
     }
+    await this.client[Symbol.asyncDispose]();
   }
 
   metadata(): Record<string, unknown> {

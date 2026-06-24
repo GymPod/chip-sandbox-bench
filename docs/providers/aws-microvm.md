@@ -5,7 +5,8 @@
 Implementation:
 
 - `AwsMicrovmProvider` in `ts/src/providers.ts`
-- `AwsMicrovmSandbox` in `ts/src/aws_microvm.ts`
+- AWS SDK facade in `ts/src/aws_microvm_sdk.ts` (`AwsMicrovm`, `AwsMicrovmSandbox`)
+- compatibility exports in `ts/src/aws_microvm.ts`
 - runner image artifact in `ts/aws-microvm-runner/`
 
 Required inputs:
@@ -64,12 +65,13 @@ Lifecycle hooks are disabled by default for the MVP image. Set `AWS_MICROVM_ENAB
 
 ## Runtime Lifecycle
 
-The AWS provider has two layers:
+The AWS provider has three layers:
 
-- AWS Lambda MicroVM control-plane calls in `ts/src/aws_microvm.ts`.
+- `AwsMicrovmProvider` in `ts/src/providers.ts`, which adapts the benchmark `Provider` contract.
+- `AwsMicrovm` / `AwsMicrovmSandbox` in `ts/src/aws_microvm_sdk.ts`, which bake AWS region, image, lifecycle, auth, connector, retry, and pricing defaults into a Daytona-shaped client/sandbox interface.
 - A repo-owned Python command runner in `ts/aws-microvm-runner/server.py`, baked into the MicroVM image and listening on port `8080`.
 
-Most benchmark commands do not call an AWS "exec" API. AWS starts and exposes the MicroVM; after that, command execution is an authenticated HTTPS request to `server.py` inside the MicroVM.
+Most benchmark commands do not call an AWS "exec" API. The local SDK facade starts and exposes the MicroVM; after that, command execution is an authenticated HTTPS request to `server.py` inside the MicroVM.
 
 ### Start
 
@@ -79,6 +81,7 @@ Most benchmark commands do not call an AWS "exec" API. AWS starts and exposes th
 bench.ts
   -> makeProvider("aws-microvm")
   -> AwsMicrovmProvider.start()
+  -> AwsMicrovm.create(...)
   -> AwsMicrovmSandbox.start()
 ```
 
@@ -105,7 +108,7 @@ solve
 verify
 ```
 
-For AWS MicroVMs, `AwsMicrovmProvider.run()` delegates to `AwsMicrovmSandbox.run()`, which sends the command to `server.py`:
+For AWS MicroVMs, `AwsMicrovmProvider.run()` delegates to `AwsMicrovmSandbox.process.executeCommand(...)`, which sends the command to `server.py`:
 
 1. Ensure `microvmId` and endpoint are present.
 2. Create or reuse a cached `CreateMicrovmAuthToken` value.
@@ -176,6 +179,7 @@ After each task, `bench.ts` calls the provider cleanup path. For AWS MicroVMs:
 
 ```text
 AwsMicrovmProvider.stop()
+  -> AwsMicrovm.delete(sandbox)
   -> AwsMicrovmSandbox.stop()
   -> TerminateMicrovm
 ```
@@ -188,7 +192,7 @@ AWS MicroVMs expose a lower-level lifecycle than the other SDKs used by this har
 
 | Provider | Start path | Command path | Stop path | Harness-owned runner? |
 | --- | --- | --- | --- | --- |
-| AWS MicroVM | `RunMicrovm`, then `GetMicrovm`, `CreateMicrovmAuthToken`, `GET /health` | Authenticated HTTPS to `server.py`: `POST /commands`, poll `GET /commands/<jobId>` | `TerminateMicrovm` | Yes. `server.py` validates commands, spawns `/bin/sh -lc`, stores output files, and reports job status. |
+| AWS MicroVM | `AwsMicrovm.create(...)`, backed by `RunMicrovm`, then `GetMicrovm`, `CreateMicrovmAuthToken`, `GET /health` | `sandbox.process.executeCommand(command, cwd, undefined, timeoutSeconds)`, backed by authenticated HTTPS to `server.py`: `POST /commands`, poll `GET /commands/<jobId>` | `AwsMicrovm.delete(sandbox)`, backed by `TerminateMicrovm` or session-mode suspend | Yes. `server.py` validates commands, spawns `/bin/sh -lc`, stores output files, and reports job status. |
 | Daytona | `client.create(...)` from image or snapshot | `sandbox.process.executeCommand(command, cwd, undefined, timeoutSeconds)` | `client.delete(sandbox)` and client dispose | No. The Daytona SDK/service owns process execution and output transport. |
 | Modal | `client.sandboxes.create(...)` after app/image setup | `sandbox.exec(["/bin/sh", "-lc", command], ...)` and SDK stream reads | `sandbox.terminate()` | No. The Modal SDK/service owns process execution and stream handling. |
 | Vercel | `VercelSandbox.create(...)` from runtime or snapshot | `sandbox.runCommand(...)`, wait, then read SDK stdout/stderr | `sandbox.stop({ blocking: true })` | No. The Vercel SDK/service owns process execution and stream handling. |
