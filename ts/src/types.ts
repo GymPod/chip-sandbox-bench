@@ -85,5 +85,7 @@ export type BenchArgs = {
   resourcePolicy: ResourcePolicyName;
   resourceConfigPath?: string;
   resourceObservationsOutput?: string;
+  adaptiveConcurrency: boolean;
+  adaptiveConcurrencyStatePath?: string;
   output?: string;
 };

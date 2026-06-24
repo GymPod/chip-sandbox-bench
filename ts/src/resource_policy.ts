@@ -47,13 +47,68 @@ export type ResourceFailureClass =
   | "none";
 
 export type ResourceObservation = {
+  schema_version: 1;
+  observed_at: string;
   provider: ProviderName;
   resource_policy: ResourcePolicyName;
+  dataset?: string;
+  task_id?: string;
+  env_type?: string;
+  data_source?: string;
+  repo_key?: string;
+  source_id?: string;
+  runtime?: string;
+  docker_image?: string;
+  image_id?: string;
+  image_version?: string;
+  manifest_hash?: string;
   requested: ResourceSpec;
+  adaptive?: ResourceSpec;
+  effective: ResourceSpec;
+  concurrency?: number;
+  resource_resolution_reasons?: string[];
+  phase_seconds?: Record<string, number>;
   usage: CommandUsageSummary;
+  disk_usage?: DiskUsageSummary;
+  estimated_cost_usd?: number;
+  static_estimated_cost_usd?: number;
+  adaptive_estimated_cost_usd?: number;
   return_code: number;
   passed: boolean;
   failure_class: ResourceFailureClass;
+};
+
+export type DiskUsageSummary = {
+  paths: Record<string, { kb: number; gb: number }>;
+  total_kb: number;
+  total_gb: number;
+  workspace_kb?: number;
+  workspace_gb?: number;
+  testbed_kb?: number;
+  testbed_gb?: number;
+  cache_kb?: number;
+  cache_gb?: number;
+};
+
+export type ResourceObservationContext = {
+  observedAt?: string;
+  dataset?: string;
+  taskId?: string;
+  taskEnv?: TaskEnv;
+  runtime?: string;
+  imageId?: string;
+  imageVersion?: string;
+  manifestHash?: string;
+  requested: ResourceSpec;
+  adaptive?: ResourceSpec;
+  effective: ResourceSpec;
+  concurrency?: number;
+  resourceResolutionReasons?: string[];
+  phaseSeconds?: Record<string, number>;
+  diskUsage?: DiskUsageSummary;
+  estimatedCostUsd?: number;
+  staticEstimatedCostUsd?: number;
+  adaptiveEstimatedCostUsd?: number;
 };
 
 export type AdaptiveResourceRecommendation = {
@@ -125,7 +180,7 @@ export function summarizeTraceUsage(trace: AgentTrace): CommandUsageSummary {
 export function buildResourceObservation(
   provider: ProviderName,
   resourcePolicy: ResourcePolicyName,
-  requested: ResourceSpec,
+  context: ResourceObservationContext,
   trace: AgentTrace,
   returnCode: number,
   passed: boolean,
@@ -133,10 +188,32 @@ export function buildResourceObservation(
 ): ResourceObservation {
   const usage = summarizeTraceUsage(trace);
   return {
+    schema_version: 1,
+    observed_at: context.observedAt ?? new Date().toISOString(),
     provider,
     resource_policy: resourcePolicy,
-    requested,
+    ...(context.dataset ? { dataset: context.dataset } : {}),
+    ...(context.taskId ? { task_id: context.taskId } : {}),
+    ...(context.taskEnv?.envType ? { env_type: context.taskEnv.envType } : {}),
+    ...(context.taskEnv?.dataSource ? { data_source: context.taskEnv.dataSource } : {}),
+    ...(context.taskEnv?.repoKey ? { repo_key: context.taskEnv.repoKey } : {}),
+    ...(context.taskEnv?.sourceId ? { source_id: context.taskEnv.sourceId } : {}),
+    ...(context.runtime ? { runtime: context.runtime } : {}),
+    ...(context.taskEnv?.dockerImage ? { docker_image: context.taskEnv.dockerImage } : {}),
+    ...(context.imageId ? { image_id: context.imageId } : {}),
+    ...(context.imageVersion ? { image_version: context.imageVersion } : {}),
+    ...(context.manifestHash ? { manifest_hash: context.manifestHash } : {}),
+    requested: context.requested,
+    ...(context.adaptive ? { adaptive: context.adaptive } : {}),
+    effective: context.effective,
+    ...(context.concurrency === undefined ? {} : { concurrency: context.concurrency }),
+    ...(context.resourceResolutionReasons ? { resource_resolution_reasons: context.resourceResolutionReasons } : {}),
+    ...(context.phaseSeconds ? { phase_seconds: context.phaseSeconds } : {}),
     usage,
+    ...(context.diskUsage ? { disk_usage: context.diskUsage } : {}),
+    ...(context.estimatedCostUsd === undefined ? {} : { estimated_cost_usd: context.estimatedCostUsd }),
+    ...(context.staticEstimatedCostUsd === undefined ? {} : { static_estimated_cost_usd: context.staticEstimatedCostUsd }),
+    ...(context.adaptiveEstimatedCostUsd === undefined ? {} : { adaptive_estimated_cost_usd: context.adaptiveEstimatedCostUsd }),
     return_code: returnCode,
     passed,
     failure_class: classifyResourceFailure(returnCode, stderr, usage)
@@ -144,7 +221,7 @@ export function buildResourceObservation(
 }
 
 export function recommendAdaptiveResources(observation: ResourceObservation): AdaptiveResourceRecommendation {
-  const requested = observation.requested;
+  const requested = observation.effective ?? observation.requested;
   const recommended: ResourceSpec = { ...requested };
   const reasons: string[] = [];
   let confidence: AdaptiveResourceRecommendation["confidence"] = "low";

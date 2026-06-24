@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { AdaptiveConcurrencyLimiter, DEFAULT_ADAPTIVE_CONCURRENCY_STATE_PATH, type AdaptiveConcurrencySummary } from "./adaptive_concurrency";
 import { AgentTraceRecorder, summarizeAgentTraces, TracedProvider, type AgentTrace } from "./agent_trace";
 import { loadTasks } from "./dataset";
 import { makeProvider, writeText } from "./providers";
@@ -10,6 +12,7 @@ import {
   resolveResourceSpec,
   resourceRetryDecision,
   type AdaptiveResourceRecommendation,
+  type DiskUsageSummary,
   type ResourceObservation,
   type ResourcePolicyConfig,
   type ResourceRetryDecision,
@@ -43,6 +46,17 @@ fi
 code=$?
 if [ "$code" -eq 0 ]; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
 exit "$code"
+`;
+
+const resourceProbeCommand = `
+set +e
+for path in /workspace /testbed /tests /solution /tmp /root/.cache /home/agent/.cache /opt/testbed-venv /opt/verifier-venv; do
+  if [ -e "$path" ]; then
+    kb=$(du -sk "$path" 2>/dev/null | awk '{print $1}')
+    printf '%s\\t%s\\n' "$path" "\${kb:-0}"
+  fi
+done
+exit 0
 `;
 
 function parseArgs(argv: string[]): BenchArgs {
@@ -84,6 +98,11 @@ function parseArgs(argv: string[]): BenchArgs {
     resourcePolicy,
     resourceConfigPath,
     resourceObservationsOutput: values.get("--resource-observations-output"),
+    adaptiveConcurrency: parseBoolean(values.get("--adaptive-concurrency") ?? process.env.BENCH_ADAPTIVE_CONCURRENCY ?? "true"),
+    adaptiveConcurrencyStatePath:
+      values.get("--adaptive-concurrency-state") ??
+      process.env.BENCH_ADAPTIVE_CONCURRENCY_STATE ??
+      DEFAULT_ADAPTIVE_CONCURRENCY_STATE_PATH,
     output: values.get("--output")
   };
 }
@@ -104,6 +123,16 @@ function parseResourcePolicy(value: string): ResourcePolicyName {
     return value;
   }
   throw new Error(`Unsupported resource policy: ${value}`);
+}
+
+function parseBoolean(value: string): boolean {
+  if (value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes" || value.toLowerCase() === "on") {
+    return true;
+  }
+  if (value === "0" || value.toLowerCase() === "false" || value.toLowerCase() === "no" || value.toLowerCase() === "off") {
+    return false;
+  }
+  throw new Error(`Unsupported boolean value: ${value}`);
 }
 
 function parseForwardEnv(value: string | undefined): string[] {
@@ -402,13 +431,13 @@ exit "$code"
 
 const MAX_TRANSIENT_TASK_ATTEMPTS = 5;
 
-async function runTask(args: BenchArgs, task: BenchTask): Promise<Record<string, unknown>> {
+async function runTask(args: BenchArgs, task: BenchTask, concurrency: number): Promise<Record<string, unknown>> {
   const retryErrors: string[] = [];
   let totalElapsedSeconds = 0;
   const resourceConfig = loadResourcePolicyConfig(args.resourceConfigPath);
   let resourceRetry: ResourceRetryDecision | undefined;
   for (let attempt = 1; attempt <= MAX_TRANSIENT_TASK_ATTEMPTS; attempt += 1) {
-    const result = await runTaskAttempt(args, task, resourceConfig, resourceRetry?.next);
+    const result = await runTaskAttempt(args, task, resourceConfig, concurrency, resourceRetry?.next);
     totalElapsedSeconds += Number(result.elapsed_seconds ?? 0);
     if (attempt > 1) {
       result.task_attempts = attempt;
@@ -474,6 +503,7 @@ async function runTaskAttempt(
   args: BenchArgs,
   task: BenchTask,
   resourceConfig: ResourcePolicyConfig,
+  concurrency: number,
   retryResourceSpec?: ResourceSpec
 ): Promise<Record<string, unknown>> {
   const taskEnv = resolveTaskEnv(task, args.runtime, args.provider);
@@ -485,6 +515,7 @@ async function runTaskAttempt(
   let solveResult: CommandResult | undefined;
   let result: CommandResult = { stdout: "", stderr: "", returnCode: 1 };
   let providerMetadata: Record<string, unknown> = {};
+  let diskUsage: DiskUsageSummary | undefined;
   const phases: Record<string, number> = {};
   async function timed<T>(name: string, action: () => Promise<T>): Promise<T> {
     const phaseStarted = performance.now();
@@ -560,6 +591,14 @@ async function runTaskAttempt(
     const providerToStop = provider;
     if (providerToStop) {
       try {
+        const probe = await timed("resource_probe", () =>
+          providerToStop.run(resourceProbeCommand, undefined, Math.min(30, timeoutSeconds), { label: "resource_probe" })
+        );
+        diskUsage = parseDiskUsage(probe.stdout);
+      } catch {
+        diskUsage = undefined;
+      }
+      try {
         await timed("stop", () => providerToStop.stop());
         providerMetadata = providerToStop.metadata?.() ?? {};
       } catch (error) {
@@ -595,7 +634,25 @@ async function runTaskAttempt(
   const resourceObservation = buildResourceObservation(
     args.provider,
     args.resourcePolicy,
-    { cpu, memoryGb, diskGb, timeoutSeconds },
+    {
+      dataset: args.dataset,
+      taskId: task.task_id,
+      taskEnv,
+      runtime: taskEnv.runtime ?? args.runtime,
+      imageId: observationImageId(args),
+      imageVersion: observationImageVersion(args),
+      manifestHash: hashJson(taskEnv.manifest),
+      requested: resourceSpec.requested,
+      adaptive: resourceSpec.adaptive,
+      effective: { cpu, memoryGb, diskGb, timeoutSeconds },
+      concurrency,
+      resourceResolutionReasons: resourceSpec.reasons,
+      phaseSeconds: phases,
+      diskUsage,
+      estimatedCostUsd,
+      staticEstimatedCostUsd,
+      adaptiveEstimatedCostUsd
+    },
     agentTrace,
     result.returnCode,
     result.returnCode === 0,
@@ -647,6 +704,61 @@ async function runTaskAttempt(
 
 function formatError(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ""}` : String(error);
+}
+
+function parseDiskUsage(stdout: string): DiskUsageSummary | undefined {
+  const paths: DiskUsageSummary["paths"] = {};
+  for (const line of stdout.split("\n")) {
+    const [path, rawKb] = line.trim().split(/\s+/, 2);
+    const kb = Number.parseInt(rawKb ?? "", 10);
+    if (!path || !Number.isFinite(kb)) {
+      continue;
+    }
+    paths[path] = { kb, gb: kb / 1024 / 1024 };
+  }
+  const entries = Object.entries(paths);
+  if (entries.length === 0) {
+    return undefined;
+  }
+  const totalKb = entries.reduce((total, [, item]) => total + item.kb, 0);
+  const cacheKb = entries
+    .filter(([path]) => path.includes(".cache"))
+    .reduce((total, [, item]) => total + item.kb, 0);
+  return {
+    paths,
+    total_kb: totalKb,
+    total_gb: totalKb / 1024 / 1024,
+    ...(paths["/workspace"] ? { workspace_kb: paths["/workspace"].kb, workspace_gb: paths["/workspace"].gb } : {}),
+    ...(paths["/testbed"] ? { testbed_kb: paths["/testbed"].kb, testbed_gb: paths["/testbed"].gb } : {}),
+    ...(cacheKb > 0 ? { cache_kb: cacheKb, cache_gb: cacheKb / 1024 / 1024 } : {})
+  };
+}
+
+function hashJson(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function observationImageId(args: BenchArgs): string | undefined {
+  if (args.provider === "vercel") {
+    return args.vercelSnapshotId;
+  }
+  if (args.provider === "modal") {
+    return args.modalImageId;
+  }
+  if (args.provider === "daytona") {
+    return args.daytonaSnapshot;
+  }
+  if (args.provider === "aws-microvm") {
+    return args.awsMicrovmImageId;
+  }
+  return undefined;
+}
+
+function observationImageVersion(args: BenchArgs): string | undefined {
+  return args.provider === "aws-microvm" ? args.awsMicrovmImageVersion : undefined;
 }
 
 async function writeTaskInstructions(
@@ -731,7 +843,8 @@ async function main(): Promise<void> {
   const args = parseArgs(Bun.argv.slice(2));
   const tasks = loadTasks(args.dataset, args.taskIndex, args.taskLimit);
   const kind: RunKind = resolveSolveCommand(args) ? "solve" : "verifier";
-  const results = await runWithConcurrency(tasks, args);
+  const run = await runWithConcurrency(tasks, args);
+  const results = run.results;
   const estimatedCostUsd = estimateRunCost(results);
   const staticEstimatedCostUsd = estimateStaticRunCost(results);
   const adaptiveEstimatedCostUsd = estimateAdaptiveRunCost(results);
@@ -752,6 +865,7 @@ async function main(): Promise<void> {
     adaptive_estimated_cost_usd: adaptiveEstimatedCostUsd,
     adaptive_cost_reduction_pct: adaptiveCostReductionPct(staticEstimatedCostUsd, adaptiveEstimatedCostUsd),
     aws_microvm_lifecycle_cost_usd: awsMicrovmLifecycleCost(results),
+    adaptive_concurrency: run.adaptiveConcurrency,
     agent_trace_summary: summarizeAgentTraces(
       results.map((item) => item.agent_trace).filter((trace): trace is AgentTrace => isAgentTrace(trace))
     ),
@@ -804,27 +918,63 @@ function awsMicrovmLifecycleCost(results: Record<string, unknown>[]): number | u
   return found ? total : undefined;
 }
 
-async function runWithConcurrency(tasks: BenchTask[], args: BenchArgs): Promise<Record<string, unknown>[]> {
+async function runWithConcurrency(
+  tasks: BenchTask[],
+  args: BenchArgs
+): Promise<{ results: Record<string, unknown>[]; adaptiveConcurrency: AdaptiveConcurrencySummary }> {
   const results: Record<string, unknown>[] = new Array(tasks.length);
   let nextIndex = 0;
-  const workerCount = effectiveWorkerCount(tasks, args);
-  async function worker(): Promise<void> {
-    while (true) {
-      const index = nextIndex;
-      nextIndex += 1;
-      if (index >= tasks.length) {
-        return;
+  let activeCount = 0;
+  let completedCount = 0;
+  const limiter = new AdaptiveConcurrencyLimiter(args.provider, args.concurrency, staticWorkerCount(tasks, args), {
+    enabled: args.adaptiveConcurrency,
+    statePath: args.adaptiveConcurrencyStatePath
+  });
+  await new Promise<void>((resolvePromise) => {
+    const launch = () => {
+      while (activeCount < limiter.currentLimit() && nextIndex < tasks.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        activeCount += 1;
+        const task = tasks[index];
+        const concurrency = limiter.currentLimit();
+        console.log(`running ${task.task_id} on ${args.provider} (concurrency ${concurrency})`);
+        runTask(args, task, concurrency)
+          .then((result) => {
+            results[index] = result;
+            const event = limiter.recordResult(result);
+            if (event.pressure_class !== "none" && event.next_limit !== event.previous_limit) {
+              console.warn(
+                `adaptive concurrency ${args.provider}: ${event.previous_limit} -> ${event.next_limit} after ${event.pressure_class} (${event.reason})`
+              );
+            }
+          })
+          .catch((error) => {
+            results[index] = {
+              task_id: task.task_id,
+              passed: false,
+              return_code: 1,
+              stderr_tail: formatError(error)
+            };
+            limiter.recordResult(results[index]);
+          })
+          .finally(() => {
+            activeCount -= 1;
+            completedCount += 1;
+            if (completedCount >= tasks.length) {
+              resolvePromise();
+              return;
+            }
+            launch();
+          });
       }
-      const task = tasks[index];
-      console.log(`running ${task.task_id} on ${args.provider}`);
-      results[index] = await runTask(args, task);
-    }
-  }
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
-  return results;
+    };
+    launch();
+  });
+  return { results, adaptiveConcurrency: limiter.summary() };
 }
 
-function effectiveWorkerCount(tasks: BenchTask[], args: BenchArgs): number {
+function staticWorkerCount(tasks: BenchTask[], args: BenchArgs): number {
   const requested = Math.max(1, Math.min(args.concurrency, tasks.length));
   if (args.provider === "daytona" && tasks.some((task) => task.env_type === "harbor_swesmith")) {
     return 1;

@@ -14,6 +14,7 @@ npm install
 - `bun run matrix`: run several provider/mode combinations concurrently.
 - `bun run prewarm`: create or test warm artifacts where supported.
 - `bun run report`: generate a raw markdown report from result JSON files.
+- `bun run resource:report`: aggregate resource observation JSONL/result JSON into resource suggestions.
 - `bun run triage`: classify failed tasks from result JSON files into provider-transport, environment-fidelity, patch-application, timeout, and real-test-failure buckets.
 
 ## Local Smoke
@@ -34,7 +35,7 @@ bun --env-file=../.env src/bench.ts --provider modal --mode cold --dataset ../da
 bun --env-file=../.env src/matrix.ts --providers all --modes cold,warm --task-index all --task-limit 20 --concurrency 2 --run-concurrency 6 --timeout-seconds 900 --solve-timeout-seconds 300 --solve-command-file ../scripts/openrouter_solver.sh --output ../results/solve-price-matrix-task20.json
 ```
 
-The matrix runner starts provider/mode runs concurrently. It also applies provider-specific task concurrency caps unless overridden with `--vercel-concurrency`, `--modal-concurrency`, or `--daytona-concurrency`.
+The matrix runner starts provider/mode runs concurrently. It also applies provider-specific task concurrency caps unless overridden with `--vercel-concurrency`, `--modal-concurrency`, `--daytona-concurrency`, or `--aws-microvm-concurrency`. Task concurrency is seeded from `--adaptive-concurrency-state` and benchmark runs update that state when provider quota, rate-limit, or transport pressure appears.
 
 ## Report Generation
 
@@ -43,6 +44,14 @@ bun run report --results-dir ../results --output ../reports/generated-provider-r
 ```
 
 Generated reports are raw summaries. Curated analysis lives in `../reports/`.
+
+## Resource Observation Reports
+
+```bash
+bun run resource:report --results-dir ../results/resource-observations --output ../reports/generated-resource-observations.md --suggested-config-output ../results/generated-resource-policy.json
+```
+
+`src/bench.ts` records keyed resource observations when `--resource-observations-output` is set. `src/matrix.ts` writes those files under `--resource-observations-dir` by default. The report command also accepts benchmark result JSON files and extracts embedded `resource_observation` rows.
 
 How it works:
 

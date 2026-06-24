@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { adaptiveLimitForProvider, DEFAULT_ADAPTIVE_CONCURRENCY_STATE_PATH } from "./adaptive_concurrency";
 import { loadResourcePolicyConfig } from "./resource_policy";
 import type { ProviderName, ResourcePolicyName, RunMode } from "./types";
 
@@ -12,6 +13,7 @@ type MatrixArgs = {
   taskIndex: string;
   taskLimit?: number;
   outputDir: string;
+  resourceObservationsDir: string;
   suffix: string;
   timeoutSeconds: number;
   solveTimeoutSeconds: number;
@@ -26,6 +28,8 @@ type MatrixArgs = {
   diskGb: number;
   resourcePolicy: ResourcePolicyName;
   resourceConfigPath?: string;
+  adaptiveConcurrency: boolean;
+  adaptiveConcurrencyStatePath?: string;
   solveCommandFile: string;
   forwardEnv: string[];
   prewarmProfile: string;
@@ -48,6 +52,7 @@ type RunSpec = {
   runtime: string;
   taskConcurrency: number;
   output: string;
+  resourceObservationsOutput: string;
   argv: string[];
 };
 
@@ -57,6 +62,7 @@ type RunResult = {
   runtime: string;
   task_concurrency: number;
   output: string;
+  resource_observations_output: string;
   exit_code: number;
   passed?: number;
   task_count?: number;
@@ -76,13 +82,15 @@ function parseArgs(argv: string[]): MatrixArgs {
   const modes = parseList(values.get("--modes") ?? "cold,warm", ALL_MODES);
   const resourceConfigPath = values.get("--resource-config") ?? process.env.BENCH_RESOURCE_CONFIG;
   const resourceConfig = loadResourcePolicyConfig(resourceConfigPath);
+  const outputDir = resolve(values.get("--output-dir") ?? resolve(import.meta.dir, "../../results"));
   return {
     providers,
     modes,
     dataset: resolve(values.get("--dataset") ?? resolve(import.meta.dir, "../../data/swesmith_v4_smoke100.jsonl")),
     taskIndex: values.get("--task-index") ?? "all",
     taskLimit: parseOptionalInt(values.get("--task-limit")),
-    outputDir: resolve(values.get("--output-dir") ?? resolve(import.meta.dir, "../../results")),
+    outputDir,
+    resourceObservationsDir: resolve(values.get("--resource-observations-dir") ?? resolve(outputDir, "resource-observations")),
     suffix: values.get("--suffix") ?? yyyymmdd(new Date()),
     timeoutSeconds: Number.parseInt(values.get("--timeout-seconds") ?? "180", 10),
     solveTimeoutSeconds: Number.parseInt(values.get("--solve-timeout-seconds") ?? "900", 10),
@@ -99,6 +107,11 @@ function parseArgs(argv: string[]): MatrixArgs {
       values.get("--resource-policy") ?? process.env.BENCH_RESOURCE_POLICY ?? resourceConfig.default_policy ?? "adaptive"
     ),
     resourceConfigPath,
+    adaptiveConcurrency: parseBoolean(values.get("--adaptive-concurrency") ?? process.env.BENCH_ADAPTIVE_CONCURRENCY ?? "true"),
+    adaptiveConcurrencyStatePath:
+      values.get("--adaptive-concurrency-state") ??
+      process.env.BENCH_ADAPTIVE_CONCURRENCY_STATE ??
+      DEFAULT_ADAPTIVE_CONCURRENCY_STATE_PATH,
     solveCommandFile: resolve(values.get("--solve-command-file") ?? resolve(import.meta.dir, "../../scripts/openrouter_solver.sh")),
     forwardEnv: parseForwardEnv(values.get("--forward-env")),
     prewarmProfile: values.get("--prewarm-profile") ?? "terminalbench-smoke",
@@ -114,6 +127,16 @@ function parseArgs(argv: string[]): MatrixArgs {
     awsMicrovmExecutionRoleArn: values.get("--aws-microvm-execution-role-arn") ?? process.env.AWS_MICROVM_EXECUTION_ROLE_ARN,
     output: values.get("--output")
   };
+}
+
+function parseBoolean(value: string): boolean {
+  if (value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes" || value.toLowerCase() === "on") {
+    return true;
+  }
+  if (value === "0" || value.toLowerCase() === "false" || value.toLowerCase() === "no" || value.toLowerCase() === "off") {
+    return false;
+  }
+  throw new Error(`Unsupported boolean value: ${value}`);
 }
 
 function parseResourcePolicy(value: string): ResourcePolicyName {
@@ -176,6 +199,7 @@ function buildRunSpecs(args: MatrixArgs): RunSpec[] {
       const runtime = runtimeFor(provider, args);
       const taskConcurrency = taskConcurrencyFor(provider, args);
       const output = `${args.outputDir}/ts-${provider}-${mode}-solve-all-${args.suffix}.json`;
+      const resourceObservationsOutput = `${args.resourceObservationsDir}/ts-${provider}-${mode}-solve-all-${args.suffix}.jsonl`;
       const argv = [
         "src/bench.ts",
         "--provider",
@@ -204,6 +228,11 @@ function buildRunSpecs(args: MatrixArgs): RunSpec[] {
         "--resource-policy",
         args.resourcePolicy,
         ...(args.resourceConfigPath ? ["--resource-config", args.resourceConfigPath] : []),
+        "--resource-observations-output",
+        resourceObservationsOutput,
+        "--adaptive-concurrency",
+        String(args.adaptiveConcurrency),
+        ...(args.adaptiveConcurrencyStatePath ? ["--adaptive-concurrency-state", args.adaptiveConcurrencyStatePath] : []),
         "--forward-env",
         args.forwardEnv.join(","),
         "--solve-command-file",
@@ -213,27 +242,28 @@ function buildRunSpecs(args: MatrixArgs): RunSpec[] {
       ];
       argv.push(...warmProviderArgs(provider, mode, args));
       argv.push(...awsMicrovmArgs(provider, args));
-      return { provider, mode, runtime, taskConcurrency, output, argv };
+      return { provider, mode, runtime, taskConcurrency, output, resourceObservationsOutput, argv };
     })
   );
 }
 
 function taskConcurrencyFor(provider: MatrixProvider, args: MatrixArgs): number {
   const modeCount = Math.max(1, args.modes.length);
+  let staticLimit: number;
   if (provider === "vercel") {
-    return args.vercelConcurrency ?? (usesTaskDockerDataset(args) ? 1 : args.concurrency);
-  }
-  if (provider === "modal") {
-    return args.modalConcurrency ?? (usesTaskDockerDataset(args) ? 1 : Math.min(args.concurrency, Math.max(1, Math.floor(5 / modeCount))));
-  }
-  if (provider === "aws-microvm") {
+    staticLimit = args.vercelConcurrency ?? (usesTaskDockerDataset(args) ? 1 : args.concurrency);
+  } else if (provider === "modal") {
+    staticLimit = args.modalConcurrency ?? (usesTaskDockerDataset(args) ? 1 : Math.min(args.concurrency, Math.max(1, Math.floor(5 / modeCount))));
+  } else if (provider === "aws-microvm") {
     const accountMemoryGb = envNumber("AWS_MICROVM_ACCOUNT_MEMORY_GB", 4);
     const memoryCap = Math.max(1, Math.floor(accountMemoryGb / concurrencyMemoryGb(provider, args) / modeCount));
-    return args.awsMicrovmConcurrency ?? Math.min(args.concurrency, memoryCap);
+    staticLimit = args.awsMicrovmConcurrency ?? Math.min(args.concurrency, memoryCap);
+  } else {
+    const cpuCap = Math.floor(10 / args.cpu / modeCount);
+    const memoryCap = Math.floor(10 / concurrencyMemoryGb(provider, args) / modeCount);
+    staticLimit = args.daytonaConcurrency ?? Math.min(args.concurrency, Math.max(1, Math.min(cpuCap, memoryCap)));
   }
-  const cpuCap = Math.floor(10 / args.cpu / modeCount);
-  const memoryCap = Math.floor(10 / concurrencyMemoryGb(provider, args) / modeCount);
-  return args.daytonaConcurrency ?? Math.min(args.concurrency, Math.max(1, Math.min(cpuCap, memoryCap)));
+  return adaptiveLimitForProvider(provider, args.concurrency, staticLimit, args.adaptiveConcurrencyStatePath, args.adaptiveConcurrency);
 }
 
 function concurrencyMemoryGb(provider: MatrixProvider, args: MatrixArgs): number {
@@ -308,6 +338,7 @@ async function runSpec(spec: RunSpec): Promise<RunResult> {
     runtime: spec.runtime,
     task_concurrency: spec.taskConcurrency,
     output: spec.output,
+    resource_observations_output: spec.resourceObservationsOutput,
     exit_code: exitCode,
     passed: runSummary?.passed,
     task_count: runSummary?.task_count,
@@ -354,6 +385,8 @@ async function main(): Promise<void> {
     generated_at: new Date().toISOString(),
     requested_task_concurrency_per_run: args.concurrency,
     effective_task_concurrency_per_run: Object.fromEntries(specs.map((spec) => [`${spec.provider}-${spec.mode}`, spec.taskConcurrency])),
+    adaptive_concurrency_state: args.adaptiveConcurrencyStatePath,
+    resource_observations_dir: args.resourceObservationsDir,
     run_concurrency: args.runConcurrency,
     results
   };

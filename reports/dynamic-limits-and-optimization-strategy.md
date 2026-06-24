@@ -157,7 +157,7 @@ Then apply product latency constraints:
 - stdout/stderr bytes;
 - timeout and signal fields.
 
-AWS MicroVM collects this inside `server.py`; local, Vercel, Modal, and Daytona collect wall/output usage in the provider wrapper. Providers can add richer CPU/RSS metrics as their SDKs expose them.
+AWS MicroVM collects this inside `server.py`; local, Vercel, Modal, and Daytona collect wall/output usage in the provider wrapper. `bench.ts` also runs a small post-task disk probe so observations include workspace/cache high-water inputs for aggregation. Providers can add richer CPU/RSS metrics as their SDKs expose them.
 
 ### 2. Bounded Resource Retry Ladder
 
@@ -248,14 +248,14 @@ One global resource policy will overfit one workload and hurt another.
 ## Implementation Sequence
 
 1. Add optional `command_usage` telemetry to command results and agent traces. Done.
-2. Store per-task observations as JSONL, keyed by task/repo/provider/runtime/image. Partially done through `--resource-observations-output`.
-3. Add `bun src/resource_report.ts` to aggregate observations into resource suggestions.
+2. Store per-task observations as JSONL, keyed by task/repo/provider/runtime/image. Done through `--resource-observations-output`, and matrix runs write per-run observation files under `--resource-observations-dir`.
+3. Add `bun src/resource_report.ts` to aggregate observations into resource suggestions. Done through `bun run resource:report`.
 4. Add `--resource-policy static|observe|adaptive`, defaulting to `adaptive`. Done.
 5. In `observe`, emit recommended envelopes and adaptive prices without changing resources. Done for pricing; execution remains static outside `adaptive`.
 6. In `adaptive`, apply checked-in config recommendations with caps and one bounded resource retry on clear resource failures. Done.
-7. Replace provider concurrency constants with an adaptive limiter that records quota/rate-limit feedback.
+7. Replace provider concurrency constants with an adaptive limiter that records quota/rate-limit feedback. Done for task concurrency through persisted AIMD state.
 8. Make AWS auto-suspend thresholds derive from observed idle gaps, resume probability, snapshot IO cost, and measured resume latency.
-9. Promote stable recommendations into checked-in manifests only after repeated samples.
+9. Promote stable recommendations into checked-in manifests only after repeated samples. Partially done: `resource_report.ts` emits a suggested config after a configurable sample threshold; applying it remains a review step.
 
 ## Guardrails
 
