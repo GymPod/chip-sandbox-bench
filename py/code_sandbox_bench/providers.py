@@ -1,6 +1,6 @@
 import asyncio
+import json
 import os
-import re
 import re
 import shlex
 import shutil
@@ -27,6 +27,9 @@ class Provider(ABC):
 
     @abstractmethod
     async def stop(self) -> None: ...
+
+    def metadata(self) -> dict[str, object]:
+        return {}
 
 
 class LocalProvider(Provider):
@@ -199,7 +202,143 @@ class DaytonaProvider(Provider):
         self.sandbox = None
 
 
-def make_provider(name: str, runtime: str, timeout: int, cpu: int, memory_gb: int, disk_gb: int) -> Provider:
+class AwsMicrovmProvider(Provider):
+    def __init__(
+        self,
+        timeout: int,
+        cpu: int,
+        memory_gb: int,
+        image_identifier: str | None = None,
+        image_version: str | None = None,
+        execution_role_arn: str | None = None,
+    ) -> None:
+        self.timeout = timeout
+        self.cpu = cpu
+        self.memory_gb = memory_gb
+        self.image_identifier = image_identifier
+        self.image_version = image_version
+        self.execution_role_arn = execution_role_arn
+        self.process: asyncio.subprocess.Process | None = None
+        self.request_id = 0
+        self.lock = asyncio.Lock()
+        self.stderr_tail = ""
+        self.stderr_task: asyncio.Task[None] | None = None
+        self.last_metadata: dict[str, object] = {}
+
+    async def start(self) -> None:
+        bun = os.environ.get("BUN", "bun")
+        if shutil.which(bun) is None:
+            raise RuntimeError("AWS MicroVM Python provider requires Bun on PATH")
+        ts_root = Path(__file__).resolve().parents[2] / "ts"
+        bridge_path = ts_root / "src" / "aws_microvm_py_bridge.ts"
+        self.process = await asyncio.create_subprocess_exec(
+            bun,
+            str(bridge_path),
+            cwd=ts_root,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        self.stderr_task = asyncio.create_task(self._collect_stderr())
+        response = await self._request(
+            {
+                "op": "start",
+                "timeoutSeconds": self.timeout,
+                "cpu": self.cpu,
+                "memoryGb": self.memory_gb,
+                "imageIdentifier": self.image_identifier,
+                "imageVersion": self.image_version,
+                "executionRoleArn": self.execution_role_arn,
+            }
+        )
+        self.last_metadata = dict(response.get("metadata") or {})
+
+    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+        response = await self._request({"op": "run", "command": command, "cwd": cwd, "timeoutSeconds": timeout})
+        self.last_metadata = dict(response.get("metadata") or self.last_metadata)
+        result = response.get("result")
+        if not isinstance(result, dict):
+            raise RuntimeError("AWS MicroVM bridge run did not return a result object")
+        return CommandResult(
+            str(result.get("stdout") or ""),
+            str(result.get("stderr") or ""),
+            int(result.get("returnCode") or 0),
+        )
+
+    async def stop(self) -> None:
+        process = self.process
+        if process is None:
+            return
+        try:
+            if process.returncode is None:
+                try:
+                    response = await self._request({"op": "stop"})
+                    self.last_metadata = dict(response.get("metadata") or self.last_metadata)
+                except Exception:
+                    process.kill()
+                    raise
+        finally:
+            if process.stdin is not None and not process.stdin.is_closing():
+                process.stdin.close()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=5)
+            except TimeoutError:
+                process.kill()
+                await process.wait()
+            if self.stderr_task is not None:
+                self.stderr_task.cancel()
+                try:
+                    await self.stderr_task
+                except asyncio.CancelledError:
+                    pass
+            self.process = None
+            self.stderr_task = None
+
+    def metadata(self) -> dict[str, object]:
+        return self.last_metadata
+
+    async def _request(self, payload: dict[str, object | None]) -> dict[str, object]:
+        if self.process is None or self.process.stdin is None or self.process.stdout is None:
+            raise RuntimeError("AWS MicroVM bridge process is not running")
+        async with self.lock:
+            self.request_id += 1
+            request = {"id": self.request_id, **{key: value for key, value in payload.items() if value is not None}}
+            self.process.stdin.write((json.dumps(request) + "\n").encode())
+            await self.process.stdin.drain()
+            line = await self.process.stdout.readline()
+            if not line:
+                returncode = await self.process.wait()
+                raise RuntimeError(
+                    f"AWS MicroVM bridge exited before responding with code {returncode}: {self.stderr_tail}"
+                )
+            response = json.loads(line.decode())
+            if not response.get("ok"):
+                error = str(response.get("error") or "unknown bridge error")
+                tail = f"\nBridge stderr:\n{self.stderr_tail}" if self.stderr_tail else ""
+                raise RuntimeError(f"AWS MicroVM bridge request failed: {error}{tail}")
+            return response
+
+    async def _collect_stderr(self) -> None:
+        if self.process is None or self.process.stderr is None:
+            return
+        while True:
+            line = await self.process.stderr.readline()
+            if not line:
+                return
+            self.stderr_tail = (self.stderr_tail + line.decode(errors="replace"))[-8000:]
+
+
+def make_provider(
+    name: str,
+    runtime: str,
+    timeout: int,
+    cpu: int,
+    memory_gb: int,
+    disk_gb: int,
+    aws_microvm_image_id: str | None = None,
+    aws_microvm_image_version: str | None = None,
+    aws_microvm_execution_role_arn: str | None = None,
+) -> Provider:
     if name == "local":
         return LocalProvider()
     if name == "vercel":
@@ -208,6 +347,15 @@ def make_provider(name: str, runtime: str, timeout: int, cpu: int, memory_gb: in
         return ModalProvider(image=runtime, timeout=timeout, cpu=float(cpu), memory_mb=memory_gb * 1024)
     if name == "daytona":
         return DaytonaProvider(image=runtime, timeout=timeout, cpu=cpu, memory_gb=memory_gb, disk_gb=disk_gb)
+    if name == "aws-microvm":
+        return AwsMicrovmProvider(
+            timeout=timeout,
+            cpu=cpu,
+            memory_gb=memory_gb,
+            image_identifier=aws_microvm_image_id,
+            image_version=aws_microvm_image_version,
+            execution_role_arn=aws_microvm_execution_role_arn,
+        )
     raise ValueError(f"Unsupported provider: {name}")
 
 

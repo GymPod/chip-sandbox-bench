@@ -24,12 +24,14 @@ python -m code_sandbox_bench.bench --provider local --task-index 0 --output ../r
 python -m code_sandbox_bench.bench --provider vercel --task-index all --output ../results/vercel-all.json
 python -m code_sandbox_bench.bench --provider modal --task-index all --output ../results/modal-all.json
 python -m code_sandbox_bench.bench --provider daytona --task-index all --output ../results/daytona-all.json
+python -m code_sandbox_bench.bench --provider aws-microvm --aws-microvm-image-id "$AWS_MICROVM_IMAGE_ID" --task-index all --output ../results/aws-microvm-all.json
 ```
 
 ## Notes
 
-- The Python runner supports `local`, `vercel`, `modal`, and `daytona`.
+- The Python runner supports `local`, `vercel`, `modal`, `daytona`, and `aws-microvm`.
 - Provider credentials are read from the environment.
+- AWS MicroVM support uses a persistent Bun/TypeScript bridge to the maintained `AwsMicrovmSandbox`, so Python start/run/stop shares the same lifecycle, command execution, telemetry, and cleanup semantics as the TypeScript runner.
 - New cross-provider analysis should generally use the TypeScript matrix runner so output shape matches the current reports.
 
 ## Reports

@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import os
 import time
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from code_sandbox_bench.dataset import BenchTask, select_tasks
 from code_sandbox_bench.providers import CommandResult, make_provider, write_text
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DATASET = ROOT.parent / "data" / "terminalbench_2026_03_05_smoke16.parquet"
+DEFAULT_DATASET = ROOT / "data" / "terminalbench_2026_03_05_smoke16.parquet"
 PREPARE_COMMAND = """
 set -eu
 mkdir -p /tmp/tb /workspace /tests /logs/verifier
@@ -42,11 +43,25 @@ def estimate_cost(provider: str, seconds: float, cpu: int, memory_gb: int, disk_
     if provider == "daytona":
         billable_storage_gb = max(0, disk_gb - 5)
         return seconds * (cpu * 0.00001400 + memory_gb * 0.00000450 + billable_storage_gb * 0.00000003)
+    if provider == "aws-microvm":
+        vcpu_second_usd = float(os.environ.get("AWS_MICROVM_ESTIMATE_VCPU_SECOND_USD", "0.0000276944"))
+        gb_second_usd = float(os.environ.get("AWS_MICROVM_ESTIMATE_GB_SECOND_USD", "0.0000036667"))
+        return seconds * ((memory_gb / 2.0) * vcpu_second_usd + memory_gb * gb_second_usd)
     return 0.0
 
 
 async def run_task(args: argparse.Namespace, task: BenchTask) -> dict[str, object]:
-    provider = make_provider(args.provider, args.runtime, args.timeout_seconds, args.cpu, args.memory_gb, args.disk_gb)
+    provider = make_provider(
+        args.provider,
+        args.runtime,
+        args.timeout_seconds,
+        args.cpu,
+        args.memory_gb,
+        args.disk_gb,
+        aws_microvm_image_id=args.aws_microvm_image_id,
+        aws_microvm_image_version=args.aws_microvm_image_version,
+        aws_microvm_execution_role_arn=args.aws_microvm_execution_role_arn,
+    )
     started = time.monotonic()
     result = CommandResult("", "", 1)
     try:
@@ -60,7 +75,7 @@ async def run_task(args: argparse.Namespace, task: BenchTask) -> dict[str, objec
     finally:
         await provider.stop()
     elapsed = time.monotonic() - started
-    return {
+    output = {
         "task_id": task.task_id,
         "passed": result.return_code == 0,
         "return_code": result.return_code,
@@ -69,6 +84,8 @@ async def run_task(args: argparse.Namespace, task: BenchTask) -> dict[str, objec
         "stdout_tail": result.stdout[-2000:],
         "stderr_tail": result.stderr[-2000:],
     }
+    output.update(provider.metadata())
+    return output
 
 
 async def main_async(args: argparse.Namespace) -> None:
@@ -96,7 +113,7 @@ async def main_async(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--provider", choices=["local", "vercel", "modal", "daytona"], required=True)
+    parser.add_argument("--provider", choices=["local", "vercel", "modal", "daytona", "aws-microvm"], required=True)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--task-index", default="all")
     parser.add_argument("--runtime")
@@ -104,7 +121,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cpu", type=int, default=2)
     parser.add_argument("--memory-gb", type=int, default=4)
     parser.add_argument("--disk-gb", type=int, default=10)
-    parser.add_argument("--env-file", type=Path, default=ROOT.parent / ".env")
+    parser.add_argument("--aws-microvm-image-id", default=os.environ.get("AWS_MICROVM_IMAGE_ID"))
+    parser.add_argument("--aws-microvm-image-version", default=os.environ.get("AWS_MICROVM_IMAGE_VERSION"))
+    parser.add_argument("--aws-microvm-execution-role-arn", default=os.environ.get("AWS_MICROVM_EXECUTION_ROLE_ARN"))
+    parser.add_argument("--env-file", type=Path, default=ROOT / ".env")
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
