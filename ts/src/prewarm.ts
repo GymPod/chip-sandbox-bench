@@ -38,14 +38,16 @@ function parseArgs(argv: string[]): PrewarmArgs {
   for (let index = 0; index < argv.length; index += 2) {
     values.set(argv[index], argv[index + 1]);
   }
+  const provider = (values.get("--provider") ?? "modal") as "vercel" | "modal" | "daytona" | "aws-microvm";
+  const defaultMemoryGb = provider === "aws-microvm" ? "2" : "4";
   return {
-    provider: (values.get("--provider") ?? "modal") as "vercel" | "modal" | "daytona" | "aws-microvm",
+    provider,
     runtime: values.get("--runtime") ?? "python:3.13",
     profile: values.get("--profile") ?? "terminalbench-smoke",
     name: values.get("--name") ?? "code-sandbox-bench-terminalbench-smoke",
     timeoutSeconds: Number.parseInt(values.get("--timeout-seconds") ?? "1800", 10),
     cpu: Number.parseInt(values.get("--cpu") ?? "2", 10),
-    memoryGb: Number.parseInt(values.get("--memory-gb") ?? "4", 10),
+    memoryGb: Number.parseInt(values.get("--memory-gb") ?? defaultMemoryGb, 10),
     diskGb: Number.parseInt(values.get("--disk-gb") ?? "10", 10),
     force: values.get("--force") === "true",
     awsRegion: values.get("--aws-region") ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1",

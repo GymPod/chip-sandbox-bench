@@ -11,7 +11,7 @@ provider | passed | observed task seconds | mean seconds | median seconds | p95 
 vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
 modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
 daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
-aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $1.0501
+aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
 
 ## Vercel
 
@@ -32,7 +32,7 @@ aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $1.0501
 - Current evidence: 100/100 passing.
 - Execution model: native task Docker image support for SWE-Smith task images.
 - Recent fixes addressed deterministic solve application, task image command fidelity, Pydantic uv pathing, Safety local DB/provider egress behavior, DSPy drift, and SQLFluff test command de-duplication.
-- Product fit: lowest estimated provider cost in the current stitched cold-gold evidence set, with native task-Docker fidelity.
+- Product fit: lowest estimated cost among the native task-Docker providers in the current stitched cold-gold evidence set.
 
 ## AWS Lambda MicroVMs
 
@@ -41,7 +41,7 @@ aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $1.0501
 - Recent run shape: `--task-limit 100`, `--concurrency 10`, `--memory-gb 2`, `--cpu 2`, and `scripts/gold_solver.sh`.
 - Remaining failures: DVC hit an `RLIMIT_NOFILE` verifier setup issue, one Pandas row had two failing `read_stata` tests, and one Pandas row produced a green pytest log but returned `127` after the wrapper tried `/opt/verifier-venv/bin/pytest`.
 - Product fit: AWS MicroVM startup is fast and the run parallelized cleanly, but SWE-Smith currently uses fallback environment reconstruction rather than native per-task Docker images.
-- Cost note: AWS MicroVM estimated cost uses public US East (N. Virginia) ARM runtime rates: `$0.09969984` per vCPU-hour and `$0.01320012` per GB-hour. The resulting compute-only estimate is `$1.0501`, split into `$0.8813` vCPU and `$0.1688` memory. Snapshot read/write/storage and data transfer are excluded.
+- Cost note: AWS MicroVM estimated cost uses public US East (N. Virginia) ARM runtime rates: `$0.09969984` per vCPU-hour and `$0.01320012` per GB-hour. The revised compute-only estimate is about `$0.8063`, split into `$0.6375` memory-derived vCPU and `$0.1688` memory. This is a 23.2% reduction from the previous requested-CPU estimate of `$1.0501`; snapshot read/write/storage and data transfer are excluded.
 
 ## Evidence Files
 

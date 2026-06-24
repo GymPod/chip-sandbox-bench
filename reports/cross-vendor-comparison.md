@@ -19,16 +19,17 @@ provider | passed | observed task seconds | mean seconds | median seconds | p95 
 vercel | 100/100 | 14356.6 | 143.6 | 128.6 | 267.9 | $1.5458
 modal | 100/100 | 17397.9 | 174.0 | 159.2 | 318.3 | $1.3200
 daytona | 100/100 | 19006.8 | 190.1 | 189.8 | 288.9 | $0.9465
-aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $1.0501
+aws-microvm | 97/100 | 14390.0 | 143.9 | 127.4 | 230.2 | $0.8063
 
 ## Interpretation
 
 - Vercel, Modal, and Daytona have 100/100 passing cold-gold evidence for the 100-task SWE-Smith smoke set.
 - AWS MicroVMs reached 97/100 on the first all-100 run with the shared runner image. The failures were one DVC verifier environment issue, one Pandas real test failure, and one Pandas likely false negative where the test log was green but the wrapper returned `127`.
 - Vercel has the lowest observed task seconds in this stitched newest-passing evidence set.
-- Daytona has the lowest estimated provider cost in this stitched newest-passing evidence set.
+- AWS MicroVM has the lowest current estimated provider cost, but its row is compute-only, excludes snapshot/network costs, and still has 97/100 passing evidence rather than 100/100.
 - Modal sits between Vercel and Daytona on estimated provider cost in this evidence set.
-- AWS MicroVM observed task seconds are close to Vercel's in this run. The AWS MicroVM estimate uses public runtime compute rates only; snapshot read/write/storage and data transfer are excluded.
+- Daytona has the lowest estimated provider cost among the 100/100 native task-Docker provider rows.
+- AWS MicroVM observed task seconds are close to Vercel's in this run. The AWS MicroVM estimate uses memory-derived billable vCPU and public runtime compute rates only; snapshot read/write/storage and data transfer are excluded.
 - Because this table stitches full and focused reruns, use it for runnability and rough head-to-head shape; run a fresh synchronized matrix before making strict speed claims.
 - Treat estimated provider cost as directional only. See [cost estimate caveats](cost-estimate-caveats.md).
 

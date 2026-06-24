@@ -81,6 +81,7 @@ export type AwsMicrovmLifecycleEvent = {
 };
 
 export type AwsMicrovmLifecycleCost = {
+  billable_vcpu: number;
   running_seconds: number;
   suspended_seconds: number;
   suspend_count: number;
@@ -594,8 +595,9 @@ export class AwsMicrovmSandbox {
     const suspendedSeconds =
       this.accumulatedSuspendedSeconds +
       (this.suspendedStartedAtMs === undefined ? 0 : Math.max(0, (now - this.suspendedStartedAtMs) / 1000));
+    const billableVcpu = awsMicrovmBillableVcpu(this.config.memoryGb);
     const runningComputeUsd =
-      runningSeconds * (this.config.cpu * this.config.pricing.vcpuSecondUsd + this.config.memoryGb * this.config.pricing.gbSecondUsd);
+      runningSeconds * (billableVcpu * this.config.pricing.vcpuSecondUsd + this.config.memoryGb * this.config.pricing.gbSecondUsd);
     const launchSnapshotReadGb = this.config.memoryGb;
     const suspendSnapshotWriteGb = this.suspendCount * this.config.memoryGb;
     const resumeSnapshotReadGb = this.resumeCount * this.config.memoryGb;
@@ -604,6 +606,7 @@ export class AwsMicrovmSandbox {
     const suspendedStorageUsd =
       this.config.memoryGb * (suspendedSeconds / (30 * 24 * 3600)) * this.config.pricing.snapshotStorageGbMonthUsd;
     return {
+      billable_vcpu: billableVcpu,
       running_seconds: runningSeconds,
       suspended_seconds: suspendedSeconds,
       suspend_count: this.suspendCount,
@@ -677,6 +680,10 @@ export function awsMicrovmConfigFromEnv(options: AwsMicrovmSandboxEnvOptions): A
       snapshotStorageGbMonthUsd: envNumber("AWS_MICROVM_ESTIMATE_SNAPSHOT_STORAGE_GB_MONTH_USD", 0.08)
     }
   };
+}
+
+function awsMicrovmBillableVcpu(memoryGb: number): number {
+  return memoryGb / 2;
 }
 
 function envInt(name: string, fallback: number): number {

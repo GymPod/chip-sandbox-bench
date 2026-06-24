@@ -19,7 +19,7 @@ provider | selected tasks | observed task seconds | estimated cost | selected so
 Vercel | 100 | 14356.6 | $1.5458 | 56
 Modal | 100 | 17397.9 | $1.3200 | 13
 Daytona | 100 | 19006.8 | $0.9465 | 35
-AWS Lambda MicroVMs | 100 | 14390.0 | $1.0501 | 1
+AWS Lambda MicroVMs | 100 | 14390.0 | $0.8063 | 1
 
 Selection rule:
 
@@ -38,9 +38,9 @@ provider | harness formula
 Vercel | `(seconds / 3600) * (cpu * 0.128 + memoryGb * 0.0212) + 0.60 / 1_000_000`
 Modal | `seconds * ((cpu / 2) * 0.00003942 + memoryGb * 0.00000672)`
 Daytona | `seconds * (cpu * 0.000014 + memoryGb * 0.0000045 + max(0, diskGb - 5) * 0.00000003)`
-AWS Lambda MicroVMs | `(seconds / 3600) * (cpu * 0.09969984 + memoryGb * 0.01320012)`
+AWS Lambda MicroVMs | `(seconds / 3600) * ((memoryGb / 2) * 0.09969984 + memoryGb * 0.01320012)`
 
-AWS Lambda MicroVMs use public US East (N. Virginia) ARM runtime rates from the AWS Lambda pricing page: `$0.0000276944` per vCPU-second and `$0.0000036667` per GB-second, converted to hourly values for the harness. The all-100 result JSON has been recomputed with those rates.
+AWS Lambda MicroVMs use public US East (N. Virginia) ARM runtime rates from the AWS Lambda pricing page: `$0.0000276944` per vCPU-second and `$0.0000036667` per GB-second, converted to hourly values for the harness. The all-100 result JSON has been recomputed with those rates and the AWS MicroVM memory-derived billable vCPU shape.
 
 ## Reliability
 
@@ -89,9 +89,9 @@ Provider cost ranking | Medium-low | The ranking is useful as a rough signal, bu
 ### AWS Lambda MicroVMs
 
 - The latest 100-task run reused a prebuilt MicroVM image. Image creation, snapshot read/write/storage, and any control-plane, data transfer, or network-connector charges are not included in the run-level sandbox estimate.
-- The compute-only estimate is `$1.0501`, split into `$0.8813` vCPU and `$0.1688` memory.
+- The previous compute-only estimate was `$1.0501`, split into `$0.8813` requested-CPU and `$0.1688` memory. Using AWS MicroVM billable vCPU derived from memory reduces the same sample to about `$0.8063`, split into `$0.6375` vCPU and `$0.1688` memory.
 - AWS MicroVMs currently reconstruct SWE-Smith task environments from manifests, like Vercel/local, rather than consuming each task Docker image directly.
-- Several tasks request more than the base `--memory-gb 2`; cost estimates must use per-task recorded `task_cpu` and `task_memory_gb` rather than the command-line defaults.
+- Several tasks request more than the base `--memory-gb 2`; AWS cost estimates must use per-task recorded `task_memory_gb`, with billable vCPU calculated as `task_memory_gb / 2`, rather than the command-line default.
 
 ## What Would Make This Decision-Grade
 

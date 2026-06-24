@@ -33,6 +33,8 @@ Useful runtime controls:
 - `AWS_MICROVM_EGRESS_CONNECTORS`, default `INTERNET_EGRESS`
 - `AWS_MICROVM_ESTIMATE_VCPU_SECOND_USD`, `AWS_MICROVM_ESTIMATE_GB_SECOND_USD`, `AWS_MICROVM_ESTIMATE_SNAPSHOT_WRITE_GB_USD`, `AWS_MICROVM_ESTIMATE_SNAPSHOT_READ_GB_USD`, and `AWS_MICROVM_ESTIMATE_SNAPSHOT_STORAGE_GB_MONTH_USD` override lifecycle cost estimates.
 
+The AWS MicroVM `bench` and `prewarm` commands default `--memory-gb` to `2`, while the other providers keep the repo-wide `4` GB default. The AWS runtime estimate derives billable vCPU from memory at `memoryGb / 2`, so the default AWS benchmark shape is a 2 GB / 1 billable-vCPU MicroVM unless a task requests more memory.
+
 ## Image Creation
 
 Create the reusable runner image with:
@@ -206,7 +208,7 @@ AWS MicroVMs always launch a fresh MicroVM per task from a prebuilt MicroVM imag
 - `cold` means a new MicroVM instance from the configured image.
 - `warm` reuses the same `AWS_MICROVM_IMAGE_ID` / version artifact across runs, but still launches isolated per-task MicroVMs.
 
-This shape parallelizes cleanly once the AWS account quota allows it: build one image, then run N task MicroVMs with the same environment config and bounded `AWS_MICROVM_MAX_CONCURRENCY`. The harness also caps AWS MicroVM task concurrency by `AWS_MICROVM_ACCOUNT_MEMORY_GB / --memory-gb`; in the current account, 4 GB SWE-Smith runs are sequential.
+This shape parallelizes cleanly once the AWS account quota allows it: build one image, then run N task MicroVMs with the same environment config and bounded `AWS_MICROVM_MAX_CONCURRENCY`. The harness also caps AWS MicroVM task concurrency by `AWS_MICROVM_ACCOUNT_MEMORY_GB / --memory-gb`; in the current account, the 2 GB AWS default permits more parallelism than the repo-wide 4 GB default.
 
 ## MVP Evidence
 
@@ -301,4 +303,4 @@ The provider sets short task-level maximum duration and immediate termination in
 - The current account showed a 4 GB base allocated memory limit. With `--memory-gb 4`, run sequentially or request a quota increase.
 - Use one prebuilt image for a whole run instead of rebuilding per task.
 - Prefer `AWS_MICROVM_SUSPENDED_DURATION_SECONDS=0` for benchmark tasks so idle MicroVMs terminate rather than persist.
-- Benchmark rows include `aws_microvm.lifecycle_cost` with running compute, launch snapshot read, suspend snapshot write, resume snapshot read, suspended storage, and total estimates. Override the default US East example rates with the `AWS_MICROVM_ESTIMATE_*` variables when using another region or negotiated pricing.
+- Benchmark rows include `aws_microvm.lifecycle_cost` with billable vCPU, running compute, launch snapshot read, suspend snapshot write, resume snapshot read, suspended storage, and total estimates. Runtime compute uses `memoryGb / 2` for the billable-vCPU bucket; `--cpu` remains task-resource metadata for cross-provider reporting. Override the default US East example rates with the `AWS_MICROVM_ESTIMATE_*` variables when using another region or negotiated pricing.

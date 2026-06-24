@@ -40,6 +40,7 @@ function parseArgs(argv: string[]): BenchArgs {
   }
   const provider = (values.get("--provider") ?? "local") as BenchArgs["provider"];
   const mode = parseRunMode(values.get("--mode"));
+  const defaultMemoryGb = provider === "aws-microvm" ? "2" : "4";
   return {
     provider,
     mode,
@@ -61,7 +62,7 @@ function parseArgs(argv: string[]): BenchArgs {
     awsMicrovmExecutionRoleArn: values.get("--aws-microvm-execution-role-arn") ?? process.env.AWS_MICROVM_EXECUTION_ROLE_ARN,
     concurrency: Number.parseInt(values.get("--concurrency") ?? "100", 10),
     cpu: Number.parseInt(values.get("--cpu") ?? "2", 10),
-    memoryGb: Number.parseInt(values.get("--memory-gb") ?? "4", 10),
+    memoryGb: Number.parseInt(values.get("--memory-gb") ?? defaultMemoryGb, 10),
     diskGb: Number.parseInt(values.get("--disk-gb") ?? "10", 10),
     output: values.get("--output")
   };
@@ -104,11 +105,21 @@ function estimateCost(provider: string, seconds: number, cpu: number, memoryGb: 
     return seconds * (cpu * 0.000014 + memoryGb * 0.0000045 + billableStorageGb * 0.00000003);
   }
   if (provider === "aws-microvm") {
-    const vcpuHour = Number.parseFloat(process.env.AWS_MICROVM_ESTIMATE_VCPU_HOUR_USD ?? "0");
-    const gbHour = Number.parseFloat(process.env.AWS_MICROVM_ESTIMATE_GB_HOUR_USD ?? "0");
-    return (seconds / 3600) * (cpu * vcpuHour + memoryGb * gbHour);
+    const vcpuSecond = envNumber(
+      "AWS_MICROVM_ESTIMATE_VCPU_SECOND_USD",
+      envNumber("AWS_MICROVM_ESTIMATE_VCPU_HOUR_USD", 0) / 3600 || 0.0000276944
+    );
+    const gbSecond = envNumber(
+      "AWS_MICROVM_ESTIMATE_GB_SECOND_USD",
+      envNumber("AWS_MICROVM_ESTIMATE_GB_HOUR_USD", 0) / 3600 || 0.0000036667
+    );
+    return seconds * (awsMicrovmBaselineVcpu(memoryGb) * vcpuSecond + memoryGb * gbSecond);
   }
   return 0;
+}
+
+function awsMicrovmBaselineVcpu(memoryGb: number): number {
+  return memoryGb / 2;
 }
 
 const APT_PACKAGE_NAMES: Record<string, string> = {
