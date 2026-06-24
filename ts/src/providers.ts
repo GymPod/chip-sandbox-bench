@@ -2,17 +2,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { $ } from "bun";
-import type { CommandResult } from "./types";
+import type { CommandResult, Provider, ProviderRunTrace } from "./types";
 import { Daytona, Image as DaytonaImage, type Sandbox as DaytonaSandbox } from "@daytona/sdk";
 import { Sandbox as VercelSandbox } from "@vercel/sandbox";
 import { ModalClient, type App, type Image as ModalImage, type Sandbox as ModalSandbox } from "modal";
 import { AwsMicrovmSandbox, awsMicrovmConfigFromEnv } from "./aws_microvm";
-
-export interface Provider {
-  start(): Promise<void>;
-  run(command: string, cwd: string | undefined, timeoutSeconds: number): Promise<CommandResult>;
-  stop(): Promise<void>;
-}
 
 export type ProviderOptions = {
   runtime: string;
@@ -481,11 +475,21 @@ export function makeProvider(
   throw new Error(`Unsupported TypeScript provider: ${name}`);
 }
 
-export async function writeText(provider: Provider, remotePath: string, content: string, timeoutSeconds: number): Promise<void> {
-  await provider.run(`mkdir -p $(dirname ${shellQuote(remotePath)}) && : > ${shellQuote(remotePath)}`, undefined, timeoutSeconds);
+export async function writeText(
+  provider: Provider,
+  remotePath: string,
+  content: string,
+  timeoutSeconds: number,
+  trace?: ProviderRunTrace
+): Promise<void> {
+  await provider.run(`mkdir -p $(dirname ${shellQuote(remotePath)}) && : > ${shellQuote(remotePath)}`, undefined, timeoutSeconds, {
+    label: trace?.label ? `${trace.label}:init` : "write_text:init"
+  });
   for (let offset = 0; offset < content.length; offset += 30000) {
     const chunk = content.slice(offset, offset + 30000);
-    const result = await provider.run(`printf %s ${shellQuote(chunk)} >> ${shellQuote(remotePath)}`, undefined, timeoutSeconds);
+    const result = await provider.run(`printf %s ${shellQuote(chunk)} >> ${shellQuote(remotePath)}`, undefined, timeoutSeconds, {
+      label: trace?.label ? `${trace.label}:chunk` : "write_text:chunk"
+    });
     if (result.returnCode !== 0) {
       throw new Error(result.stderr || result.stdout);
     }

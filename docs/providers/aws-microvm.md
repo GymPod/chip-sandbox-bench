@@ -130,6 +130,19 @@ The async job shape avoids holding one HTTPS request open for long dependency in
 
 `server.py` still contains a synchronous `POST /run-command` endpoint, but the benchmark provider uses `/commands` plus `/commands/<jobId>` for normal task execution.
 
+### Agent Trace Logging
+
+Every benchmark result now includes per-task `agent_trace` data and a top-level `agent_trace_summary`. This is the primary local evidence for tuning AWS MicroVM session idle policy.
+
+The trace records:
+
+- lifecycle events for `start` and `stop`;
+- command events for upload chunks, prepare, instruction writes, solve, and verify;
+- wall-clock start/end timestamps, duration, `idle_gap_seconds` between all events, and `command_idle_gap_seconds` between provider commands;
+- command cwd, timeout, return code, length, and SHA-256.
+
+Raw command text is intentionally not stored because solver commands can contain forwarded environment values. Use the idle-gap buckets in `agent_trace_summary` (`over_10s`, `over_60s`, `over_300s`) when evaluating whether auto-suspend thresholds are worthwhile for coding-agent traffic.
+
 ### Lifecycle Hooks
 
 Lifecycle hooks are separate from benchmark command execution. When `AWS_MICROVM_ENABLE_HOOKS=1` is set during image creation, `CreateMicrovmImage` includes `/ready`, `/validate`, `/run`, `/resume`, and `/terminate` hooks under the AWS Lambda MicroVM runtime prefix:

@@ -39,4 +39,17 @@ See `../reports/terminalbench_provider_report.md` for the report index.
 - `*-cold-gold-*`: solver-independent gold-patch runnability checks.
 - `*-env-*`, `*-probe*`, `*-trace*`: provider or task-environment investigations.
 
+## Agent Trace Fields
+
+Benchmark result JSON includes a top-level `agent_trace_summary` and a per-task `agent_trace`.
+The trace records lifecycle and command timing so idle gaps between commands can be analyzed without CloudWatch:
+
+- `started_at`, `completed_at`, and `duration_seconds` for each lifecycle or command event.
+- `idle_gap_seconds`, measured from the prior event completion to the next event start in the same task attempt.
+- `command_idle_gap_seconds`, measured from the prior command completion to the next command start.
+- `label`, `cwd`, `timeout_seconds`, and `return_code` for command events.
+- `command_length` and `command_sha256` instead of raw command text.
+
+The summary buckets command-to-command idle gaps with `over_10s`, `over_60s`, and `over_300s` counters for auto-suspend threshold analysis.
+
 Result JSON may include output tails from task logs. Do not store secrets in task output or forwarded environment values.

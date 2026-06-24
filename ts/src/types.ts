@@ -16,6 +16,16 @@ export type CommandResult = {
   returnCode: number;
 };
 
+export type ProviderRunTrace = {
+  label?: string;
+};
+
+export type Provider = {
+  start(): Promise<void>;
+  run(command: string, cwd: string | undefined, timeoutSeconds: number, trace?: ProviderRunTrace): Promise<CommandResult>;
+  stop(): Promise<void>;
+};
+
 export type ProviderName = "local" | "vercel" | "modal" | "daytona" | "aws-microvm";
 export type RunMode = "cold" | "warm";
 export type RunKind = "verifier" | "solve";

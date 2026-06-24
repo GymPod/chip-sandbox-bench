@@ -1,9 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { AgentTraceRecorder, summarizeAgentTraces, TracedProvider, type AgentTrace } from "./agent_trace";
 import { loadTasks } from "./dataset";
 import { makeProvider, writeText } from "./providers";
 import { resolveTaskEnv } from "./task_env";
-import type { BenchArgs, BenchTask, CommandResult, ProviderName, RunKind, RunMode, TaskEnv } from "./types";
+import type { BenchArgs, BenchTask, CommandResult, Provider, ProviderName, RunKind, RunMode, TaskEnv } from "./types";
 
 const basePrepareCommand = `
 set -eu
@@ -422,8 +423,9 @@ function sleep(milliseconds: number): Promise<void> {
 async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<string, unknown>> {
   const taskEnv = resolveTaskEnv(task, args.runtime, args.provider);
   const solveCommand = resolveSolveCommand(args);
+  const traceRecorder = new AgentTraceRecorder(args.provider, task.task_id);
   const started = performance.now();
-  let provider: ReturnType<typeof makeProvider> | undefined;
+  let provider: Provider | undefined;
   let solveElapsedSeconds: number | undefined;
   let solveResult: CommandResult | undefined;
   let result: CommandResult = { stdout: "", stderr: "", returnCode: 1 };
@@ -441,7 +443,7 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
   const requestedDiskGb = Math.max(args.diskGb, taskEnv.resources?.diskGb ?? 0);
   const diskGb = args.provider === "daytona" ? Math.min(requestedDiskGb, 10) : requestedDiskGb;
   try {
-    const activeProvider = makeProvider(args.provider, {
+    const baseProvider = makeProvider(args.provider, {
       runtime: taskEnv.runtime ?? args.runtime,
       timeoutSeconds: args.timeoutSeconds,
       cpu,
@@ -456,11 +458,16 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
       awsMicrovmImageVersion: args.awsMicrovmImageVersion,
       awsMicrovmExecutionRoleArn: args.awsMicrovmExecutionRoleArn
     });
+    const activeProvider = new TracedProvider(baseProvider, traceRecorder);
     provider = activeProvider;
     await timed("start", () => activeProvider.start());
-    await timed("upload", () => writeText(activeProvider, "/tmp/task.tar.gz.b64", task.task_files.content, args.timeoutSeconds));
+    await timed("upload", () =>
+      writeText(activeProvider, "/tmp/task.tar.gz.b64", task.task_files.content, args.timeoutSeconds, {
+        label: "upload_task_archive"
+      })
+    );
     const prepare = await timed("prepare", () =>
-      activeProvider.run(prepareCommandFor(taskEnv, args.provider), undefined, args.timeoutSeconds)
+      activeProvider.run(prepareCommandFor(taskEnv, args.provider), undefined, args.timeoutSeconds, { label: "prepare" })
     );
     if (prepare.returnCode === 0) {
       await timed("instruction_write", () => writeTaskInstructions(activeProvider, task, taskEnv, args.timeoutSeconds));
@@ -470,12 +477,15 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
           activeProvider.run(
             withBenchEnv(withForwardedEnv(solveCommand, args.forwardEnv), taskEnv),
             taskEnv.workdir,
-            args.solveTimeoutSeconds
+            args.solveTimeoutSeconds,
+            { label: "solve" }
           )
         );
         solveElapsedSeconds = (performance.now() - solveStarted) / 1000;
       }
-      result = await timed("verify", () => activeProvider.run(verifyCommandFor(taskEnv), taskEnv.verifierCwd, args.timeoutSeconds));
+      result = await timed("verify", () =>
+        activeProvider.run(verifyCommandFor(taskEnv), taskEnv.verifierCwd, args.timeoutSeconds, { label: "verify" })
+      );
     } else {
       result = prepare;
     }
@@ -495,6 +505,7 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
       }
     }
   }
+  traceRecorder.finish();
   const elapsedSeconds = (performance.now() - started) / 1000;
   const item: Record<string, unknown> = {
     task_id: task.task_id,
@@ -511,6 +522,7 @@ async function runTaskAttempt(args: BenchArgs, task: BenchTask): Promise<Record<
     return_code: result.returnCode,
     elapsed_seconds: elapsedSeconds,
     phases,
+    agent_trace: traceRecorder.snapshot(),
     stdout_tail: result.stdout.slice(-2000),
     stderr_tail: result.stderr.slice(-2000)
   };
@@ -528,7 +540,7 @@ function formatError(error: unknown): string {
 }
 
 async function writeTaskInstructions(
-  provider: ReturnType<typeof makeProvider>,
+  provider: Provider,
   task: BenchTask,
   taskEnv: TaskEnv,
   timeoutSeconds: number
@@ -547,11 +559,11 @@ async function writeTaskInstructions(
     `Work in \`${taskEnv.workdir}\`. The verifier will run after your command exits.`
   ].join("\n");
 
-  await writeText(provider, "/tmp/task_prompt.md", prompt, timeoutSeconds);
-  await writeText(provider, "/tmp/task_instruction.md", instruction, timeoutSeconds);
-  await writeText(provider, "/workspace/TASK.md", taskMarkdown, timeoutSeconds);
+  await writeText(provider, "/tmp/task_prompt.md", prompt, timeoutSeconds, { label: "write_task_prompt" });
+  await writeText(provider, "/tmp/task_instruction.md", instruction, timeoutSeconds, { label: "write_task_instruction" });
+  await writeText(provider, "/workspace/TASK.md", taskMarkdown, timeoutSeconds, { label: "write_workspace_task" });
   if (taskEnv.workdir !== "/workspace") {
-    await writeText(provider, `${taskEnv.workdir}/TASK.md`, taskMarkdown, timeoutSeconds);
+    await writeText(provider, `${taskEnv.workdir}/TASK.md`, taskMarkdown, timeoutSeconds, { label: "write_workdir_task" });
   }
 }
 
@@ -615,6 +627,9 @@ async function main(): Promise<void> {
     solve_enabled: kind === "solve",
     passed: results.filter((item) => item.passed).length,
     estimated_cost_usd: estimateRunCost(args, results),
+    agent_trace_summary: summarizeAgentTraces(
+      results.map((item) => item.agent_trace).filter((trace): trace is AgentTrace => isAgentTrace(trace))
+    ),
     results
   };
   const output = `${JSON.stringify(summary, null, 2)}\n`;
@@ -626,6 +641,10 @@ async function main(): Promise<void> {
   if (summary.passed !== summary.task_count) {
     process.exitCode = 1;
   }
+}
+
+function isAgentTrace(value: unknown): value is AgentTrace {
+  return typeof value === "object" && value !== null && (value as AgentTrace).schema_version === 1 && Array.isArray((value as AgentTrace).events);
 }
 
 async function runWithConcurrency(tasks: BenchTask[], args: BenchArgs): Promise<Record<string, unknown>[]> {
