@@ -33,6 +33,8 @@ bun run bench --provider local --task-index 0 --output ../results/ts-local-one.j
 bun --env-file=../.env src/bench.ts --provider modal --mode cold --dataset ../data/swesmith_v4_smoke100.jsonl --task-index all --task-limit 20 --concurrency 2 --timeout-seconds 900 --solve-timeout-seconds 300 --forward-env OPENROUTER_API_KEY,OPENROUTER_MODEL,SOLVER_MAX_STEPS,SOLVER_STEP_TIMEOUT_SECONDS --solve-command-file ../scripts/openrouter_solver.sh --output ../results/ts-modal-cold-task20.json
 ```
 
+To run the same solver loop through Vercel AI Gateway, set `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` and use `--solve-command-file ../scripts/ai_gateway_solver.sh`. It defaults to `AI_GATEWAY_MODEL=deepseek/deepseek-v4-flash`, a low-cost DeepSeek model suited for coding-style tasks.
+
 ## Matrix Run
 
 ```bash
@@ -97,7 +99,7 @@ bun run cost:canary-loop -- --baseline-results ../results/ts-vercel-warm-solve-a
 
 The dry-run report includes provider credential preflight by default. To execute it after provider credentials are loaded, add `--run true`. If preflight fails in run mode, the loop writes a JSON artifact and exits nonzero before launching the candidate matrix. Use `--preflight false` only when intentionally validating outside the built-in credential checks.
 
-The loop defaults to `scripts/openrouter_solver.sh` because the current solve baselines were produced through the OpenRouter solver. It also infers OpenRouter baselines from existing result tails and fails preflight if the candidate solver does not match. In run mode it performs a live, one-token OpenRouter check before launching provider sandboxes so expired, blocked, or budget-exceeded keys do not spend provider budget. Override `--solve-command-file` only when the baseline and candidate results should intentionally use a different solver contract.
+The loop defaults to `scripts/openrouter_solver.sh` because the current solve baselines were produced through the OpenRouter solver. It also infers OpenRouter baselines from existing result tails and fails preflight unless the candidate uses the same bash-solver contract through `scripts/openrouter_solver.sh` or `scripts/ai_gateway_solver.sh`. In run mode it performs a live, one-token OpenRouter or AI Gateway check before launching provider sandboxes so expired, blocked, or budget-exceeded keys do not spend provider budget. Override `--solve-command-file` only when the baseline and candidate results should intentionally use a different solver contract.
 
 The preflight checks the providers selected for the loop:
 
@@ -106,6 +108,7 @@ The preflight checks the providers selected for the loop:
 - Daytona: `DAYTONA_API_KEY`.
 - AWS MicroVM: `AWS_MICROVM_IMAGE_ID` or `AWS_MICROVM_IMAGE_ARN`, plus an AWS credential source such as `AWS_PROFILE`, static key envs, or web identity envs.
 - OpenRouter solver: `OPENROUTER_API_KEY` when `scripts/openrouter_solver.sh` is selected.
+- AI Gateway solver: `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` when `scripts/ai_gateway_solver.sh` is selected; optional `AI_GATEWAY_MODEL` defaults to `deepseek/deepseek-v4-flash`.
 
 When preflight passes, the loop runs `matrix`, aggregates only that canary's observation JSONL files, runs `policy:compare`, validates actual candidate result files, and then runs `cost:goal-audit`.
 

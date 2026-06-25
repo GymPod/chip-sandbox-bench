@@ -12,7 +12,7 @@ The project currently compares Vercel, Modal, Daytona, and AWS Lambda MicroVMs o
 - `results/`: ignored local benchmark artifacts plus checked-in metadata.
 - `reports/`: curated markdown analysis split into cross-vendor, per-task, and failure-mode views.
 - `docs/providers/`: provider configuration notes for Vercel, Modal, and Daytona.
-- `scripts/`: dataset extraction and OpenRouter solver helpers.
+- `scripts/`: dataset extraction and OpenRouter / AI Gateway solver helpers.
 
 ## Current Findings
 
@@ -59,7 +59,9 @@ Run a small Vercel/Modal/Daytona matrix:
 bun --env-file=.env ts/src/matrix.ts --providers all --modes cold,warm --task-index all --task-limit 20 --concurrency 2 --run-concurrency 6 --timeout-seconds 900 --solve-timeout-seconds 300 --solve-command-file scripts/openrouter_solver.sh --output results/solve-price-matrix-task20.json
 ```
 
-For solver-enabled remote runs, set provider credentials and OpenRouter variables in `.env`. Use `.env.example` as the template when present.
+For solver-enabled remote runs, set provider credentials and solver API variables in `.env`. Use `.env.example` as the template when present.
+
+To use Vercel AI Gateway instead of OpenRouter, set `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` and run the same command with `--solve-command-file scripts/ai_gateway_solver.sh`. The Gateway solver defaults to the cheap DeepSeek coding-capable model `deepseek/deepseek-v4-flash`; override it with `AI_GATEWAY_MODEL` if needed.
 
 ## Result Schema
 
@@ -102,7 +104,7 @@ Provider-specific setup details live in [docs/providers/](docs/providers/).
 - Modal uses the Modal SDK credentials supported by `modal`.
 - Daytona uses `DAYTONA_API_KEY` and, when needed, `DAYTONA_API_URL` and `DAYTONA_TARGET`.
 - AWS Lambda MicroVMs uses `@aws-sdk/client-lambda-microvms`. Build a runner image once with `bun run prewarm --provider aws-microvm --aws-bucket <bucket> --aws-build-role-arn <role-arn> --output ../results/prewarm-aws-microvm.json`, then reuse the emitted `AWS_MICROVM_IMAGE_ID` for `bench` or `matrix` runs. Runtime execution can use `AWS_MICROVM_EXECUTION_ROLE_ARN` when the MicroVM needs AWS service access; the benchmark runner itself only needs ingress/egress connectors.
-- Cost estimates are harness estimates from measured wall-clock time and configured provider rates. They exclude OpenRouter model spend.
+- Cost estimates are harness estimates from measured wall-clock time and configured provider rates. They exclude OpenRouter or AI Gateway model spend.
 
 ### Warm Artifacts And Saved State
 

@@ -167,7 +167,7 @@ function parseList<T extends string>(value: string, allowed: readonly T[]): T[] 
 }
 
 function parseForwardEnv(value: string | undefined): string[] {
-  return (value ?? "OPENROUTER_API_KEY,OPENROUTER_MODEL,SOLVER_MAX_STEPS,SOLVER_STEP_TIMEOUT_SECONDS")
+  return (value ?? "OPENROUTER_API_KEY,OPENROUTER_MODEL,AI_GATEWAY_API_KEY,AI_GATEWAY_MODEL,VERCEL_OIDC_TOKEN,SOLVER_MAX_STEPS,SOLVER_STEP_TIMEOUT_SECONDS")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);

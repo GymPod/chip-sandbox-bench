@@ -434,6 +434,9 @@ function solverPreflight(args: Args): PreflightCheck[] {
   if (usesOpenRouterSolver(args.solveCommandFile)) {
     checks.push(envPreflight("openrouter-solver", ["OPENROUTER_API_KEY"], ["OPENROUTER_MODEL"]));
   }
+  if (usesAiGatewaySolver(args.solveCommandFile)) {
+    checks.push(authEnvPreflight("ai-gateway-solver", ["AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN"], ["AI_GATEWAY_MODEL"]));
+  }
   return checks;
 }
 
@@ -443,12 +446,14 @@ function solverContractPreflight(args: Args): PreflightCheck | undefined {
     return undefined;
   }
   const selectedOpenRouter = usesOpenRouterSolver(args.solveCommandFile);
+  const selectedAiGateway = usesAiGatewaySolver(args.solveCommandFile);
+  const selectedCompatibleSolver = selectedOpenRouter || selectedAiGateway;
   return {
     name: "solver-contract",
-    passed: selectedOpenRouter,
-    required: ["candidate solver must match inferred OpenRouter baseline solver"],
+    passed: selectedCompatibleSolver,
+    required: ["candidate solver must use the LLM bash-solver contract inferred from the OpenRouter baseline"],
     present: ["baseline:openrouter", `candidate:${solverName(args.solveCommandFile)}`],
-    missing: selectedOpenRouter ? [] : ["scripts/openrouter_solver.sh"],
+    missing: selectedCompatibleSolver ? [] : ["scripts/openrouter_solver.sh or scripts/ai_gateway_solver.sh"],
     warnings: []
   };
 }
@@ -489,6 +494,10 @@ function usesOpenRouterSolver(path: string): boolean {
   return path.endsWith("openrouter_solver.sh");
 }
 
+function usesAiGatewaySolver(path: string): boolean {
+  return path.endsWith("ai_gateway_solver.sh");
+}
+
 function solverName(path: string): string {
   return path.split("/").at(-1) ?? path;
 }
@@ -505,16 +514,35 @@ function envPreflight(name: string, required: string[], optional: string[] = [])
   };
 }
 
+function authEnvPreflight(name: string, authAlternatives: string[], optional: string[] = []): PreflightCheck {
+  const hasAuth = authAlternatives.some(envPresent);
+  return {
+    name,
+    passed: hasAuth,
+    required: [`one of ${authAlternatives.join(", ")}`],
+    present: [...authAlternatives, ...optional].filter(envPresent),
+    missing: hasAuth ? [] : authAlternatives,
+    warnings: []
+  };
+}
+
 function envPresent(name: string): boolean {
   const value = process.env[name];
   return value !== undefined && value !== "";
 }
 
 async function runLivePreflight(args: Args, preflightResult: PreflightResult): Promise<PreflightResult> {
-  if (!args.preflight || !args.livePreflight || !usesOpenRouterSolver(args.solveCommandFile)) {
+  if (!args.preflight || !args.livePreflight) {
     return preflightResult;
   }
-  const checks = [...preflightResult.checks, await openRouterLivePreflight()];
+  const liveChecks = [
+    ...(usesOpenRouterSolver(args.solveCommandFile) ? [await openRouterLivePreflight()] : []),
+    ...(usesAiGatewaySolver(args.solveCommandFile) ? [await aiGatewayLivePreflight()] : [])
+  ];
+  if (liveChecks.length === 0) {
+    return preflightResult;
+  }
+  const checks = [...preflightResult.checks, ...liveChecks];
   return {
     enabled: preflightResult.enabled,
     passed: checks.every((check) => check.passed),
@@ -575,6 +603,67 @@ async function openRouterLivePreflight(): Promise<PreflightCheck> {
   } catch (error) {
     return {
       name: "openrouter-live",
+      passed: false,
+      required,
+      present,
+      missing: required,
+      warnings: [formatPreflightError(error)]
+    };
+  }
+}
+
+async function aiGatewayLivePreflight(): Promise<PreflightCheck> {
+  const required = ["AI Gateway chat completion access"];
+  const present = ["AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "AI_GATEWAY_MODEL"].filter(envPresent);
+  const apiKey = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
+  if (!apiKey) {
+    return {
+      name: "ai-gateway-live",
+      passed: false,
+      required,
+      present,
+      missing: required,
+      warnings: ["AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN is required for the live AI Gateway budget/auth check."]
+    };
+  }
+  const body = {
+    messages: [{ role: "user", content: "Reply with ok." }],
+    temperature: 0,
+    max_tokens: 1,
+    model: process.env.AI_GATEWAY_MODEL || "deepseek/deepseek-v4-flash"
+  };
+  try {
+    const response = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+        "x-title": "code-sandbox-bench canary preflight"
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000)
+    });
+    if (response.ok) {
+      return {
+        name: "ai-gateway-live",
+        passed: true,
+        required,
+        present,
+        missing: [],
+        warnings: []
+      };
+    }
+    return {
+      name: "ai-gateway-live",
+      passed: false,
+      required,
+      present,
+      missing: required,
+      warnings: [`HTTP ${response.status}: ${sanitizeOpenRouterError(await response.text())}`]
+    };
+  } catch (error) {
+    return {
+      name: "ai-gateway-live",
       passed: false,
       required,
       present,
