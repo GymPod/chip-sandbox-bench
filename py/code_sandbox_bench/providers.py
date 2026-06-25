@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import re
 import shlex
@@ -7,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -68,7 +68,9 @@ class LocalProvider(Provider):
 
     def _localize(self, command: str) -> str:
         command = re.sub(r"(?<![A-Za-z0-9_.-])/workspace\b", str(self.root / "workspace"), command)
+        command = re.sub(r"(?<![A-Za-z0-9_.-])/testbed\b", str(self.root / "testbed"), command)
         command = re.sub(r"(?<![A-Za-z0-9_.-])/tests\b", str(self.root / "tests"), command)
+        command = re.sub(r"(?<![A-Za-z0-9_.-])/solution\b", str(self.root / "solution"), command)
         command = re.sub(r"(?<![A-Za-z0-9_.-])/logs\b", str(self.root / "logs"), command)
         command = re.sub(r"(?<![A-Za-z0-9_.-])/tmp/", str(self.root / "tmp") + "/", command)
         return command
@@ -118,21 +120,79 @@ class VercelCliProvider(Provider):
             self.sandbox_id = None
 
 
+class DockerProvider(Provider):
+    def __init__(self, image: str, timeout: int, cpu: int, memory_gb: int) -> None:
+        self.image = image
+        self.timeout = timeout
+        self.cpu = cpu
+        self.memory_gb = memory_gb
+        self.container_name = f"code-sandbox-bench-py-{uuid.uuid4().hex[:12]}"
+
+    async def start(self) -> None:
+        args = [
+            "docker",
+            "run",
+            "-d",
+            "--rm",
+            "--name",
+            self.container_name,
+            "--cpus",
+            str(self.cpu),
+            "--memory",
+            f"{self.memory_gb}g",
+            self.image,
+            "sleep",
+            "infinity",
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=self.timeout)
+        if proc.returncode != 0:
+            raise RuntimeError((stderr or stdout).decode(errors="replace"))
+
+    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+        args = ["docker", "exec"]
+        if cwd is not None:
+            args += ["-w", cwd]
+        args += [self.container_name, "/bin/sh", "-lc", command]
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except TimeoutError:
+            proc.kill()
+            stdout, stderr = await proc.communicate()
+            return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), 124)
+        return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), proc.returncode or 0)
+
+    async def stop(self) -> None:
+        subprocess.run(["docker", "rm", "-f", self.container_name], text=True, capture_output=True, check=False)
+
+
 class ModalProvider(Provider):
     def __init__(self, image: str, timeout: int, cpu: float, memory_mb: int) -> None:
         self.image = image
         self.timeout = timeout
         self.cpu = cpu
         self.memory_mb = memory_mb
+        self.app = None
         self.sandbox = None
 
     async def start(self) -> None:
         import modal
 
         modal_image = modal.Image.from_registry(self.image)
+        self.app = await modal.App.lookup.aio("code-sandbox-bench", create_if_missing=True)
         self.sandbox = await modal.Sandbox.create.aio(
             "sleep",
             "infinity",
+            app=self.app,
             image=modal_image,
             timeout=self.timeout,
             cpu=self.cpu,
@@ -209,129 +269,17 @@ class DaytonaProvider(Provider):
 
 
 class AwsMicrovmProvider(Provider):
-    def __init__(
-        self,
-        timeout: int,
-        cpu: int,
-        memory_gb: int,
-        image_identifier: str | None = None,
-        image_version: str | None = None,
-        execution_role_arn: str | None = None,
-    ) -> None:
-        self.timeout = timeout
-        self.cpu = cpu
-        self.memory_gb = memory_gb
-        self.image_identifier = image_identifier
-        self.image_version = image_version
-        self.execution_role_arn = execution_role_arn
-        self.process: asyncio.subprocess.Process | None = None
-        self.request_id = 0
-        self.lock = asyncio.Lock()
-        self.stderr_tail = ""
-        self.stderr_task: asyncio.Task[None] | None = None
-        self.last_metadata: dict[str, object] = {}
-
     async def start(self) -> None:
-        bun = os.environ.get("BUN", "bun")
-        if shutil.which(bun) is None:
-            raise RuntimeError("AWS MicroVM Python provider requires Bun on PATH")
-        ts_root = Path(__file__).resolve().parents[2] / "ts"
-        bridge_path = ts_root / "src" / "aws_microvm_py_bridge.ts"
-        self.process = await asyncio.create_subprocess_exec(
-            bun,
-            str(bridge_path),
-            cwd=ts_root,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        raise RuntimeError(
+            "AWS MicroVM is not available in the Python-only runner yet. "
+            "The previous Python adapter used a Bun/TypeScript bridge, which has been removed from this path."
         )
-        self.stderr_task = asyncio.create_task(self._collect_stderr())
-        response = await self._request(
-            {
-                "op": "start",
-                "timeoutSeconds": self.timeout,
-                "cpu": self.cpu,
-                "memoryGb": self.memory_gb,
-                "imageIdentifier": self.image_identifier,
-                "imageVersion": self.image_version,
-                "executionRoleArn": self.execution_role_arn,
-            }
-        )
-        self.last_metadata = dict(response.get("metadata") or {})
 
     async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
-        response = await self._request({"op": "run", "command": command, "cwd": cwd, "timeoutSeconds": timeout})
-        self.last_metadata = dict(response.get("metadata") or self.last_metadata)
-        result = response.get("result")
-        if not isinstance(result, dict):
-            raise RuntimeError("AWS MicroVM bridge run did not return a result object")
-        return CommandResult(
-            str(result.get("stdout") or ""),
-            str(result.get("stderr") or ""),
-            int(result.get("returnCode") or 0),
-        )
+        return CommandResult("", "AWS MicroVM is not available in the Python-only runner", 1)
 
     async def stop(self) -> None:
-        process = self.process
-        if process is None:
-            return
-        try:
-            if process.returncode is None:
-                try:
-                    response = await self._request({"op": "stop"})
-                    self.last_metadata = dict(response.get("metadata") or self.last_metadata)
-                except Exception:
-                    process.kill()
-                    raise
-        finally:
-            if process.stdin is not None and not process.stdin.is_closing():
-                process.stdin.close()
-            try:
-                await asyncio.wait_for(process.wait(), timeout=5)
-            except TimeoutError:
-                process.kill()
-                await process.wait()
-            if self.stderr_task is not None:
-                self.stderr_task.cancel()
-                try:
-                    await self.stderr_task
-                except asyncio.CancelledError:
-                    pass
-            self.process = None
-            self.stderr_task = None
-
-    def metadata(self) -> dict[str, object]:
-        return self.last_metadata
-
-    async def _request(self, payload: dict[str, object | None]) -> dict[str, object]:
-        if self.process is None or self.process.stdin is None or self.process.stdout is None:
-            raise RuntimeError("AWS MicroVM bridge process is not running")
-        async with self.lock:
-            self.request_id += 1
-            request = {"id": self.request_id, **{key: value for key, value in payload.items() if value is not None}}
-            self.process.stdin.write((json.dumps(request) + "\n").encode())
-            await self.process.stdin.drain()
-            line = await self.process.stdout.readline()
-            if not line:
-                returncode = await self.process.wait()
-                raise RuntimeError(
-                    f"AWS MicroVM bridge exited before responding with code {returncode}: {self.stderr_tail}"
-                )
-            response = json.loads(line.decode())
-            if not response.get("ok"):
-                error = str(response.get("error") or "unknown bridge error")
-                tail = f"\nBridge stderr:\n{self.stderr_tail}" if self.stderr_tail else ""
-                raise RuntimeError(f"AWS MicroVM bridge request failed: {error}{tail}")
-            return response
-
-    async def _collect_stderr(self) -> None:
-        if self.process is None or self.process.stderr is None:
-            return
-        while True:
-            line = await self.process.stderr.readline()
-            if not line:
-                return
-            self.stderr_tail = (self.stderr_tail + line.decode(errors="replace"))[-8000:]
+        return
 
 
 def make_provider(
@@ -349,19 +297,14 @@ def make_provider(
         return LocalProvider()
     if name == "vercel":
         return VercelCliProvider(runtime=runtime, timeout=f"{timeout}s")
+    if name == "docker":
+        return DockerProvider(image=runtime, timeout=timeout, cpu=cpu, memory_gb=memory_gb)
     if name == "modal":
         return ModalProvider(image=runtime, timeout=timeout, cpu=float(cpu), memory_mb=memory_gb * 1024)
     if name == "daytona":
         return DaytonaProvider(image=runtime, timeout=timeout, cpu=cpu, memory_gb=memory_gb, disk_gb=disk_gb)
     if name == "aws-microvm":
-        return AwsMicrovmProvider(
-            timeout=timeout,
-            cpu=cpu,
-            memory_gb=memory_gb,
-            image_identifier=aws_microvm_image_id,
-            image_version=aws_microvm_image_version,
-            execution_role_arn=aws_microvm_execution_role_arn,
-        )
+        return AwsMicrovmProvider()
     raise ValueError(f"Unsupported provider: {name}")
 
 

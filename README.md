@@ -41,19 +41,37 @@ env type | workdir | provider runtime mapping
 
 ## Quick Start
 
-Install the TypeScript runner:
+Install the Python runner:
 
 ```bash
-(cd ts && npm install)
+python -m venv .venv
+.venv/bin/python -m pip install -e "py[providers,env]"
 ```
 
-Run one local task:
+Run one Docker-backed Python task:
 
 ```bash
-(cd ts && bun run bench --provider local --task-index 0 --output ../results/ts-local-one.json)
+.venv/bin/python -m code_sandbox_bench.bench --provider docker --task-index 0 --output results/py-docker-one.json
 ```
 
-Run a small Vercel/Modal/Daytona matrix:
+Run the Python-only AI Gateway solver until 10 TerminalBench smoke tasks pass:
+
+```bash
+.venv/bin/python -m code_sandbox_bench.bench \
+  --provider docker \
+  --dataset data/terminalbench_2026_03_05_smoke16.jsonl \
+  --task-index all \
+  --task-limit 16 \
+  --stop-after-passes 10 \
+  --solver ai-gateway \
+  --timeout-seconds 900 \
+  --solve-timeout-seconds 420 \
+  --output results/py-docker-ai-gateway-10pass-terminalbench-smoke16.json
+```
+
+Set `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` before running the solver. `AI_GATEWAY_MODEL` defaults to the model configured in the environment; the current proof run used `deepseek/deepseek-v4-flash` through Vercel AI Gateway.
+
+The TypeScript runner remains available for historical matrix/report workflows:
 
 ```bash
 bun --env-file=.env ts/src/matrix.ts --providers all --modes cold,warm --task-index all --task-limit 20 --concurrency 2 --run-concurrency 6 --timeout-seconds 900 --solve-timeout-seconds 300 --solve-command-file scripts/openrouter_solver.sh --output results/solve-price-matrix-task20.json
@@ -61,7 +79,7 @@ bun --env-file=.env ts/src/matrix.ts --providers all --modes cold,warm --task-in
 
 For solver-enabled remote runs, set provider credentials and solver API variables in `.env`. Use `.env.example` as the template when present.
 
-To use Vercel AI Gateway instead of OpenRouter, set `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` and run the same command with `--solve-command-file scripts/ai_gateway_solver.sh`. The Gateway solver defaults to the cheap DeepSeek coding-capable model `deepseek/deepseek-v4-flash`; override it with `AI_GATEWAY_MODEL` if needed.
+To use Vercel AI Gateway from TypeScript instead of OpenRouter, set `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` and run the same command with `--solve-command-file scripts/ai_gateway_solver.sh`. The Python runner has a built-in `--solver ai-gateway` path and does not require the shell script.
 
 ## Result Schema
 
@@ -104,6 +122,7 @@ Provider-specific setup details live in [docs/providers/](docs/providers/).
 - Modal uses the Modal SDK credentials supported by `modal`.
 - Daytona uses `DAYTONA_API_KEY` and, when needed, `DAYTONA_API_URL` and `DAYTONA_TARGET`.
 - AWS Lambda MicroVMs uses `@aws-sdk/client-lambda-microvms`. Build a runner image once with `bun run prewarm --provider aws-microvm --aws-bucket <bucket> --aws-build-role-arn <role-arn> --output ../results/prewarm-aws-microvm.json`, then reuse the emitted `AWS_MICROVM_IMAGE_ID` for `bench` or `matrix` runs. Runtime execution can use `AWS_MICROVM_EXECUTION_ROLE_ARN` when the MicroVM needs AWS service access; the benchmark runner itself only needs ingress/egress connectors.
+- Python-only local proof runs can use `--provider docker`; this provider shells out to Docker, runs `python:3.11-slim` by default, and does not require TypeScript.
 - Cost estimates are harness estimates from measured wall-clock time and configured provider rates. They exclude OpenRouter or AI Gateway model spend.
 
 ### Warm Artifacts And Saved State
