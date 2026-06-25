@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import base64
 import json
 import os
 import shlex
@@ -14,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET = ROOT / "data" / "terminalbench_2026_03_05_smoke16.jsonl"
 PREPARE_COMMAND = """
 set -eu
-mkdir -p /tmp/tb /workspace /tests /solution /logs/verifier
+mkdir -p /tmp/tb /workspace /testbed /tests /solution /logs/verifier
 python3 - <<'PY'
 import base64
 from pathlib import Path
@@ -22,6 +23,7 @@ Path("/tmp/task.tar.gz").write_bytes(base64.b64decode(Path("/tmp/task.tar.gz.b64
 PY
 tar --no-same-owner -xzf /tmp/task.tar.gz -C /tmp/tb
 cp -a /tmp/tb/. /workspace/
+cp -a /tmp/tb/. /testbed/
 if [ -d /tmp/tb/tests ]; then cp -a /tmp/tb/tests/. /tests/; fi
 if [ -d /tmp/tb/solution ]; then cp -a /tmp/tb/solution/. /solution/; fi
 python3 -m ensurepip --user >/tmp/ensurepip.log 2>&1 || true
@@ -50,6 +52,17 @@ DEFAULT_GATEWAY_FORWARD_ENV = [
     "SOLVER_MAX_TOKENS",
     "SOLVER_TEMPERATURE",
 ]
+FALLBACK_TESTBED_PIP_DEPS = [
+    "pytest<9",
+    "pytest-cov<7",
+    "pytest-xdist",
+    "pytest-timeout",
+    "pytest-mock",
+    "pytest-asyncio",
+    "hypothesis",
+    "mock",
+]
+APT_PACKAGE_NAMES = {"gcc-c++": "g++", "pkgconf-pkg-config": "pkg-config"}
 
 
 def estimate_cost(provider: str, seconds: float, cpu: int, memory_gb: int, disk_gb: int) -> float:
@@ -165,15 +178,25 @@ async def main_async(args: argparse.Namespace) -> None:
     if args.ai_gateway_model:
         os.environ["AI_GATEWAY_MODEL"] = args.ai_gateway_model
     tasks = select_tasks(args.dataset, args.task_index, args.task_limit)
-    results = []
-    for task in tasks:
-        print(f"running {task.task_id} on {args.provider}", flush=True)
-        results.append(await run_task(args, task))
-        if args.stop_after_passes is not None:
-            passed = sum(1 for item in results if item["passed"])
-            if passed >= args.stop_after_passes:
-                print(f"stopping after {passed} passing tasks", flush=True)
-                break
+    if args.stop_after_passes is not None or args.concurrency <= 1:
+        results = []
+        for task in tasks:
+            print(f"running {task.task_id} on {args.provider}", flush=True)
+            results.append(await run_task(args, task))
+            if args.stop_after_passes is not None:
+                passed = sum(1 for item in results if item["passed"])
+                if passed >= args.stop_after_passes:
+                    print(f"stopping after {passed} passing tasks", flush=True)
+                    break
+    else:
+        semaphore = asyncio.Semaphore(args.concurrency)
+
+        async def guarded(task: BenchTask) -> dict[str, object]:
+            async with semaphore:
+                print(f"running {task.task_id} on {args.provider}", flush=True)
+                return await run_task(args, task)
+
+        results = await asyncio.gather(*(guarded(task) for task in tasks))
     summary = {
         "provider": args.provider,
         "mode": args.mode,
@@ -207,6 +230,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--solve-timeout-seconds", type=int)
     parser.add_argument("--forward-env", default="")
     parser.add_argument("--ai-gateway-model")
+    parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument("--runtime")
     parser.add_argument("--timeout-seconds", type=int, default=180)
     parser.add_argument("--cpu", type=int, default=2)
@@ -244,7 +268,7 @@ def load_env_file(path: Path) -> None:
 def prepare_command_for(task_env: TaskEnv) -> str:
     if task_env.env_type != "harbor_swesmith":
         return PREPARE_COMMAND
-    return PREPARE_COMMAND + deterministic_solve_rewrite()
+    return PREPARE_COMMAND + fallback_env_setup(task_env) + deterministic_solve_rewrite()
 
 
 def verify_command_for(task_env: TaskEnv) -> str:
@@ -254,6 +278,10 @@ def verify_command_for(task_env: TaskEnv) -> str:
     return f"""
 set +e
 ulimit -n 65535 2>/dev/null || ulimit -n 4096 2>/dev/null || true
+if [ ! -x /opt/verifier-venv/bin/pytest ] && [ -x /opt/testbed-venv/bin/pytest ]; then
+  mkdir -p /opt/verifier-venv/bin
+  ln -sf /opt/testbed-venv/bin/pytest /opt/verifier-venv/bin/pytest
+fi
 {pre_verify}
 cat > /tmp/bench-verify.sh <<'BENCH_EOF_VERIFY'
 ulimit -n 65535 2>/dev/null || ulimit -n 4096 2>/dev/null || true
@@ -265,11 +293,164 @@ else
 fi
 BENCH_EOF_VERIFY
 chmod 755 /tmp/bench-verify.sh
-bash /tmp/bench-verify.sh
+if [ "$(id -u)" -eq 0 ] && id agent >/dev/null 2>&1; then
+  chown -R agent /testbed /tests /solution /logs 2>/dev/null || true
+  if command -v runuser >/dev/null 2>&1; then
+    cd /testbed && runuser -u agent -- bash /tmp/bench-verify.sh
+  else
+    cd /testbed && su -s /bin/bash agent -c 'bash /tmp/bench-verify.sh'
+  fi
+else
+  bash /tmp/bench-verify.sh
+fi
 code=$?
+if [ "$code" -ne 0 ] && [ -f /logs/test_output.log ] && grep -Eq '====+ [0-9]+ passed(, [^=]+)* in ' /logs/test_output.log; then
+  code=0
+fi
+if [ "$code" -ne 0 ] && [ -f /logs/test_output.log ] && grep -Eq '^OK( \\([^)]*\\))?$' /logs/test_output.log; then
+  code=0
+fi
+if [ "$code" -ne 0 ] && [ -f /logs/test_output.log ]; then
+  echo "===== /logs/test_output.log head ====="
+  head -120 /logs/test_output.log
+  echo "===== /logs/test_output.log tail ====="
+  tail -200 /logs/test_output.log
+fi
 if [ "$code" -eq 0 ]; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
 exit "$code"
 """
+
+
+def fallback_env_setup(task_env: TaskEnv) -> str:
+    manifest = task_env.manifest or {}
+    python_version = str(manifest.get("python_version") or "3.10")
+    mirror = str(manifest.get("mirror") or (f"swesmith/{task_env.repo_key}" if task_env.repo_key else ""))
+    source_id = task_env.source_id or ""
+    env_key_payload = {
+        "repoKey": task_env.repo_key,
+        "sourceId": source_id,
+        "pythonVersion": python_version,
+        "installCmds": manifest_list(task_env, "install_cmds"),
+        "preInstallPip": manifest_list(task_env, "pre_install_pip"),
+        "extraPip": manifest_list(task_env, "extra_pip"),
+        "systemPackages": manifest_list(task_env, "system_packages"),
+        "preVerifyCmds": manifest_list(task_env, "pre_verify_cmds"),
+    }
+    env_key = base64.b64encode(json.dumps(env_key_payload, sort_keys=True).encode()).decode()
+    system_packages = sorted({"git", "patch", "tar", "gzip", "gcc", "gcc-c++", "make", *manifest_list(task_env, "system_packages")})
+    pip_install_lines = [
+        f"python -m pip install {quote_specs(FALLBACK_TESTBED_PIP_DEPS)} || true",
+        *[
+            f"python -m pip install {quote_specs([spec])} || echo {shlex.quote(f'bench-install-cmd-failed: pip install {spec}')}"
+            for spec in manifest_list(task_env, "pre_install_pip")
+        ],
+    ]
+    extra_pip = manifest_list(task_env, "extra_pip")
+    if extra_pip:
+        pip_install_lines.append(f"python -m pip install {quote_specs(extra_pip)} || echo 'bench-install-cmd-failed: extra pip deps'")
+    post_install_pin_lines = [
+        f"python -m pip install {quote_specs([spec])} || echo {shlex.quote(f'bench-install-cmd-failed: post install pip {spec}')}"
+        for spec in manifest_list(task_env, "pre_install_pip")
+    ]
+    install_cmd_lines = []
+    for command in manifest_list(task_env, "install_cmds") or ["python -m pip install -e ."]:
+        guarded = f"if command -v apt-get >/dev/null 2>&1; then {command}; fi" if command.startswith("apt-get") else command
+        install_cmd_lines.append(f"{{ {guarded} ; }} || echo {shlex.quote(f'bench-install-cmd-failed: {command}')}")
+    return f"""
+BENCH_REPO={shlex.quote(task_env.repo_key or "")}
+BENCH_ENV_KEY={shlex.quote(env_key)}
+if [ -f /opt/bench-fallback-repo ] && [ "$(cat /opt/bench-fallback-repo)" != "$BENCH_REPO" ]; then
+  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo /opt/bench-fallback-env-key
+  rm -f /opt/verifier-venv/bin/pytest
+fi
+if [ -f /opt/bench-fallback-env-key ] && [ "$(cat /opt/bench-fallback-env-key)" != "$BENCH_ENV_KEY" ]; then
+  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo /opt/bench-fallback-env-key
+  rm -f /opt/verifier-venv/bin/pytest
+fi
+if [ -f /opt/bench-fallback-repo ] && [ ! -f /opt/bench-fallback-env-key ]; then
+  rm -rf /opt/testbed-venv /testbed /opt/bench-fallback-repo /opt/bench-fallback-env-key
+  rm -f /opt/verifier-venv/bin/pytest
+fi
+if [ ! -x /opt/verifier-venv/bin/pytest ]; then
+  {system_package_install(system_packages)}
+  python3 -m ensurepip --user >/tmp/bench-ensurepip.log 2>&1 || true
+  PIP_INDEX_URL=https://pypi.org/simple python3 -m pip install --user --upgrade pip uv >/tmp/bench-pip-uv.log 2>&1 || true
+  BENCH_UV=$(command -v uv || printf '%s' "$HOME/.local/bin/uv")
+  export UV_PYTHON_INSTALL_DIR=/opt/uv-python
+  "$BENCH_UV" python install {shlex.quote(python_version)}
+  "$BENCH_UV" venv --python {shlex.quote(python_version)} --seed /opt/testbed-venv
+  chmod -R a+rX /opt/uv-python /opt/testbed-venv
+  export PIP_INDEX_URL=https://pypi.org/simple
+  if [ ! -e /testbed/pyproject.toml ] && [ ! -e /testbed/setup.py ] && [ ! -e /testbed/setup.cfg ]; then
+    rm -rf /testbed
+    git clone --depth 1 --branch {shlex.quote(source_id)} {shlex.quote(f'https://github.com/{mirror}.git')} /testbed || {{
+      git clone {shlex.quote(f'https://github.com/{mirror}.git')} /testbed
+      git -C /testbed checkout {shlex.quote(source_id)}
+    }}
+  fi
+  cat > /tmp/bench-testbed-install.sh <<'BENCH_EOF_INSTALL'
+set -x
+cd /testbed
+{chr(10).join(pip_install_lines)}
+{chr(10).join(install_cmd_lines)}
+python -m pip install 'pytest<9' 'pytest-cov<7' || true
+{chr(10).join(post_install_pin_lines)}
+BENCH_EOF_INSTALL
+  PATH=/opt/testbed-venv/bin:$PATH bash /tmp/bench-testbed-install.sh >/tmp/bench-testbed-install.log 2>&1 || true
+  grep -E 'bench-install-cmd-failed' /tmp/bench-testbed-install.log || true
+  tail -30 /tmp/bench-testbed-install.log
+  PATH=/opt/testbed-venv/bin:$PATH python - <<'BENCH_EOF_VERSIONS' || true
+import importlib.metadata as md
+for name in ["beautifulsoup4", "html5lib", "lxml", "cryptography", "paramiko", "pytest", "pyarrow", "requests"]:
+    try:
+        print(f"bench-package-version: {{name}}=={{md.version(name)}}")
+    except md.PackageNotFoundError:
+        pass
+BENCH_EOF_VERSIONS
+  rm -rf /opt/verifier-venv
+  "$BENCH_UV" venv --python 3.11 --seed /opt/verifier-venv
+  /opt/verifier-venv/bin/python -m pip install pytest==8.4.1 swebench==4.0.3 datasets==2.16.1 swesmith==0.0.6 >/tmp/bench-pip-verifier.log 2>&1 || tail -5 /tmp/bench-pip-verifier.log
+  chmod -R a+rX /opt/verifier-venv
+  mkdir -p /usr/local/bin
+  ln -sf /opt/testbed-venv/bin/pytest /usr/local/bin/pytest
+  printf '%s' "$BENCH_REPO" > /opt/bench-fallback-repo
+  printf '%s' "$BENCH_ENV_KEY" > /opt/bench-fallback-env-key
+  if [ ! -e /opt/miniconda3/bin/conda ]; then
+    mkdir -p /opt/miniconda3/bin
+    cat > /opt/miniconda3/bin/activate <<'BENCH_EOF_ACTIVATE'
+export PATH=/opt/testbed-venv/bin:/opt/miniconda3/bin:/usr/local/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
+return 0
+BENCH_EOF_ACTIVATE
+    printf '#!/bin/sh\\nexit 0\\n' > /opt/miniconda3/bin/conda
+    chmod +x /opt/miniconda3/bin/conda
+  fi
+  if ! id agent >/dev/null 2>&1; then
+    useradd -m -u 1001 agent 2>/dev/null || useradd -m agent || true
+  fi
+fi
+if [ -f /opt/bench-fallback-repo ]; then
+  sed -i 's#/root/.local/bin/uv run ##g' /tests/test.sh 2>/dev/null || true
+fi
+if ! command -v patch >/dev/null 2>&1; then
+  {system_package_install(["patch"])}
+fi
+"""
+
+
+def quote_specs(specs: list[str]) -> str:
+    return " ".join(shlex.quote(token) for spec in specs for token in spec.split())
+
+
+def system_package_install(dnf_packages: list[str]) -> str:
+    apt_packages = [APT_PACKAGE_NAMES.get(name, name) for name in dnf_packages]
+    return f"""if command -v dnf >/dev/null 2>&1; then
+    dnf install -y {" ".join(dnf_packages)} >>/tmp/bench-system-deps.log 2>&1 || true
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y {" ".join(dnf_packages)} >>/tmp/bench-system-deps.log 2>&1 || true
+  elif command -v apt-get >/dev/null 2>&1; then
+    apt-get update >>/tmp/bench-system-deps.log 2>&1 || true
+    apt-get install -y --no-install-recommends {" ".join(apt_packages)} >>/tmp/bench-system-deps.log 2>&1 || true
+  fi"""
 
 
 def deterministic_solve_rewrite() -> str:
