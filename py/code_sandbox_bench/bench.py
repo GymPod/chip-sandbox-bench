@@ -24,11 +24,11 @@ tar -xzf /tmp/task.tar.gz -C /tmp/tb
 cp -a /tmp/tb/. /workspace/
 cp -a /tmp/tb/tests/. /tests/
 python3 -m ensurepip --user >/tmp/ensurepip.log 2>&1 || true
-python3 -m pip install --user pytest==8.4.1 >/tmp/pip-pytest.log 2>&1 || true
+python3 -m pip install pytest==8.4.1 >/tmp/pip-pytest.log 2>&1 || python3 -m pip install --user pytest==8.4.1 >>/tmp/pip-pytest.log 2>&1 || true
 """
 VERIFY_COMMAND = """
 set +e
-PATH="$HOME/.local/bin:$PATH" pytest /tests/test_outputs.py -rA
+python3 -m pytest /tests/test_outputs.py -rA
 code=$?
 if [ "$code" -eq 0 ]; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
 exit "$code"

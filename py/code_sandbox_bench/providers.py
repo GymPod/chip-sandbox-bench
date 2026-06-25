@@ -5,6 +5,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -43,9 +44,14 @@ class LocalProvider(Provider):
         workdir = self.root / cwd.lstrip("/") if cwd else self.root
         workdir.mkdir(parents=True, exist_ok=True)
         local_command = self._localize(command)
+        env = os.environ.copy()
+        env["PATH"] = f"{Path(sys.executable).parent}{os.pathsep}{env.get('PATH', '')}"
+        if sys.prefix != sys.base_prefix:
+            env["VIRTUAL_ENV"] = sys.prefix
         proc = await asyncio.create_subprocess_shell(
             local_command,
             cwd=workdir,
+            env=env,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
