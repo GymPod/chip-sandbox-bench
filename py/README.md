@@ -65,6 +65,7 @@ Useful report commands:
 
 ```bash
 python -m code_sandbox_bench.resource_report --input ../results/resource-observations.jsonl --format json
+python -m code_sandbox_bench.matrix --providers aws-microvm --modes cold --task-limit 20 --solver gold
 python -m code_sandbox_bench.policy_compare --results ../results/baseline.json --candidate-config ../data/resource_policy.json --format json
 python -m code_sandbox_bench.canary_validate --baseline-results ../results/baseline.json --candidate-results ../results/candidate.json --format json
 python -m code_sandbox_bench.cost_goal_audit --policy-comparison ../reports/policy.json --resource-report ../reports/resources.json --canary-validation ../reports/canary.json

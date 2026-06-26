@@ -427,6 +427,8 @@ async def main_async(args: argparse.Namespace) -> None:
     if args.resource_observations_output is not None:
         write_resource_observations(args.resource_observations_output, results)
     print(json.dumps(summary, indent=2))
+    if summary["passed"] != summary["task_count"]:
+        raise SystemExit(1)
 
 
 async def run_with_concurrency(tasks: list[BenchTask], args: argparse.Namespace) -> dict[str, object]:

@@ -57,9 +57,11 @@ test("AWS MicroVM Python bridge handles stop without live AWS configuration", as
 
 test("Python runner exposes dynamic resource parity controls", async () => {
   const repoRoot = resolve(process.cwd(), "..");
-  const [bench, providers, resourcePolicy, adaptiveConcurrency, agentTrace, pyproject] = await Promise.all([
+  const [bench, providers, matrix, costCanaryLoop, resourcePolicy, adaptiveConcurrency, agentTrace, pyproject] = await Promise.all([
     readFile(resolve(repoRoot, "py/code_sandbox_bench/bench.py"), "utf8"),
     readFile(resolve(repoRoot, "py/code_sandbox_bench/providers.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/matrix.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/cost_canary_loop.py"), "utf8"),
     readFile(resolve(repoRoot, "py/code_sandbox_bench/resource_policy.py"), "utf8"),
     readFile(resolve(repoRoot, "py/code_sandbox_bench/adaptive_concurrency.py"), "utf8"),
     readFile(resolve(repoRoot, "py/code_sandbox_bench/agent_trace.py"), "utf8"),
@@ -71,12 +73,20 @@ test("Python runner exposes dynamic resource parity controls", async () => {
   expect(bench).toContain("build_resource_observation");
   expect(bench).toContain("resource_retry_decision");
   expect(bench).toContain("AdaptiveConcurrencyLimiter");
+  expect(bench).toContain("raise SystemExit(1)");
   expect(providers).toContain("usage:");
   expect(providers).toContain("normalize_usage(data.get(\"usage\")");
+  expect(matrix).toContain("adaptive_limit_for_provider");
+  expect(matrix).toContain("--resource-observations-dir");
+  expect(matrix).toContain("effective_task_concurrency_per_run");
+  expect(costCanaryLoop).toContain("code_sandbox_bench.matrix");
+  expect(costCanaryLoop).toContain("--aws-microvm-image-id");
+  expect(costCanaryLoop).toContain("python_subprocess_env");
   expect(resourcePolicy).toContain("def resolve_resource_spec");
   expect(resourcePolicy).toContain("def recommend_adaptive_resources");
   expect(adaptiveConcurrency).toContain("class AdaptiveConcurrencyLimiter");
   expect(agentTrace).toContain("class AgentTraceRecorder");
+  expect(pyproject).toContain("code-sandbox-matrix");
   expect(pyproject).toContain("code-sandbox-resource-report");
   expect(pyproject).toContain("code-sandbox-cost-canary-loop");
 });
