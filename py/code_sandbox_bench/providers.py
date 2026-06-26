@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ class CommandResult:
     stdout: str
     stderr: str
     return_code: int
+    usage: dict[str, object] | None = None
 
 
 class Provider(ABC):
@@ -25,7 +27,13 @@ class Provider(ABC):
     async def start(self) -> None: ...
 
     @abstractmethod
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult: ...
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult: ...
 
     @abstractmethod
     async def stop(self) -> None: ...
@@ -41,7 +49,13 @@ class LocalProvider(Provider):
     async def start(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
 
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult:
         workdir = self.root / cwd.lstrip("/") if cwd else self.root
         workdir.mkdir(parents=True, exist_ok=True)
         local_command = self._localize(command)
@@ -49,6 +63,7 @@ class LocalProvider(Provider):
         env["PATH"] = f"{Path(sys.executable).parent}{os.pathsep}{env.get('PATH', '')}"
         if sys.prefix != sys.base_prefix:
             env["VIRTUAL_ENV"] = sys.prefix
+        started = time.monotonic()
         proc = await asyncio.create_subprocess_shell(
             local_command,
             cwd=workdir,
@@ -61,8 +76,8 @@ class LocalProvider(Provider):
         except TimeoutError:
             proc.kill()
             stdout, stderr = await proc.communicate()
-            return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), 124)
-        return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), proc.returncode or 0)
+            return command_result(stdout, stderr, 124, started, timed_out=True)
+        return command_result(stdout, stderr, proc.returncode or 0, started)
 
     async def stop(self) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -95,13 +110,20 @@ class VercelCliProvider(Provider):
             raise RuntimeError(f"Could not parse Vercel sandbox id from output:\n{result.stdout}\n{result.stderr}")
         self.sandbox_id = match.group(1)
 
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult:
         if self.sandbox_id is None:
             raise RuntimeError("Vercel sandbox not started")
         args = ["sandbox", "exec"]
         if cwd is not None:
             args += ["--workdir", cwd]
         args += [self.sandbox_id, command]
+        started = time.monotonic()
         proc = await asyncio.create_subprocess_exec(
             *args,
             stdout=asyncio.subprocess.PIPE,
@@ -112,8 +134,8 @@ class VercelCliProvider(Provider):
         except TimeoutError:
             proc.kill()
             stdout, stderr = await proc.communicate()
-            return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), 124)
-        return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), proc.returncode or 0)
+            return command_result(stdout, stderr, 124, started, timed_out=True)
+        return command_result(stdout, stderr, proc.returncode or 0, started)
 
     async def stop(self) -> None:
         if self.sandbox_id is not None:
@@ -154,11 +176,18 @@ class DockerProvider(Provider):
         if proc.returncode != 0:
             raise RuntimeError((stderr or stdout).decode(errors="replace"))
 
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult:
         args = ["docker", "exec"]
         if cwd is not None:
             args += ["-w", cwd]
         args += [self.container_name, "/bin/sh", "-lc", command]
+        started = time.monotonic()
         proc = await asyncio.create_subprocess_exec(
             *args,
             stdout=asyncio.subprocess.PIPE,
@@ -169,8 +198,8 @@ class DockerProvider(Provider):
         except TimeoutError:
             proc.kill()
             stdout, stderr = await proc.communicate()
-            return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), 124)
-        return CommandResult(stdout.decode(errors="replace"), stderr.decode(errors="replace"), proc.returncode or 0)
+            return command_result(stdout, stderr, 124, started, timed_out=True)
+        return command_result(stdout, stderr, proc.returncode or 0, started)
 
     async def stop(self) -> None:
         subprocess.run(["docker", "rm", "-f", self.container_name], text=True, capture_output=True, check=False)
@@ -200,9 +229,16 @@ class ModalProvider(Provider):
             memory=self.memory_mb,
         )
 
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult:
         if self.sandbox is None:
             raise RuntimeError("Modal sandbox not started")
+        started = time.monotonic()
         proc = await self.sandbox.exec.aio("/bin/sh", "-lc", command, workdir=cwd, timeout=timeout, text=False)
         stdout_parts: list[bytes] = []
         stderr_parts: list[bytes] = []
@@ -211,11 +247,7 @@ class ModalProvider(Provider):
         async for chunk in proc.stderr:
             stderr_parts.append(chunk if isinstance(chunk, bytes) else chunk.encode())
         await proc.wait.aio()
-        return CommandResult(
-            b"".join(stdout_parts).decode(errors="replace"),
-            b"".join(stderr_parts).decode(errors="replace"),
-            proc.returncode or 0,
-        )
+        return command_result(b"".join(stdout_parts), b"".join(stderr_parts), proc.returncode or 0, started)
 
     async def stop(self) -> None:
         if self.sandbox is not None:
@@ -253,12 +285,20 @@ class DaytonaProvider(Provider):
             timeout=self.timeout,
         )
 
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult:
         if self.sandbox is None:
             raise RuntimeError("Daytona sandbox not started")
+        started = time.monotonic()
         response = await self.sandbox.process.exec(command=command, cwd=cwd, timeout=timeout)
         stdout = response.artifacts.stdout if response.artifacts else ""
-        return CommandResult(stdout or response.result or "", "", response.exit_code or 0)
+        stdout_text = stdout or response.result or ""
+        return text_command_result(stdout_text, "", response.exit_code or 0, started)
 
     async def stop(self) -> None:
         if self.client is not None and self.sandbox is not None:
@@ -314,7 +354,14 @@ class AwsMicrovmProvider(Provider):
             timeout=self.timeout + 30,
         )
 
-    async def run(self, command: str, cwd: str | None, timeout: int) -> CommandResult:
+    async def run(
+        self,
+        command: str,
+        cwd: str | None,
+        timeout: int,
+        trace: dict[str, object] | None = None,
+    ) -> CommandResult:
+        started = time.monotonic()
         response = await self._request(
             "run",
             {"command": command, "cwd": cwd, "timeoutSeconds": timeout},
@@ -325,6 +372,7 @@ class AwsMicrovmProvider(Provider):
             str(data.get("stdout") or ""),
             str(data.get("stderr") or ""),
             int(data.get("returnCode") or 0),
+            normalize_usage(data.get("usage"), started, str(data.get("stdout") or ""), str(data.get("stderr") or "")),
         )
 
     async def stop(self) -> None:
@@ -400,11 +448,80 @@ def make_provider(
     raise ValueError(f"Unsupported provider: {name}")
 
 
-async def write_text(provider: Provider, remote_path: str, content: str, timeout: int) -> None:
+async def write_text(
+    provider: Provider,
+    remote_path: str,
+    content: str,
+    timeout: int,
+    trace: dict[str, object] | None = None,
+) -> None:
     quoted_path = shlex.quote(remote_path)
-    await provider.run(f"mkdir -p $(dirname {quoted_path}) && : > {quoted_path}", cwd=None, timeout=timeout)
+    label = str((trace or {}).get("label") or "write_text")
+    await provider.run(
+        f"mkdir -p $(dirname {quoted_path}) && : > {quoted_path}",
+        cwd=None,
+        timeout=timeout,
+        trace={"label": f"{label}_init"},
+    )
     for offset in range(0, len(content), 30000):
         chunk = shlex.quote(content[offset : offset + 30000])
-        result = await provider.run(f"printf %s {chunk} >> {quoted_path}", cwd=None, timeout=timeout)
+        result = await provider.run(
+            f"printf %s {chunk} >> {quoted_path}",
+            cwd=None,
+            timeout=timeout,
+            trace={"label": f"{label}_chunk"},
+        )
         if result.return_code != 0:
             raise RuntimeError(result.stderr or result.stdout)
+
+
+def command_result(
+    stdout: bytes,
+    stderr: bytes,
+    return_code: int,
+    started: float,
+    timed_out: bool = False,
+) -> CommandResult:
+    return CommandResult(
+        stdout.decode(errors="replace"),
+        stderr.decode(errors="replace"),
+        return_code,
+        {
+            "wall_seconds": max(0.0, time.monotonic() - started),
+            "stdout_bytes": len(stdout),
+            "stderr_bytes": len(stderr),
+            "timed_out": timed_out,
+        },
+    )
+
+
+def text_command_result(
+    stdout: str,
+    stderr: str,
+    return_code: int,
+    started: float,
+    timed_out: bool = False,
+) -> CommandResult:
+    return CommandResult(
+        stdout,
+        stderr,
+        return_code,
+        {
+            "wall_seconds": max(0.0, time.monotonic() - started),
+            "stdout_bytes": len(stdout.encode()),
+            "stderr_bytes": len(stderr.encode()),
+            "timed_out": timed_out,
+        },
+    )
+
+
+def normalize_usage(raw_usage: object, started: float, stdout: str, stderr: str) -> dict[str, object]:
+    if isinstance(raw_usage, dict):
+        usage = dict(raw_usage)
+    else:
+        usage = {}
+    usage.setdefault("wall_seconds", max(0.0, time.monotonic() - started))
+    usage.setdefault("stdout_bytes", len(stdout.encode()))
+    usage.setdefault("stderr_bytes", len(stderr.encode()))
+    usage.setdefault("timed_out", False)
+    return usage

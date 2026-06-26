@@ -26,6 +26,11 @@ all = [
 
 [project.scripts]
 code-sandbox-bench = "code_sandbox_bench.bench:main"
+code-sandbox-resource-report = "code_sandbox_bench.resource_report:main"
+code-sandbox-policy-compare = "code_sandbox_bench.policy_compare:main"
+code-sandbox-canary-validate = "code_sandbox_bench.canary_validate:main"
+code-sandbox-cost-goal-audit = "code_sandbox_bench.cost_goal_audit:main"
+code-sandbox-cost-canary-loop = "code_sandbox_bench.cost_canary_loop:main"
 
 [tool.ruff]
 line-length = 120

@@ -46,15 +46,27 @@ python -m code_sandbox_bench.bench --provider docker --task-index all --output .
 python -m code_sandbox_bench.bench --provider vercel --task-index all --output ../results/vercel-all.json
 python -m code_sandbox_bench.bench --provider modal --task-index all --output ../results/modal-all.json
 python -m code_sandbox_bench.bench --provider daytona --task-index all --output ../results/daytona-all.json
+python -m code_sandbox_bench.bench --provider aws-microvm --task-index all --output ../results/aws-microvm-all.json
 ```
 
 ## Notes
 
-- The Python runner supports `local`, `docker`, `vercel`, `modal`, and `daytona`.
+- The Python runner supports `local`, `docker`, `vercel`, `modal`, `daytona`, and `aws-microvm`.
 - Provider credentials are read from the environment.
-- AWS MicroVM support is intentionally not exposed as a Python-only provider yet; the previous Python adapter used a Bun/TypeScript bridge, and that hidden dependency has been removed from this path.
+- AWS MicroVM uses the persistent TypeScript bridge in `ts/src/aws_microvm_py_bridge.ts` so Python runs share the same MicroVM SDK implementation and telemetry path.
 - The built-in `ai-gateway` solver is uploaded by the Python runner and uses only Python standard-library HTTP calls inside the sandbox.
+- Resource policy defaults come from `data/resource_policy.json`; use `--resource-policy static` for fixed-resource comparisons and `--resource-observations-output` to write JSONL observations.
 
 ## Reports
 
-The Python runner writes provider-level result JSON with the same core fields as the TypeScript runner: provider, mode, kind, dataset, runtime, pass count, per-task phases, verifier tails, and solver tails when enabled. Existing report discovery still focuses on historical `ts-*` artifacts, so Python report ingestion should be wired explicitly when adding new generated reports.
+The Python runner writes provider-level result JSON with the same dynamic-limit fields as the TypeScript runner: requested/adaptive/effective resources, static/adaptive cost estimates, resource observations, adaptive recommendations, retry metadata, adaptive concurrency summaries, agent traces, per-task phases, verifier tails, and solver tails when enabled.
+
+Useful report commands:
+
+```bash
+python -m code_sandbox_bench.resource_report --input ../results/resource-observations.jsonl --format json
+python -m code_sandbox_bench.policy_compare --results ../results/baseline.json --candidate-config ../data/resource_policy.json --format json
+python -m code_sandbox_bench.canary_validate --baseline-results ../results/baseline.json --candidate-results ../results/candidate.json --format json
+python -m code_sandbox_bench.cost_goal_audit --policy-comparison ../reports/policy.json --resource-report ../reports/resources.json --canary-validation ../reports/canary.json
+python -m code_sandbox_bench.cost_canary_loop --providers vercel,modal,daytona --modes warm --baseline-results ../results/baseline.json
+```

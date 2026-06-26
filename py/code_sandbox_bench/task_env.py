@@ -24,6 +24,7 @@ class TaskEnv:
     repo_key: str | None = None
     source_id: str | None = None
     manifest: dict[str, object] | None = None
+    resources: dict[str, object] | None = None
 
 
 def resolve_task_env(task: BenchTask, default_runtime: str, provider: str) -> TaskEnv:
@@ -48,6 +49,7 @@ def resolve_task_env(task: BenchTask, default_runtime: str, provider: str) -> Ta
             repo_key=repo_key,
             source_id=source_id,
             manifest=manifest,
+            resources=manifest.get("resources") if isinstance(manifest, dict) and isinstance(manifest.get("resources"), dict) else None,
         )
     return TaskEnv(
         env_type=task.env_type or "terminalbench",

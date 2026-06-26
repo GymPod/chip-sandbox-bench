@@ -54,3 +54,29 @@ test("AWS MicroVM Python bridge handles stop without live AWS configuration", as
   expect(code).toBe(0);
   expect(JSON.parse(stdout.trim())).toMatchObject({ id: 1, ok: true });
 });
+
+test("Python runner exposes dynamic resource parity controls", async () => {
+  const repoRoot = resolve(process.cwd(), "..");
+  const [bench, providers, resourcePolicy, adaptiveConcurrency, agentTrace, pyproject] = await Promise.all([
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/bench.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/providers.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/resource_policy.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/adaptive_concurrency.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/code_sandbox_bench/agent_trace.py"), "utf8"),
+    readFile(resolve(repoRoot, "py/pyproject.toml"), "utf8")
+  ]);
+
+  expect(bench).toContain("--resource-policy");
+  expect(bench).toContain("--resource-observations-output");
+  expect(bench).toContain("build_resource_observation");
+  expect(bench).toContain("resource_retry_decision");
+  expect(bench).toContain("AdaptiveConcurrencyLimiter");
+  expect(providers).toContain("usage:");
+  expect(providers).toContain("normalize_usage(data.get(\"usage\")");
+  expect(resourcePolicy).toContain("def resolve_resource_spec");
+  expect(resourcePolicy).toContain("def recommend_adaptive_resources");
+  expect(adaptiveConcurrency).toContain("class AdaptiveConcurrencyLimiter");
+  expect(agentTrace).toContain("class AgentTraceRecorder");
+  expect(pyproject).toContain("code-sandbox-resource-report");
+  expect(pyproject).toContain("code-sandbox-cost-canary-loop");
+});
