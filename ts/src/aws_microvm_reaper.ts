@@ -47,7 +47,8 @@ async function listMicrovms(client: LambdaMicrovmsClient, args: ReaperArgs): Pro
       new ListMicrovmsCommand({
         imageIdentifier: args.imageIdentifier,
         imageVersion: args.imageVersion,
-        maxResults: 100,
+        // The Lambda MicroVM API accepts at most 50 items per page.
+        maxResults: 50,
         nextToken
       })
     );
