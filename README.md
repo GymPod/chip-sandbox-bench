@@ -149,6 +149,11 @@ Modal | `MODAL_IMAGE_ID` | `results/prewarm-modal-*.json` | `--modal-image-id` o
 Daytona | `DAYTONA_SNAPSHOT` | `results/prewarm-daytona-*.json` | `--daytona-snapshot` or the `DAYTONA_SNAPSHOT` env var
 AWS Lambda MicroVMs | `AWS_MICROVM_IMAGE_ID` | `results/prewarm-aws-microvm-*.json` | `--aws-microvm-image-id` or the `AWS_MICROVM_IMAGE_ID` env var
 
+AI Gateway solve runs also emit a versioned `solver_trace` for every task. It
+captures each model turn, extracted shell action, execution output, verifier
+output, timing, and terminal state. See
+[`docs/solver-traces.md`](docs/solver-traces.md).
+
 To run warm, copy the identifier from the prewarm result JSON into the corresponding flag or env var on the next `bench.ts`/`matrix.ts` run. For TerminalBench (non-Docker) tasks, Daytona instead uses a cached profile via `--prewarm-profile` (default `terminalbench-smoke`) rather than a named snapshot.
 
 Note: the Vercel fallback's repo-specific dependency repair for SWE-Smith tasks is **not** configured through environment variables — it is in-code setup in `ts/src/bench.ts`. See [reports/failure-modes-tradeoffs.md](reports/failure-modes-tradeoffs.md) for the rationale.
