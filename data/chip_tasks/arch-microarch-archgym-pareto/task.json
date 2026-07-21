@@ -1,0 +1,13 @@
+{
+  "task_id": "arch-microarch-archgym-pareto",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "ArchGym",
+  "tools": ["python3", "pytest"],
+  "source": {
+    "repo": "benchmarks/archgym",
+    "commit": "53f745af87b256794c0cd712c2b8e77aab74b4a6",
+    "paths": ["README.md", "settings/default_timeloop.yaml"]
+  },
+  "prompt": "Implement the Pareto-frontier selection used by a small architecture design-space exploration pass. Complete pareto_frontier() in dse.py. Each candidate has id, latency, energy, and area fields. All three metrics are minimized. A candidate is dominated only when another candidate is no worse in every metric and strictly better in at least one. Return the non-dominated candidate IDs in lexicographic order. Do not mutate the input.",
+  "instruction": "Complete dse.py so the architecture DSE Pareto selection passes all tests."
+}

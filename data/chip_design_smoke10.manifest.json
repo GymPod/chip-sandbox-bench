@@ -1,0 +1,241 @@
+{
+  "dataset": "chip_design_smoke10.jsonl",
+  "discipline_counts": {
+    "Architecture & Microarchitecture": 2,
+    "Architecture Modeling": 2,
+    "RTL Design": 2,
+    "Software Development": 2,
+    "Verification (DV/FV)": 2
+  },
+  "schema_version": 1,
+  "task_count": 10,
+  "tasks": [
+    {
+      "archive_bytes": 1075,
+      "archive_sha256": "c32f3905916906521072d045aab7014b7974ca5edce639be731b54d09f8084f7",
+      "benchmark": "ArchGym",
+      "data_source": "ArchGym",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement the Pareto-frontier selection used by a small architecture design-space exploration pass. Complete pareto_frontier() in dse.py. Each candidate has id, latency, energy, and area fields. All three metrics are minimized. A candidate is dominated only when another candidate is no worse in every metric and strictly better in at least one. Return the non-dominated candidate IDs in lexicographic order. Do not mutate the input.",
+      "source": {
+        "commit": "53f745af87b256794c0cd712c2b8e77aab74b4a6",
+        "paths": [
+          "README.md",
+          "settings/default_timeloop.yaml"
+        ],
+        "repo": "benchmarks/archgym"
+      },
+      "task_id": "arch-microarch-archgym-pareto",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 996,
+      "archive_sha256": "c50de070d98ef1a9a2c496fc11bc17c4e5ba479eaa6356ab2fee5728488a031f",
+      "benchmark": "ChampSim",
+      "data_source": "ChampSim",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement the unsigned fixed-width saturating counter in saturating_counter.h. SaturatingCounter<Bits> must support Bits from 1 through 16, clamp constructor values to [0, 2^Bits-1], expose value(), is_min(), and is_max(), and implement prefix/postfix ++ and -- plus += and -= for signed integer deltas. Every operation must saturate without unsigned wraparound. Keep this as a header-only C++20 implementation.",
+      "source": {
+        "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+        "paths": [
+          "inc/msl/fwcounter.h",
+          "test/cpp/src/043-fwcounter.cc"
+        ],
+        "repo": "benchmarks/champsim"
+      },
+      "task_id": "arch-microarch-champsim-counter",
+      "tools": [
+        "g++",
+        "C++20"
+      ]
+    },
+    {
+      "archive_bytes": 843,
+      "archive_sha256": "bb584907b3a4d8478681f075fb04964b2bbc54f784ae4ee2326347ecad40af01",
+      "benchmark": "Accellera SystemC",
+      "data_source": "Accellera SystemC",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Complete stream_accumulator.h as a SystemC module. The module has sc_fifo_in<int> in and sc_fifo_out<int> out ports. Its SC_THREAD must consume input tokens continuously, accumulate each non-overlapping group of four tokens, write one sum for every complete group, then continue with the next group. Do not emit partial groups. Keep the implementation header-only and preserve the class and port names.",
+      "source": {
+        "commit": "adb09b1e3f998db9cce702fb8dce22a302c58001",
+        "paths": [
+          "examples/sysc/simple_fifo/simple_fifo.cpp",
+          "examples/sysc/fir/fir.cpp"
+        ],
+        "repo": "benchmarks/systemc"
+      },
+      "task_id": "architecture-modeling-systemc-stream",
+      "tools": [
+        "SystemC 3.0.2",
+        "g++",
+        "pkg-config"
+      ]
+    },
+    {
+      "archive_bytes": 1099,
+      "archive_sha256": "7aea28cbdf06ea48d6e946f7819e5df91095d4f47bbabe2d76fb1a45944ede2a",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Repair arch.yaml to describe the requested weight-stationary accelerator. Keep the existing hierarchy and names. DRAM must be 64 bits wide with 16-bit data words. shared_glb must have depth 16384, 32 banks, and read/write bandwidth 16. PE must be a 16 by 16 spatial mesh. pe_spad must have depth 192, keep Weights, and bypass Inputs and Outputs. mac must use an 8-bit multiplier and 16-bit adder. Replace all null placeholders with these values and leave the file as valid YAML.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/example_designs/example_designs/simple_weight_stationary/arch.yaml"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-timeloop-config",
+      "tools": [
+        "python3",
+        "PyYAML",
+        "Timeloop architecture schema"
+      ]
+    },
+    {
+      "archive_bytes": 914,
+      "archive_sha256": "3515cb77f753633d5f88e996c3b71ca7fad7b686f13898be54f360affa84b6bc",
+      "benchmark": "RTLLM 2.0",
+      "data_source": "RTLLM 2.0",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "Implement the synthesizable module accu in accu.sv. Ports: clk, active-low asynchronous rst_n, data_in[7:0], valid_in, valid_out, and data_out[9:0]. Accept data_in only on rising clock edges where valid_in is high. For every non-overlapping group of four accepted bytes, drive their 10-bit sum on data_out and pulse valid_out high for exactly one cycle. Invalid cycles must not advance the group. Reset clears partial state and valid_out.",
+      "source": {
+        "commit": "41b26896e33b536940116a975626455eed3de65e",
+        "paths": [
+          "Arithmetic/Accumulator/accu/design_description.txt",
+          "Arithmetic/Accumulator/accu/testbench.v",
+          "Arithmetic/Accumulator/accu/verified_accu.v"
+        ],
+        "repo": "benchmarks/rtllm"
+      },
+      "task_id": "rtl-design-rtllm-accumulator",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 744,
+      "archive_sha256": "b110639f9d8b06e149b2a8641b211eeeb72c498d572fc87bf175aa98194bf15b",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "Implement TopModule in TopModule.sv. Its ports are input clk, input reset, and output logic [3:0] q. It is a decade counter that counts 1 through 10 inclusive. All state changes occur on the positive edge of clk. reset is active-high and synchronous and sets q to 1. After q reaches 10, the next active clock edge wraps it to 1.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob035_count1to10_prompt.txt",
+          "dataset_spec-to-rtl/Prob035_count1to10_test.sv",
+          "dataset_spec-to-rtl/Prob035_count1to10_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-counter",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1155,
+      "archive_sha256": "e328d6d48d8941845a9a74924005918732f3b3c94d3e97a361792ba5ff0c72a3",
+      "benchmark": "OpenTitan",
+      "data_source": "OpenTitan",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement crc32.c using the API in crc32.h. It must compute reflected IEEE 802.3 CRC-32 with polynomial 0xedb88320 and match Python zlib.crc32. Support one-shot crc32(), streaming init/add8/add32/add/finish, zero-length buffers, and unaligned buffers. crc32_add32 must consume the word in little-endian byte order regardless of host alignment. Do not use zlib or a lookup-table dependency.",
+      "source": {
+        "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+        "paths": [
+          "sw/device/lib/base/crc32.c",
+          "sw/device/lib/base/crc32.h",
+          "sw/device/lib/base/crc32_functest.c"
+        ],
+        "repo": "benchmarks/opentitan"
+      },
+      "task_id": "software-opentitan-crc32",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 1858,
+      "archive_sha256": "56013c93b615756651774dedce0dd8800c2c20c4d3602c4249b9a58d92932ef7",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement the fixed-storage generic min-heap API in min_heap.c. Elements are opaque fixed-size byte records ordered by the caller comparator. Implement init, push, peek, pop, remove by zero-based heap-array index, and find. Push and removal must preserve heap order in O(log n); find may be O(n). Return -1 when full, false for invalid removal or empty pop, and never allocate memory. Preserve the API in min_heap.h and correctly support element sizes that are not machine-word sized.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "include/zephyr/sys/min_heap.h",
+          "tests/lib/min_heap/src/test_min_heap.c",
+          "samples/data_structures/min-heap/src/main.c"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-min-heap",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 1150,
+      "archive_sha256": "75ea9d7a4395ddc80d7aa26d7dceb5f9334c4a3aa64915f23933263e4dfbd49a",
+      "benchmark": "YosysHQ MCY",
+      "data_source": "YosysHQ MCY",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete bitcnt_tb.sv as a self-checking SystemVerilog testbench for bitcnt.v. The DUT implements CLZ64, CLZ32, CTZ64, CTZ32, CNT64, and CNT32 selected by din_func 000 through 101. Verify every operation, including all-zero inputs and the rule that 32-bit modes ignore din_data[63:32]. The testbench module must be named testbench, print PASS on success, call $fatal on a mismatch, and finish. The verifier will run it against the reference design and mutation variants.",
+      "source": {
+        "commit": "686c816ceaae60003d51a863e0aefe221003185c",
+        "paths": [
+          "examples/bitcnt/bitcnt.v",
+          "examples/bitcnt/bitcnt_tb.v",
+          "examples/bitcnt/test_fm.sv"
+        ],
+        "repo": "benchmarks/mcy"
+      },
+      "task_id": "verification-mcy-bitcnt",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 937,
+      "archive_sha256": "c0472f7740cf8b2a0bebf024d5c9e9b8bf238ee009706c9164a9eb5e200a50ee",
+      "benchmark": "riscv-formal methodology",
+      "data_source": "riscv-formal methodology",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Write immediate formal properties in properties.sv for a depth-2 FIFO transition relation. The file is included inside formal_top and may reference count[1:0], wr_en, rd_en, and next_count[1:0]. Inputs are unconstrained except that the harness assumes count <= 2. Add at least four assertions proving: next_count never exceeds 2; a write without a read is blocked when full; a read without a write is blocked when empty; and simultaneous read/write preserves count. Use an always @* block and no module declaration.",
+      "source": {
+        "commit": "c992aa61fdfe0846c5ed90324c596202a1c69b76",
+        "paths": [
+          "README.md",
+          "cores/picorv32/checks.cfg",
+          "cores/picorv32/complete.sv"
+        ],
+        "repo": "benchmarks/riscv-formal"
+      },
+      "task_id": "verification-riscv-formal-properties",
+      "tools": [
+        "Yosys 0.59.1",
+        "SAT proof"
+      ]
+    }
+  ]
+}

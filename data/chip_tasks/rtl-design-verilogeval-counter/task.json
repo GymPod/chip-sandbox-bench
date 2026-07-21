@@ -1,0 +1,17 @@
+{
+  "task_id": "rtl-design-verilogeval-counter",
+  "discipline": "RTL Design",
+  "benchmark": "VerilogEval v2",
+  "tools": ["Icarus Verilog 12", "SystemVerilog simulation"],
+  "source": {
+    "repo": "benchmarks/verilog-eval",
+    "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+    "paths": [
+      "dataset_spec-to-rtl/Prob035_count1to10_prompt.txt",
+      "dataset_spec-to-rtl/Prob035_count1to10_test.sv",
+      "dataset_spec-to-rtl/Prob035_count1to10_ref.sv"
+    ]
+  },
+  "prompt": "Implement TopModule in TopModule.sv. Its ports are input clk, input reset, and output logic [3:0] q. It is a decade counter that counts 1 through 10 inclusive. All state changes occur on the positive edge of clk. reset is active-high and synchronous and sets q to 1. After q reaches 10, the next active clock edge wraps it to 1.",
+  "instruction": "Write the complete synthesizable SystemVerilog implementation in TopModule.sv."
+}

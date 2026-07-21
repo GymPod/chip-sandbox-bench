@@ -1,0 +1,17 @@
+{
+  "task_id": "software-opentitan-crc32",
+  "discipline": "Software Development",
+  "benchmark": "OpenTitan",
+  "tools": ["gcc", "C11"],
+  "source": {
+    "repo": "benchmarks/opentitan",
+    "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+    "paths": [
+      "sw/device/lib/base/crc32.c",
+      "sw/device/lib/base/crc32.h",
+      "sw/device/lib/base/crc32_functest.c"
+    ]
+  },
+  "prompt": "Implement crc32.c using the API in crc32.h. It must compute reflected IEEE 802.3 CRC-32 with polynomial 0xedb88320 and match Python zlib.crc32. Support one-shot crc32(), streaming init/add8/add32/add/finish, zero-length buffers, and unaligned buffers. crc32_add32 must consume the word in little-endian byte order regardless of host alignment. Do not use zlib or a lookup-table dependency.",
+  "instruction": "Complete the portable OpenTitan-style CRC32 implementation in crc32.c."
+}

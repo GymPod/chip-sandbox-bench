@@ -1,0 +1,48 @@
+architecture:
+  version: 0.4
+  nodes:
+    - type: Container
+      name: system
+    - type: Component
+      name: DRAM
+      class: DRAM
+      attributes:
+        type: LPDDR4
+        width: null
+        datawidth: null
+    - type: Container
+      name: simple_ws
+      attributes:
+        technology: 45nm
+    - type: Component
+      name: shared_glb
+      class: smartbuffer_SRAM
+      attributes:
+        depth: null
+        width: 64
+        n_banks: null
+        datawidth: 16
+        read_bandwidth: null
+        write_bandwidth: null
+    - type: Container
+      name: PE
+      spatial:
+        meshX: null
+        meshY: null
+    - type: Component
+      name: pe_spad
+      class: smartbuffer_SRAM
+      attributes:
+        depth: null
+        width: 16
+        datawidth: 16
+      constraints:
+        dataspace:
+          bypass: []
+          keep: []
+    - type: Component
+      name: mac
+      class: intmac
+      attributes:
+        multiplier_width: null
+        adder_width: null

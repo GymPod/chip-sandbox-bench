@@ -1,0 +1,13 @@
+{
+  "task_id": "arch-microarch-champsim-counter",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "ChampSim",
+  "tools": ["g++", "C++20"],
+  "source": {
+    "repo": "benchmarks/champsim",
+    "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+    "paths": ["inc/msl/fwcounter.h", "test/cpp/src/043-fwcounter.cc"]
+  },
+  "prompt": "Implement the unsigned fixed-width saturating counter in saturating_counter.h. SaturatingCounter<Bits> must support Bits from 1 through 16, clamp constructor values to [0, 2^Bits-1], expose value(), is_min(), and is_max(), and implement prefix/postfix ++ and -- plus += and -= for signed integer deltas. Every operation must saturate without unsigned wraparound. Keep this as a header-only C++20 implementation.",
+  "instruction": "Complete saturating_counter.h and preserve its public API."
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "rtl-design-rtllm-accumulator",
+  "discipline": "RTL Design",
+  "benchmark": "RTLLM 2.0",
+  "tools": ["Icarus Verilog 12", "SystemVerilog simulation"],
+  "source": {
+    "repo": "benchmarks/rtllm",
+    "commit": "41b26896e33b536940116a975626455eed3de65e",
+    "paths": [
+      "Arithmetic/Accumulator/accu/design_description.txt",
+      "Arithmetic/Accumulator/accu/testbench.v",
+      "Arithmetic/Accumulator/accu/verified_accu.v"
+    ]
+  },
+  "prompt": "Implement the synthesizable module accu in accu.sv. Ports: clk, active-low asynchronous rst_n, data_in[7:0], valid_in, valid_out, and data_out[9:0]. Accept data_in only on rising clock edges where valid_in is high. For every non-overlapping group of four accepted bytes, drive their 10-bit sum on data_out and pulse valid_out high for exactly one cycle. Invalid cycles must not advance the group. Reset clears partial state and valid_out.",
+  "instruction": "Complete accu.sv with the four-sample valid-gated accumulator."
+}

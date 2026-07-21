@@ -1,0 +1,13 @@
+{
+  "task_id": "architecture-modeling-systemc-stream",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Accellera SystemC",
+  "tools": ["SystemC 3.0.2", "g++", "pkg-config"],
+  "source": {
+    "repo": "benchmarks/systemc",
+    "commit": "adb09b1e3f998db9cce702fb8dce22a302c58001",
+    "paths": ["examples/sysc/simple_fifo/simple_fifo.cpp", "examples/sysc/fir/fir.cpp"]
+  },
+  "prompt": "Complete stream_accumulator.h as a SystemC module. The module has sc_fifo_in<int> in and sc_fifo_out<int> out ports. Its SC_THREAD must consume input tokens continuously, accumulate each non-overlapping group of four tokens, write one sum for every complete group, then continue with the next group. Do not emit partial groups. Keep the implementation header-only and preserve the class and port names.",
+  "instruction": "Implement the SystemC stream accumulator in stream_accumulator.h."
+}

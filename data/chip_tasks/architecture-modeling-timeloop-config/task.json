@@ -1,0 +1,13 @@
+{
+  "task_id": "architecture-modeling-timeloop-config",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Timeloop and Accelergy exercises",
+  "tools": ["python3", "PyYAML", "Timeloop architecture schema"],
+  "source": {
+    "repo": "benchmarks/timeloop-accelergy-exercises",
+    "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+    "paths": ["workspace/example_designs/example_designs/simple_weight_stationary/arch.yaml"]
+  },
+  "prompt": "Repair arch.yaml to describe the requested weight-stationary accelerator. Keep the existing hierarchy and names. DRAM must be 64 bits wide with 16-bit data words. shared_glb must have depth 16384, 32 banks, and read/write bandwidth 16. PE must be a 16 by 16 spatial mesh. pe_spad must have depth 192, keep Weights, and bypass Inputs and Outputs. mac must use an 8-bit multiplier and 16-bit adder. Replace all null placeholders with these values and leave the file as valid YAML.",
+  "instruction": "Complete the Timeloop-style architecture description in arch.yaml."
+}

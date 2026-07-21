@@ -1,0 +1,17 @@
+{
+  "task_id": "verification-riscv-formal-properties",
+  "discipline": "Verification (DV/FV)",
+  "benchmark": "riscv-formal methodology",
+  "tools": ["Yosys 0.59.1", "SAT proof"],
+  "source": {
+    "repo": "benchmarks/riscv-formal",
+    "commit": "c992aa61fdfe0846c5ed90324c596202a1c69b76",
+    "paths": [
+      "README.md",
+      "cores/picorv32/checks.cfg",
+      "cores/picorv32/complete.sv"
+    ]
+  },
+  "prompt": "Write immediate formal properties in properties.sv for a depth-2 FIFO transition relation. The file is included inside formal_top and may reference count[1:0], wr_en, rd_en, and next_count[1:0]. Inputs are unconstrained except that the harness assumes count <= 2. Add at least four assertions proving: next_count never exceeds 2; a write without a read is blocked when full; a read without a write is blocked when empty; and simultaneous read/write preserves count. Use an always @* block and no module declaration.",
+  "instruction": "Complete properties.sv with exhaustive combinational FIFO assertions."
+}

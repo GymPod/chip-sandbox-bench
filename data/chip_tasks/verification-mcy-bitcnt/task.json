@@ -1,0 +1,17 @@
+{
+  "task_id": "verification-mcy-bitcnt",
+  "discipline": "Verification (DV/FV)",
+  "benchmark": "YosysHQ MCY",
+  "tools": ["Icarus Verilog 12", "mutation testing"],
+  "source": {
+    "repo": "benchmarks/mcy",
+    "commit": "686c816ceaae60003d51a863e0aefe221003185c",
+    "paths": [
+      "examples/bitcnt/bitcnt.v",
+      "examples/bitcnt/bitcnt_tb.v",
+      "examples/bitcnt/test_fm.sv"
+    ]
+  },
+  "prompt": "Complete bitcnt_tb.sv as a self-checking SystemVerilog testbench for bitcnt.v. The DUT implements CLZ64, CLZ32, CTZ64, CTZ32, CNT64, and CNT32 selected by din_func 000 through 101. Verify every operation, including all-zero inputs and the rule that 32-bit modes ignore din_data[63:32]. The testbench module must be named testbench, print PASS on success, call $fatal on a mismatch, and finish. The verifier will run it against the reference design and mutation variants.",
+  "instruction": "Write a mutation-sensitive self-checking testbench in bitcnt_tb.sv."
+}

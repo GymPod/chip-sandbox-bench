@@ -1,0 +1,17 @@
+{
+  "task_id": "software-zephyr-min-heap",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": ["gcc", "C11"],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "include/zephyr/sys/min_heap.h",
+      "tests/lib/min_heap/src/test_min_heap.c",
+      "samples/data_structures/min-heap/src/main.c"
+    ]
+  },
+  "prompt": "Implement the fixed-storage generic min-heap API in min_heap.c. Elements are opaque fixed-size byte records ordered by the caller comparator. Implement init, push, peek, pop, remove by zero-based heap-array index, and find. Push and removal must preserve heap order in O(log n); find may be O(n). Return -1 when full, false for invalid removal or empty pop, and never allocate memory. Preserve the API in min_heap.h and correctly support element sizes that are not machine-word sized.",
+  "instruction": "Complete min_heap.c as a portable Zephyr-style fixed-storage heap."
+}
