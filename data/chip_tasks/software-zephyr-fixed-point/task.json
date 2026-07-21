@@ -1,0 +1,19 @@
+{
+  "task_id": "software-zephyr-fixed-point",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "tests/unit/intmath/main.c",
+      "include/zephyr/sys/math_extras.h"
+    ]
+  },
+  "prompt": "Implement signed Q16.16 multiplication and division in utility.c. Round multiplication to nearest with ties away from zero. Division truncates toward zero. Saturate results to INT32_MIN/MAX and report division by zero as the signed saturation matching the numerator (zero divided by zero returns zero).",
+  "instruction": "Implement signed Q16.16 multiplication and division in utility.c. Round multiplication to nearest with ties away from zero. Division truncates toward zero. Saturate results to INT32_MIN/MAX and report division by zero as the signed saturation matching the numerator (zero divided by zero returns zero)."
+}

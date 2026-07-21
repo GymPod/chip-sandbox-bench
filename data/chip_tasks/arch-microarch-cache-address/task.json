@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-cache-address",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "gem5",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/gem5",
+    "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+    "paths": [
+      "src/mem/cache/tags/base.hh",
+      "src/mem/cache/cache.cc"
+    ]
+  },
+  "prompt": "Implement decode_address(address, line_bytes, sets) in model.py. Return (tag, set_index, block_offset) for a physically indexed cache. line_bytes and sets must be positive powers of two; reject invalid inputs with ValueError. Addresses are non-negative integers.",
+  "instruction": "Implement decode_address(address, line_bytes, sets) in model.py. Return (tag, set_index, block_offset) for a physically indexed cache. line_bytes and sets must be positive powers of two; reject invalid inputs with ValueError. Addresses are non-negative integers."
+}

@@ -1,0 +1,19 @@
+{
+  "task_id": "software-zephyr-endian",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "include/zephyr/sys/byteorder.h",
+      "tests/kernel/common/src/byteorder.c"
+    ]
+  },
+  "prompt": "Implement portable unaligned little- and big-endian 16/32-bit loads and stores in utility.c using the API in utility.h. Do not cast byte pointers to wider integer pointers and do not depend on host byte order or alignment.",
+  "instruction": "Implement portable unaligned little- and big-endian 16/32-bit loads and stores in utility.c using the API in utility.h. Do not cast byte pointers to wider integer pointers and do not depend on host byte order or alignment."
+}

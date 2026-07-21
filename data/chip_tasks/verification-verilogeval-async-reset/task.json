@@ -1,0 +1,20 @@
+{
+  "task_id": "verification-verilogeval-async-reset",
+  "discipline": "Verification (DV/FV)",
+  "benchmark": "VerilogEval mutation extension",
+  "tools": [
+    "Icarus Verilog 12",
+    "mutation testing"
+  ],
+  "source": {
+    "repo": "benchmarks/verilog-eval",
+    "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+    "paths": [
+      "dataset_spec-to-rtl/Prob047_dff8ar_prompt.txt",
+      "dataset_spec-to-rtl/Prob047_dff8ar_test.sv",
+      "dataset_spec-to-rtl/Prob047_dff8ar_ref.sv"
+    ]
+  },
+  "prompt": "Complete tb.sv to distinguish an active-high asynchronous reset from a synchronous reset in an 8-bit register. Verify data capture and reset asserted between clock edges. Name the module testbench, print PASS, and use $fatal.",
+  "instruction": "Complete tb.sv to distinguish an active-high asynchronous reset from a synchronous reset in an 8-bit register. Verify data capture and reset asserted between clock edges. Name the module testbench, print PASS, and use $fatal."
+}

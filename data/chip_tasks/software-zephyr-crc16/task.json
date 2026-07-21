@@ -1,0 +1,19 @@
+{
+  "task_id": "software-zephyr-crc16",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "subsys/crc/crc16_sw.c",
+      "tests/unit/crc/main.c"
+    ]
+  },
+  "prompt": "Implement crc16_ccitt in utility.c using polynomial 0x1021, caller-supplied initial state, no reflection, and no final xor. Process each byte most-significant bit first. Support zero length and incremental use without tables or allocation.",
+  "instruction": "Implement crc16_ccitt in utility.c using polynomial 0x1021, caller-supplied initial state, no reflection, and no final xor. Process each byte most-significant bit first. Support zero length and incremental use without tables or allocation."
+}

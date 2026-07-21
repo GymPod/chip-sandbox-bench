@@ -1,0 +1,19 @@
+{
+  "task_id": "architecture-modeling-mesh-noc",
+  "discipline": "Architecture Modeling",
+  "benchmark": "gem5",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/gem5",
+    "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+    "paths": [
+      "src/mem/ruby/network/garnet/GarnetNetwork.py",
+      "src/mem/ruby/network/garnet/NetworkLink.hh"
+    ]
+  },
+  "prompt": "Implement mesh_latency(src, dst, width, height, router_cycles, link_cycles). Node IDs use row-major coordinates. Model deterministic XY routing: latency is one router traversal at every visited node plus one link traversal per Manhattan hop. Validate node IDs, dimensions, and non-negative cycle costs.",
+  "instruction": "Implement mesh_latency(src, dst, width, height, router_cycles, link_cycles). Node IDs use row-major coordinates. Model deterministic XY routing: latency is one router traversal at every visited node plus one link traversal per Manhattan hop. Validate node IDs, dimensions, and non-negative cycle costs."
+}

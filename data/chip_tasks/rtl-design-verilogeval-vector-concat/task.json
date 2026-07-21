@@ -1,0 +1,20 @@
+{
+  "task_id": "rtl-design-verilogeval-vector-concat",
+  "discipline": "RTL Design",
+  "benchmark": "VerilogEval v2",
+  "tools": [
+    "Icarus Verilog 12",
+    "SystemVerilog simulation"
+  ],
+  "source": {
+    "repo": "benchmarks/verilog-eval",
+    "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+    "paths": [
+      "dataset_spec-to-rtl/Prob064_vector3_prompt.txt",
+      "dataset_spec-to-rtl/Prob064_vector3_test.sv",
+      "dataset_spec-to-rtl/Prob064_vector3_ref.sv"
+    ]
+  },
+  "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  a (5 bits)\n - input  b (5 bits)\n - input  c (5 bits)\n - input  d (5 bits)\n - input  e (5 bits)\n - input  f (5 bits)\n - output w (8 bits)\n - output x (8 bits)\n - output y (8 bits)\n - output z (8 bits)\n\nThe module should concatenate the input vectors together then split them\nup into several output vectors. There are six 5-bit input vectors: a, b,\nc, d, e, and f, for a total of 30 bits of input. There are four 8-bit\noutput vectors: w, x, y, and z, for 32 bits of output. The output should\nbe a concatenation of the input vectors followed by two 1 bits (the two 1\nbits should be in the LSB positions).",
+  "instruction": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  a (5 bits)\n - input  b (5 bits)\n - input  c (5 bits)\n - input  d (5 bits)\n - input  e (5 bits)\n - input  f (5 bits)\n - output w (8 bits)\n - output x (8 bits)\n - output y (8 bits)\n - output z (8 bits)\n\nThe module should concatenate the input vectors together then split them\nup into several output vectors. There are six 5-bit input vectors: a, b,\nc, d, e, and f, for a total of 30 bits of input. There are four 8-bit\noutput vectors: w, x, y, and z, for 32 bits of output. The output should\nbe a concatenation of the input vectors followed by two 1 bits (the two 1\nbits should be in the LSB positions)."
+}

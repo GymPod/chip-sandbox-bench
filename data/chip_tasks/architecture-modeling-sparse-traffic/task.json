@@ -1,0 +1,18 @@
+{
+  "task_id": "architecture-modeling-sparse-traffic",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Timeloop and Accelergy exercises",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/timeloop-accelergy-exercises",
+    "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+    "paths": [
+      "workspace/tutorial_exercises/03_sparse_tensors_2021_isca/README.md"
+    ]
+  },
+  "prompt": "Implement sparse_storage(dense_elements, density, value_bytes, metadata_bits). Use ceil(dense_elements*density) stored nonzeros. Return nonzeros, data_bytes, metadata_bytes rounded up from bits, total_bytes, and compression_ratio (dense value bytes divided by sparse total bytes). For an empty sparse encoding return infinity as the ratio. Validate all inputs.",
+  "instruction": "Implement sparse_storage(dense_elements, density, value_bytes, metadata_bits). Use ceil(dense_elements*density) stored nonzeros. Return nonzeros, data_bytes, metadata_bytes rounded up from bits, total_bytes, and compression_ratio (dense value bytes divided by sparse total bytes). For an empty sparse encoding return infinity as the ratio. Validate all inputs."
+}

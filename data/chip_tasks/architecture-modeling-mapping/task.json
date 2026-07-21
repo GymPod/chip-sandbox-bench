@@ -1,0 +1,19 @@
+{
+  "task_id": "architecture-modeling-mapping",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Timeloop and Accelergy exercises",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/timeloop-accelergy-exercises",
+    "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+    "paths": [
+      "workspace/cheatsheets/3_architecture.yaml",
+      "workspace/example_designs/example_designs/top.yaml.jinja2"
+    ]
+  },
+  "prompt": "Implement validate_mapping(problem, factors). Both dictionaries map dimension names to positive integers. Every problem dimension must appear in factors, no unknown factor dimensions are allowed, and each factor must divide the problem extent. Return a list of human-readable errors sorted by dimension, or an empty list for a valid mapping.",
+  "instruction": "Implement validate_mapping(problem, factors). Both dictionaries map dimension names to positive integers. Every problem dimension must appear in factors, no unknown factor dimensions are allowed, and each factor must divide the problem extent. Return a list of human-readable errors sorted by dimension, or an empty list for a valid mapping."
+}

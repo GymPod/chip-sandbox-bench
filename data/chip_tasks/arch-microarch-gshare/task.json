@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-gshare",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "ChampSim",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/champsim",
+    "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+    "paths": [
+      "branch/gshare/gshare.cc",
+      "branch/gshare/gshare.h"
+    ]
+  },
+  "prompt": "Implement GShare in model.py. The predictor has a power-of-two table of 2-bit saturating counters initialized weakly taken (2), an N-bit global history register, and indexes with (pc >> 2) XOR history. predict returns taken for counters >= 2. update changes the indexed counter and then shifts the actual outcome into history. Reject invalid table/history sizes.",
+  "instruction": "Implement GShare in model.py. The predictor has a power-of-two table of 2-bit saturating counters initialized weakly taken (2), an N-bit global history register, and indexes with (pc >> 2) XOR history. predict returns taken for counters >= 2. update changes the indexed counter and then shifts the actual outcome into history. Reject invalid table/history sizes."
+}

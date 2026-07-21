@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-amat",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "ArchGym",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/archgym",
+    "commit": "53f745af87b256794c0cd712c2b8e77aab74b4a6",
+    "paths": [
+      "settings/default_sniper.yaml",
+      "settings/default_timeloop.yaml"
+    ]
+  },
+  "prompt": "Implement average_memory_access_time(levels, memory_latency) in model.py. Each cache level is a dict with hit_latency and local_hit_rate, where the rate is conditional on reaching that level. Return the expected latency, including lookup latency at every reached cache and memory latency on a complete miss. Validate non-negative latencies and rates in [0, 1].",
+  "instruction": "Implement average_memory_access_time(levels, memory_latency) in model.py. Each cache level is a dict with hit_latency and local_hit_rate, where the rate is conditional on reaching that level. Return the expected latency, including lookup latency at every reached cache and memory latency on a complete miss. Validate non-negative latencies and rates in [0, 1]."
+}

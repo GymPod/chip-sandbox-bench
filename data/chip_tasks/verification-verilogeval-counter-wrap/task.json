@@ -1,0 +1,20 @@
+{
+  "task_id": "verification-verilogeval-counter-wrap",
+  "discipline": "Verification (DV/FV)",
+  "benchmark": "VerilogEval mutation extension",
+  "tools": [
+    "Icarus Verilog 12",
+    "mutation testing"
+  ],
+  "source": {
+    "repo": "benchmarks/verilog-eval",
+    "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+    "paths": [
+      "dataset_spec-to-rtl/Prob035_count1to10_prompt.txt",
+      "dataset_spec-to-rtl/Prob035_count1to10_test.sv",
+      "dataset_spec-to-rtl/Prob035_count1to10_ref.sv"
+    ]
+  },
+  "prompt": "Complete tb.sv to verify the synchronous reset and 1-through-10 wrap behavior of dut. Check every count value and at least two wraps. Name the module testbench, print PASS, and call $fatal on mismatch.",
+  "instruction": "Complete tb.sv to verify the synchronous reset and 1-through-10 wrap behavior of dut. Check every count value and at least two wraps. Name the module testbench, print PASS, and call $fatal on mismatch."
+}

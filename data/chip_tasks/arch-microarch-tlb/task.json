@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-tlb",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "gem5",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/gem5",
+    "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+    "paths": [
+      "src/arch/generic/tlb.hh",
+      "src/arch/x86/tlb.hh"
+    ]
+  },
+  "prompt": "Implement FullyAssociativeTLB in model.py with LRU replacement. lookup(va) returns the translated physical address or None and refreshes recency on a hit. insert(vpn, ppn) updates an existing mapping or evicts the LRU mapping when full. invalidate removes a VPN. Preserve page offsets and support only positive entry counts and power-of-two page sizes.",
+  "instruction": "Implement FullyAssociativeTLB in model.py with LRU replacement. lookup(va) returns the translated physical address or None and refreshes recency on a hit. insert(vpn, ppn) updates an existing mapping or evicts the LRU mapping when full. invalidate removes a VPN. Preserve page offsets and support only positive entry counts and power-of-two page sizes."
+}

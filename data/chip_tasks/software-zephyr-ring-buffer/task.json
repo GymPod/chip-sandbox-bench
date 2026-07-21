@@ -1,0 +1,19 @@
+{
+  "task_id": "software-zephyr-ring-buffer",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "lib/utils/ring_buffer.c",
+      "tests/lib/ringbuffer/src/main.c"
+    ]
+  },
+  "prompt": "Implement the fixed-capacity byte ring buffer in utility.c. rb_put and rb_get return the number of bytes transferred, support wraparound and partial transfers, preserve FIFO order, and never allocate. rb_init resets caller-owned storage. A zero-capacity ring must behave safely.",
+  "instruction": "Implement the fixed-capacity byte ring buffer in utility.c. rb_put and rb_get return the number of bytes transferred, support wraparound and partial transfers, preserve FIFO order, and never allocate. rb_init resets caller-owned storage. A zero-capacity ring must behave safely."
+}

@@ -1,0 +1,19 @@
+{
+  "task_id": "software-opentitan-saturating",
+  "discipline": "Software Development",
+  "benchmark": "OpenTitan",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/opentitan",
+    "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+    "paths": [
+      "sw/device/lib/base/math.c",
+      "sw/device/lib/base/math.h"
+    ]
+  },
+  "prompt": "Implement saturating unsigned 32-bit add, subtract, and multiply in utility.c. Clamp overflow to UINT32_MAX and subtraction underflow to zero. The implementation must be defined by C11 for all input values.",
+  "instruction": "Implement saturating unsigned 32-bit add, subtract, and multiply in utility.c. Clamp overflow to UINT32_MAX and subtraction underflow to zero. The implementation must be defined by C11 for all input values."
+}

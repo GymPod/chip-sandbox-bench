@@ -1,0 +1,19 @@
+{
+  "task_id": "software-zephyr-hash",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "tests/lib/hash_function/src/main.c",
+      "include/zephyr/sys/hash_function.h"
+    ]
+  },
+  "prompt": "Implement 32-bit FNV-1a in utility.c with offset basis 2166136261 and prime 16777619. fnv1a32 hashes a complete buffer. fnv1a32_update continues from a caller-provided state so chunked and one-shot hashing match. Support zero length and arbitrary byte values with defined uint32_t wraparound.",
+  "instruction": "Implement 32-bit FNV-1a in utility.c with offset basis 2166136261 and prime 16777619. fnv1a32 hashes a complete buffer. fnv1a32_update continues from a caller-provided state so chunked and one-shot hashing match. Support zero length and arbitrary byte values with defined uint32_t wraparound."
+}

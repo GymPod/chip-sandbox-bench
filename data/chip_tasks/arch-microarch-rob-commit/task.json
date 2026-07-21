@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-rob-commit",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "gem5",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/gem5",
+    "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+    "paths": [
+      "src/cpu/o3/rob.hh",
+      "src/cpu/o3/rob.cc"
+    ]
+  },
+  "prompt": "Implement commit_ready(entries, width) in model.py. Entries are in program order and contain ready and exception booleans. Return the indices committed this cycle. Commit at most width contiguous ready entries from the head. An unready head blocks younger entries. An exception entry may commit but ends the cycle immediately. Reject negative width and do not mutate entries.",
+  "instruction": "Implement commit_ready(entries, width) in model.py. Entries are in program order and contain ready and exception booleans. Return the indices committed this cycle. Commit at most width contiguous ready entries from the head. An unready head blocks younger entries. An exception entry may commit but ends the cycle immediately. Reject negative width and do not mutate entries."
+}

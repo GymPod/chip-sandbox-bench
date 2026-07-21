@@ -1,0 +1,20 @@
+{
+  "task_id": "rtl-design-verilogeval-dff8",
+  "discipline": "RTL Design",
+  "benchmark": "VerilogEval v2",
+  "tools": [
+    "Icarus Verilog 12",
+    "SystemVerilog simulation"
+  ],
+  "source": {
+    "repo": "benchmarks/verilog-eval",
+    "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+    "paths": [
+      "dataset_spec-to-rtl/Prob034_dff8_prompt.txt",
+      "dataset_spec-to-rtl/Prob034_dff8_test.sv",
+      "dataset_spec-to-rtl/Prob034_dff8_ref.sv"
+    ]
+  },
+  "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  clk\n - input  d   (8 bits)\n - output q   (8 bits)\n\nThe module should include 8 D flip-flops. All DFFs should be triggered by\nthe positive edge of clock.",
+  "instruction": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  clk\n - input  d   (8 bits)\n - output q   (8 bits)\n\nThe module should include 8 D flip-flops. All DFFs should be triggered by\nthe positive edge of clock."
+}

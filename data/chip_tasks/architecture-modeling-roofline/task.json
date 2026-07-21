@@ -1,0 +1,18 @@
+{
+  "task_id": "architecture-modeling-roofline",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Timeloop and Accelergy exercises",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/timeloop-accelergy-exercises",
+    "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+    "paths": [
+      "workspace/tutorial_exercises/02_interface_and_design_space_exploration_2024/1_specifications.ipynb"
+    ]
+  },
+  "prompt": "Implement roofline(operations, bytes_moved, peak_ops_per_cycle, bytes_per_cycle) returning arithmetic_intensity, attainable_ops_per_cycle, and cycles. The attainable rate is min(peak compute, intensity times memory bandwidth). Zero operations requires zero cycles; zero bytes means infinite intensity. Reject negative values and non-positive machine rates.",
+  "instruction": "Implement roofline(operations, bytes_moved, peak_ops_per_cycle, bytes_per_cycle) returning arithmetic_intensity, attainable_ops_per_cycle, and cycles. The attainable rate is min(peak compute, intensity times memory bandwidth). Zero operations requires zero cycles; zero bytes means infinite intensity. Reject negative values and non-positive machine rates."
+}

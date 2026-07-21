@@ -1,0 +1,20 @@
+{
+  "task_id": "verification-verilogeval-priority-encoder",
+  "discipline": "Verification (DV/FV)",
+  "benchmark": "VerilogEval mutation extension",
+  "tools": [
+    "Icarus Verilog 12",
+    "mutation testing"
+  ],
+  "source": {
+    "repo": "benchmarks/verilog-eval",
+    "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+    "paths": [
+      "dataset_spec-to-rtl/Prob097_mux9to1v_prompt.txt",
+      "dataset_spec-to-rtl/Prob097_mux9to1v_test.sv",
+      "dataset_spec-to-rtl/Prob097_mux9to1v_ref.sv"
+    ]
+  },
+  "prompt": "Complete tb.sv as an exhaustive self-checking testbench for the 4-bit fixed-priority encoder dut. valid is high for nonzero req and index must select the lowest numbered asserted request. Name the module testbench, print PASS, and call $fatal on mismatch.",
+  "instruction": "Complete tb.sv as an exhaustive self-checking testbench for the 4-bit fixed-priority encoder dut. valid is high for nonzero req and index must select the lowest numbered asserted request. Name the module testbench, print PASS, and call $fatal on mismatch."
+}

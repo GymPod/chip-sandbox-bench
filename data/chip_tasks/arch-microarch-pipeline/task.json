@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-pipeline",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "gem5",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/gem5",
+    "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+    "paths": [
+      "src/cpu/minor/pipeline.hh",
+      "src/cpu/minor/pipeline.cc"
+    ]
+  },
+  "prompt": "Implement pipeline_cycles(instructions, stages, issue_width, stalls). For an in-order ideal pipeline, empty work takes zero cycles; otherwise cycles are stages-1 plus ceil(instructions/issue_width), plus all explicit non-negative stall penalties. Validate that instructions is non-negative and stages and issue_width are positive integers.",
+  "instruction": "Implement pipeline_cycles(instructions, stages, issue_width, stalls). For an in-order ideal pipeline, empty work takes zero cycles; otherwise cycles are stages-1 plus ceil(instructions/issue_width), plus all explicit non-negative stall penalties. Validate that instructions is non-negative and stages and issue_width are positive integers."
+}

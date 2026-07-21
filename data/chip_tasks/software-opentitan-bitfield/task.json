@@ -1,0 +1,19 @@
+{
+  "task_id": "software-opentitan-bitfield",
+  "discipline": "Software Development",
+  "benchmark": "OpenTitan",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/opentitan",
+    "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+    "paths": [
+      "sw/device/lib/base/bitfield.c",
+      "sw/device/lib/base/bitfield.h"
+    ]
+  },
+  "prompt": "Implement bitfield.c. bitfield_read32 extracts field.width bits at field.index. bitfield_write32 replaces exactly that field. Width may be 0 through 32; width 32 is valid only at index 0. Out-of-range fields leave writes unchanged and reads return 0. Avoid undefined shifts.",
+  "instruction": "Implement bitfield.c. bitfield_read32 extracts field.width bits at field.index. bitfield_write32 replaces exactly that field. Width may be 0 through 32; width 32 is valid only at index 0. Out-of-range fields leave writes unchanged and reads return 0. Avoid undefined shifts."
+}

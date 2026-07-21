@@ -1,0 +1,19 @@
+{
+  "task_id": "architecture-modeling-queue",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Accellera SystemC",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/systemc",
+    "commit": "adb09b1e3f998db9cce702fb8dce22a302c58001",
+    "paths": [
+      "examples/sysc/simple_fifo/simple_fifo.cpp",
+      "examples/sysc/pipe/main.cpp"
+    ]
+  },
+  "prompt": "Implement mm1_metrics(arrival_rate, service_rate). For a stable M/M/1 queue return utilization, average jobs in system, average jobs waiting, average system time, and average waiting time. Rates use the same time unit. Require arrival_rate >= 0, service_rate > 0, and arrival_rate < service_rate.",
+  "instruction": "Implement mm1_metrics(arrival_rate, service_rate). For a stable M/M/1 queue return utilization, average jobs in system, average jobs waiting, average system time, and average waiting time. Rates use the same time unit. Require arrival_rate >= 0, service_rate > 0, and arrival_rate < service_rate."
+}

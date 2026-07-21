@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-lru",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "ChampSim",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/champsim",
+    "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+    "paths": [
+      "replacement/lru/lru.cc",
+      "inc/util/lru_table.h"
+    ]
+  },
+  "prompt": "Implement LRUSet in model.py for one cache set. Lines are numbered from 0 through ways-1. touch marks a line most recently used. victim must return the least recently touched line, preferring never-touched lines in ascending line order. invalidate makes a line eligible as never touched. Reject invalid line numbers and non-positive associativity.",
+  "instruction": "Implement LRUSet in model.py for one cache set. Lines are numbered from 0 through ways-1. touch marks a line most recently used. victim must return the least recently touched line, preferring never-touched lines in ascending line order. invalidate makes a line eligible as never touched. Reject invalid line numbers and non-positive associativity."
+}

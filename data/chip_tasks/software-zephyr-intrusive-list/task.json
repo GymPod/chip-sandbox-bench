@@ -1,0 +1,19 @@
+{
+  "task_id": "software-zephyr-intrusive-list",
+  "discipline": "Software Development",
+  "benchmark": "Zephyr RTOS",
+  "tools": [
+    "gcc",
+    "C11"
+  ],
+  "source": {
+    "repo": "benchmarks/zephyr",
+    "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+    "paths": [
+      "tests/unit/list/dlist.c",
+      "include/zephyr/sys/dlist.h"
+    ]
+  },
+  "prompt": "Implement the intrusive doubly linked list API in utility.c. list_init uses a circular sentinel. Support append, prepend, remove, pop_front, and pop_back. Removal must leave the removed node self-linked; popping an empty list returns NULL. Do not allocate memory.",
+  "instruction": "Implement the intrusive doubly linked list API in utility.c. list_init uses a circular sentinel. Support append, prepend, remove, pop_front, and pop_back. Removal must leave the removed node self-linked; popping an empty list returns NULL. Do not allocate memory."
+}

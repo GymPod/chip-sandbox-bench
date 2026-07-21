@@ -1,0 +1,18 @@
+{
+  "task_id": "architecture-modeling-tiles",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Timeloop and Accelergy exercises",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/timeloop-accelergy-exercises",
+    "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+    "paths": [
+      "workspace/example_designs/example_designs/simple_weight_stationary/arch.yaml"
+    ]
+  },
+  "prompt": "Implement enumerate_tiles(extents, capacity). Return every positive integer tile shape whose dimensions divide the corresponding problem extent and whose element product is at most capacity. Order shapes lexicographically. Reject empty/non-positive extents and non-positive capacity.",
+  "instruction": "Implement enumerate_tiles(extents, capacity). Return every positive integer tile shape whose dimensions divide the corresponding problem extent and whose element product is at most capacity. Order shapes lexicographically. Reject empty/non-positive extents and non-positive capacity."
+}

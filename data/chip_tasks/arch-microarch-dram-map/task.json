@@ -1,0 +1,19 @@
+{
+  "task_id": "arch-microarch-dram-map",
+  "discipline": "Architecture & Microarchitecture",
+  "benchmark": "gem5",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/gem5",
+    "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+    "paths": [
+      "src/mem/mem_ctrl.hh",
+      "src/mem/DRAMInterface.py"
+    ]
+  },
+  "prompt": "Implement map_dram(address, burst_bytes, channels, banks, row_bytes). Decode low-order fields in this order: burst offset, channel, bank, column within a row, then row. All geometry values must be positive powers of two and row_bytes must be divisible by burst_bytes. Return a dict containing offset, channel, bank, column, and row.",
+  "instruction": "Implement map_dram(address, burst_bytes, channels, banks, row_bytes). Decode low-order fields in this order: burst offset, channel, bank, column within a row, then row. All geometry values must be positive powers of two and row_bytes must be divisible by burst_bytes. Return a dict containing offset, channel, bank, column, and row."
+}

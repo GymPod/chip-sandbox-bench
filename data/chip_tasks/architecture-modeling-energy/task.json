@@ -1,0 +1,19 @@
+{
+  "task_id": "architecture-modeling-energy",
+  "discipline": "Architecture Modeling",
+  "benchmark": "Timeloop and Accelergy exercises",
+  "tools": [
+    "python3",
+    "pytest"
+  ],
+  "source": {
+    "repo": "benchmarks/timeloop-accelergy-exercises",
+    "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+    "paths": [
+      "workspace/cheatsheets/4_compound_component.yaml",
+      "workspace/cheatsheets/3_architecture.yaml"
+    ]
+  },
+  "prompt": "Implement aggregate_energy(action_counts, energy_per_action). For every component and action count, multiply by the matching per-action energy and return component totals plus total. Reject negative counts or energies and raise KeyError when a requested component/action has no energy model. Do not count unused energy-table entries.",
+  "instruction": "Implement aggregate_energy(action_counts, energy_per_action). For every component and action count, multiply by the matching per-action energy and return component totals plus total. Reject negative counts or energies and raise KeyError when a requested component/action has no energy model. Do not count unused energy-table entries."
+}
