@@ -63,3 +63,7 @@ is bounded by the solver before it is added to the trace.
 
 The top-level benchmark result also contains `solver_trace_summary`, with trace
 and step counts plus passed, failed, and error totals.
+
+Open [`viewer/trace-viewer.html`](../viewer/trace-viewer.html) directly in a
+browser and select a benchmark result JSON or JSONL file to inspect all traces
+and steps without running a server.

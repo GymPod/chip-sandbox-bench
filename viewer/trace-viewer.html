@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solver Trace Viewer</title>
+    <link rel="stylesheet" href="./static/trace-viewer.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span>Solver Trace Viewer</span>
+      </div>
+      <label class="file-button">
+        <input id="result-file" type="file" accept=".json,.jsonl,application/json" />
+        Open result
+      </label>
+    </header>
+
+    <main class="layout">
+      <aside class="trace-rail">
+        <div class="rail-heading">
+          <span>Runs</span>
+          <span id="trace-count">0</span>
+        </div>
+        <div id="trace-list" class="trace-list"></div>
+      </aside>
+
+      <section class="content">
+        <div id="empty-state" class="empty-state">
+          <h1>Open a benchmark result</h1>
+          <p>Select a JSON or JSONL result containing versioned solver traces.</p>
+        </div>
+
+        <div id="trace-view" hidden>
+          <header class="trace-header">
+            <div>
+              <div class="identity-row">
+                <span id="trace-status" class="status"></span>
+                <span id="trace-provider" class="provider"></span>
+              </div>
+              <h1 id="trace-task"></h1>
+              <p id="trace-id" class="trace-id"></p>
+            </div>
+            <dl class="trace-meta">
+              <div><dt>Model</dt><dd id="trace-model"></dd></div>
+              <div><dt>Started</dt><dd id="trace-started"></dd></div>
+              <div><dt>Steps</dt><dd id="trace-steps-count"></dd></div>
+            </dl>
+          </header>
+          <div id="steps" class="steps"></div>
+        </div>
+
+        <div id="error-state" class="error-state" hidden></div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/trace-viewer.js"></script>
+  </body>
+</html>
