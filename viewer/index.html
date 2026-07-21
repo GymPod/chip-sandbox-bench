@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>Chip Task Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="icon-button task-drawer-toggle" id="task-drawer-toggle" title="Show tasks" aria-label="Show tasks" aria-expanded="false">
+          <span class="menu-icon" aria-hidden="true"></span>
+        </button>
+        <a class="brand" href="#" aria-label="Chip Task Viewer home">
+          <span class="chip-mark" aria-hidden="true"><span></span></span>
+          <span>Chip Task Viewer</span>
+        </a>
+        <div class="topbar-summary">
+          <span id="task-total">0 tasks</span>
+          <span class="topbar-divider"></span>
+          <span id="file-total">0 files</span>
+        </div>
+      </header>
+
+      <aside class="task-rail" id="task-rail" aria-label="Task browser">
+        <div class="rail-tools">
+          <label class="search-field">
+            <span class="search-icon" aria-hidden="true"></span>
+            <span class="sr-only">Search tasks</span>
+            <input id="task-search" type="search" placeholder="Search tasks" autocomplete="off" />
+          </label>
+          <label class="filter-field">
+            <span>Discipline</span>
+            <select id="discipline-filter">
+              <option value="">All disciplines</option>
+            </select>
+          </label>
+        </div>
+        <div class="task-list-heading">
+          <span>Tasks</span>
+          <span id="visible-count">0</span>
+        </div>
+        <nav class="task-list" id="task-list"></nav>
+        <div class="no-results" id="no-results" hidden>No matching tasks</div>
+      </aside>
+
+      <button class="drawer-scrim" id="drawer-scrim" aria-label="Close tasks" tabindex="-1"></button>
+
+      <main class="content" id="content">
+        <section class="loading-state" id="loading-state" aria-live="polite">
+          <span class="loading-chip"><span></span></span>
+          <p>Loading task sources...</p>
+        </section>
+
+        <div id="task-view" hidden>
+          <header class="task-header">
+            <div class="eyebrow-row">
+              <span class="discipline-label" id="task-discipline"></span>
+              <span class="benchmark-label" id="task-benchmark"></span>
+            </div>
+            <h1 id="task-title"></h1>
+            <p class="task-id" id="task-id"></p>
+            <div class="tool-list" id="tool-list"></div>
+          </header>
+
+          <nav class="tabs" id="tabs" aria-label="Task sections">
+            <button class="tab" data-tab="overview">Overview</button>
+            <button class="tab" data-tab="workspace">Workspace <span class="tab-count" data-count="workspace"></span></button>
+            <button class="tab" data-tab="tests">Tests <span class="tab-count" data-count="tests"></span></button>
+            <button class="tab" data-tab="solution">Solution <span class="tab-count" data-count="solution"></span></button>
+          </nav>
+
+          <section class="overview" id="overview-panel">
+            <div class="prompt-block">
+              <div class="section-label">Prompt</div>
+              <p id="task-prompt"></p>
+            </div>
+            <div class="overview-grid">
+              <section class="info-section">
+                <h2>Instruction</h2>
+                <p id="task-instruction"></p>
+              </section>
+              <section class="info-section source-section">
+                <h2>Source provenance</h2>
+                <dl>
+                  <div>
+                    <dt>Repository</dt>
+                    <dd id="source-repo"></dd>
+                  </div>
+                  <div>
+                    <dt>Commit</dt>
+                    <dd><code id="source-commit"></code></dd>
+                  </div>
+                </dl>
+                <div class="source-paths" id="source-paths"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="file-browser" id="file-panel" hidden>
+            <aside class="file-list" id="file-list" aria-label="Files"></aside>
+            <article class="code-pane">
+              <header class="code-header">
+                <div class="file-identity">
+                  <span class="file-type" id="file-language"></span>
+                  <span class="file-path" id="file-path"></span>
+                </div>
+                <button class="copy-button" id="copy-button" title="Copy file contents">
+                  <span class="copy-icon" aria-hidden="true"></span>
+                  <span id="copy-label">Copy</span>
+                </button>
+              </header>
+              <div class="code-scroll">
+                <pre class="code-lines" id="code-frame"><code id="code-content"></code></pre>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <section class="error-state" id="error-state" hidden>
+          <h1>Task data unavailable</h1>
+          <p id="error-message"></p>
+          <button id="retry-button">Retry</button>
+        </section>
+      </main>
+    </div>
+    <script src="/vendor/prism/prism.js" defer></script>
+    <script src="/vendor/prism/prism-python.min.js" defer></script>
+    <script src="/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="/vendor/prism/prism-c.min.js" defer></script>
+    <script src="/vendor/prism/prism-cpp.min.js" defer></script>
+    <script src="/vendor/prism/prism-verilog.min.js" defer></script>
+    <script src="/vendor/prism/prism-json.min.js" defer></script>
+    <script src="/vendor/prism/prism-yaml.min.js" defer></script>
+    <script src="/vendor/prism/prism-markdown.min.js" defer></script>
+    <script src="/vendor/prism/prism-line-numbers.min.js" defer></script>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

@@ -48,6 +48,19 @@ python -m venv .venv
 .venv/bin/python -m pip install -e "py[providers,env]"
 ```
 
+Browse the inspectable chip-design prompts, workspaces, tests, and gold
+solutions:
+
+```bash
+cd viewer
+npm install
+npx convex dev
+npm run dev
+```
+
+The viewer reads task metadata and source files from Convex. See
+[`viewer/README.md`](viewer/README.md) for backfill and deployment commands.
+
 Run one Docker-backed Python task:
 
 ```bash
