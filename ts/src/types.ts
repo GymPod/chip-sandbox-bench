@@ -8,6 +8,15 @@ export type BenchTask = {
   };
   data_source?: string;
   env_type?: string;
+  discipline?: string;
+  benchmark?: string;
+  tools?: string[];
+  source?: {
+    repo: string;
+    commit: string;
+    paths: string[];
+  };
+  archive_sha256?: string;
 };
 
 export type CommandResult = {

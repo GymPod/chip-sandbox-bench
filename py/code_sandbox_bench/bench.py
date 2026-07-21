@@ -30,7 +30,7 @@ from code_sandbox_bench.task_env import TaskEnv, resolve_task_env
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET = ROOT / "data" / "terminalbench_2026_03_05_smoke16.jsonl"
-PREPARE_COMMAND = """
+ARCHIVE_PREPARE_COMMAND = """
 set -eu
 mkdir -p /tmp/tb /workspace /testbed /tests /solution /logs/verifier
 python3 - <<'PY'
@@ -43,8 +43,21 @@ cp -a /tmp/tb/. /workspace/
 cp -a /tmp/tb/. /testbed/
 if [ -d /tmp/tb/tests ]; then cp -a /tmp/tb/tests/. /tests/; fi
 if [ -d /tmp/tb/solution ]; then cp -a /tmp/tb/solution/. /solution/; fi
+"""
+PREPARE_COMMAND = ARCHIVE_PREPARE_COMMAND + """
 python3 -m ensurepip --user >/tmp/ensurepip.log 2>&1 || true
 PIP_INDEX_URL=https://pypi.org/simple python3 -m pip install --user pytest==8.4.1 >/tmp/pip-pytest.log 2>&1 || true
+"""
+CHIP_PREPARE_COMMAND = ARCHIVE_PREPARE_COMMAND + r"""
+command -v gcc >/dev/null
+command -v g++ >/dev/null
+iverilog -V 2>&1 | grep -q 'Icarus Verilog version 12\.0'
+yosys -V | grep -q 'Yosys 0\.59+0'
+test "$(pkg-config --modversion systemc)" = "3.0.2"
+python3 - <<'PY'
+import pytest
+import yaml
+PY
 """
 VERIFY_COMMAND = """
 set +e
@@ -325,6 +338,11 @@ async def run_task_attempt(
         "task_disk_gb": disk_gb,
         "env_type": task_env.env_type,
         "data_source": task_env.data_source,
+        "discipline": task.discipline,
+        "benchmark": task.benchmark,
+        "tools": list(task.tools),
+        "source": task.source,
+        "archive_sha256": task.archive_sha256,
         "task_workdir": task_env.workdir,
         "task_runtime": task_env.runtime,
         "task_docker_image": task_env.docker_image,
@@ -645,6 +663,8 @@ def load_env_file(path: Path) -> None:
 
 
 def prepare_command_for(task_env: TaskEnv) -> str:
+    if task_env.env_type == "chip":
+        return CHIP_PREPARE_COMMAND
     if task_env.env_type != "harbor_swesmith":
         return PREPARE_COMMAND
     return PREPARE_COMMAND + fallback_env_setup(task_env) + deterministic_solve_rewrite()

@@ -215,8 +215,8 @@
       ]
     },
     {
-      "archive_bytes": 937,
-      "archive_sha256": "c0472f7740cf8b2a0bebf024d5c9e9b8bf238ee009706c9164a9eb5e200a50ee",
+      "archive_bytes": 945,
+      "archive_sha256": "abd899ba32ccc7b62d07d330bcb3f276fec950c0a6851dfe11512c8a18c8ed55",
       "benchmark": "riscv-formal methodology",
       "data_source": "riscv-formal methodology",
       "discipline": "Verification (DV/FV)",

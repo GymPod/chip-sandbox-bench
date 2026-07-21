@@ -3,6 +3,15 @@ import { loadEnvManifests } from "./env_manifest";
 import type { BenchTask, ProviderName, TaskEnv } from "./types";
 
 export function resolveTaskEnv(task: BenchTask, defaultRuntime: string, provider: ProviderName): TaskEnv {
+  if (task.env_type === "chip") {
+    return {
+      envType: task.env_type,
+      dataSource: task.data_source,
+      workdir: "/workspace",
+      verifierCwd: "/workspace",
+      runtime: process.env.CHIP_TASK_RUNTIME ?? defaultRuntime
+    };
+  }
   if (task.env_type === "harbor_swesmith") {
     const dockerfile = readArchiveText(task, "environment/Dockerfile");
     const dockerImage = dockerfile ? parseDockerfileFrom(dockerfile) : undefined;

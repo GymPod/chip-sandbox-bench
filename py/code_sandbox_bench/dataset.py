@@ -13,6 +13,11 @@ class BenchTask:
     task_files_encoding: str = "tar.gz+base64"
     data_source: str | None = None
     env_type: str | None = None
+    discipline: str | None = None
+    benchmark: str | None = None
+    tools: tuple[str, ...] = ()
+    source: dict[str, object] | None = None
+    archive_sha256: str | None = None
 
 
 def iter_tasks(path: Path) -> Iterator[BenchTask]:
@@ -29,6 +34,11 @@ def iter_tasks(path: Path) -> Iterator[BenchTask]:
                     task_files_encoding=task_files.get("encoding", "tar.gz+base64"),
                     data_source=row.get("data_source"),
                     env_type=row.get("env_type"),
+                    discipline=row.get("discipline"),
+                    benchmark=row.get("benchmark"),
+                    tools=tuple(row.get("tools") or ()),
+                    source=row.get("source"),
+                    archive_sha256=row.get("archive_sha256"),
                 )
         return
 
@@ -47,6 +57,11 @@ def iter_tasks(path: Path) -> Iterator[BenchTask]:
                 task_files_encoding=task_files.get("encoding", "tar.gz+base64"),
                 data_source=instance.get("data_source") or row.get("data_source"),
                 env_type=instance.get("env_type") or row.get("env_type"),
+                discipline=instance.get("discipline") or row.get("discipline"),
+                benchmark=instance.get("benchmark") or row.get("benchmark"),
+                tools=tuple(instance.get("tools") or row.get("tools") or ()),
+                source=instance.get("source") or row.get("source"),
+                archive_sha256=instance.get("archive_sha256") or row.get("archive_sha256"),
             )
 
 

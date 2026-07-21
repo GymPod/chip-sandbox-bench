@@ -22,7 +22,7 @@ import {
 import { resolveTaskEnv } from "./task_env";
 import type { BenchArgs, BenchTask, CommandResult, Provider, ProviderName, ResourcePolicyName, RunKind, RunMode, TaskEnv } from "./types";
 
-const basePrepareCommand = `
+const archivePrepareCommand = `
 set -eu
 mkdir -p /tmp/tb /workspace /tests /solution /logs/verifier
 python3 - <<'PY'
@@ -34,8 +34,21 @@ tar --no-same-owner -xzf /tmp/task.tar.gz -C /tmp/tb
 cp -a /tmp/tb/. /workspace/
 if [ -d /tmp/tb/tests ]; then cp -a /tmp/tb/tests/. /tests/; fi
 if [ -d /tmp/tb/solution ]; then cp -a /tmp/tb/solution/. /solution/; fi
+`;
+const basePrepareCommand = `${archivePrepareCommand}
 python3 -m ensurepip --user >/tmp/ensurepip.log 2>&1 || true
 PIP_INDEX_URL=https://pypi.org/simple python3 -m pip install --user pytest==8.4.1 >/tmp/pip-pytest.log 2>&1 || true
+`;
+const chipPrepareCommand = `${archivePrepareCommand}
+command -v gcc >/dev/null
+command -v g++ >/dev/null
+iverilog -V 2>&1 | grep -q 'Icarus Verilog version 12\\.0'
+yosys -V | grep -q 'Yosys 0\\.59+0'
+test "$(pkg-config --modversion systemc)" = "3.0.2"
+python3 - <<'PY'
+import pytest
+import yaml
+PY
 `;
 const verifyCommand = `
 set +e
@@ -343,6 +356,9 @@ fi`;
 }
 
 export function prepareCommandFor(taskEnv: TaskEnv, provider: ProviderName): string {
+  if (taskEnv.envType === "chip") {
+    return chipPrepareCommand;
+  }
   if (taskEnv.envType !== "harbor_swesmith") {
     return basePrepareCommand;
   }
@@ -645,6 +661,7 @@ async function runTaskAttempt(
     task_disk_gb: diskGb,
     env_type: taskEnv.envType,
     data_source: taskEnv.dataSource,
+    ...taskMetadata(task),
     task_workdir: taskEnv.workdir,
     task_runtime: taskEnv.runtime,
     task_docker_image: taskEnv.dockerImage,
@@ -678,6 +695,16 @@ async function runTaskAttempt(
     item.solve_stderr_tail = solveResult.stderr.slice(-2000);
   }
   return item;
+}
+
+export function taskMetadata(task: BenchTask): Record<string, unknown> {
+  return {
+    discipline: task.discipline,
+    benchmark: task.benchmark,
+    tools: task.tools,
+    source: task.source,
+    archive_sha256: task.archive_sha256
+  };
 }
 
 function formatError(error: unknown): string {

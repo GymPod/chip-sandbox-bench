@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import os
 import re
 import tarfile
 from dataclasses import dataclass
@@ -28,6 +29,14 @@ class TaskEnv:
 
 
 def resolve_task_env(task: BenchTask, default_runtime: str, provider: str) -> TaskEnv:
+    if task.env_type == "chip":
+        return TaskEnv(
+            env_type=task.env_type,
+            data_source=task.data_source,
+            workdir="/workspace",
+            verifier_cwd="/workspace",
+            runtime=os.environ.get("CHIP_TASK_RUNTIME") or default_runtime,
+        )
     if task.env_type == "harbor_swesmith":
         dockerfile = read_archive_text(task, "environment/Dockerfile")
         task_toml = read_archive_text(task, "task.toml")
