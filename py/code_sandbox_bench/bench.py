@@ -26,6 +26,11 @@ from code_sandbox_bench.resource_policy import (
     resource_retry_decision,
     resource_spec,
 )
+from code_sandbox_bench.solver_trace import (
+    TRACE_PATH as SOLVER_TRACE_PATH,
+    parse_solver_trace,
+    summarize_solver_traces,
+)
 from code_sandbox_bench.task_env import TaskEnv, resolve_task_env
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -184,6 +189,8 @@ async def run_task_attempt(
     result = CommandResult("", "", 1)
     solve_result: CommandResult | None = None
     solve_elapsed: float | None = None
+    solver_trace: dict[str, Any] | None = None
+    solver_trace_error: str | None = None
     provider_metadata: dict[str, object] = {}
     disk_usage: dict[str, object] | None = None
     phases: dict[str, float] = {}
@@ -243,13 +250,32 @@ async def run_task_attempt(
                 solve_result = await timed(
                     "solve",
                     lambda: provider.run(
-                            with_bench_env(with_forwarded_env(solve_command, resolve_forward_env(args)), task_env),
-                            cwd=task_env.workdir,
-                            timeout=args.solve_timeout_seconds,
-                            trace={"label": "solve"},
+                        with_bench_env(
+                            with_forwarded_env(solve_command, resolve_forward_env(args)),
+                            task_env,
+                            task,
+                            args.provider,
                         ),
+                        cwd=task_env.workdir,
+                        timeout=args.solve_timeout_seconds,
+                        trace={"label": "solve"},
+                    ),
                 )
                 solve_elapsed = time.monotonic() - solve_started
+                if args.solver == "ai-gateway":
+                    trace_result = await timed(
+                        "solver_trace_read",
+                        lambda: provider.run(
+                            f"if [ -f {SOLVER_TRACE_PATH} ]; then cat {SOLVER_TRACE_PATH}; fi",
+                            cwd=None,
+                            timeout=min(30, timeout_seconds),
+                            trace={"label": "read_solver_trace"},
+                        ),
+                    )
+                    try:
+                        solver_trace = parse_solver_trace(trace_result.stdout)
+                    except (json.JSONDecodeError, ValueError) as error:
+                        solver_trace_error = f"{type(error).__name__}: {error}"
             result = await timed(
                 "verify",
                 lambda: provider.run(
@@ -366,6 +392,8 @@ async def run_task_attempt(
         **({"resource_retry": {"resources": retry_resource_spec}} if retry_resource_spec else {}),
         "phases": phases,
         "agent_trace": agent_trace,
+        **({"solver_trace": solver_trace} if solver_trace else {}),
+        **({"solver_trace_error": solver_trace_error} if solver_trace_error else {}),
         **provider_metadata,
         "stdout_tail": result.stdout[-2000:],
         "stderr_tail": result.stderr[-2000:],
@@ -436,6 +464,9 @@ async def main_async(args: argparse.Namespace) -> None:
         "adaptive_concurrency": adaptive_concurrency,
         "agent_trace_summary": summarize_agent_traces(
             [item["agent_trace"] for item in results if isinstance(item.get("agent_trace"), dict)]
+        ),
+        "solver_trace_summary": summarize_solver_traces(
+            [item["solver_trace"] for item in results if isinstance(item.get("solver_trace"), dict)]
         ),
         "results": results,
     }
@@ -935,12 +966,15 @@ def with_forwarded_env(command: str, names: list[str]) -> str:
     return command if not exports else "\n".join(exports + [command])
 
 
-def with_bench_env(command: str, task_env: TaskEnv) -> str:
+def with_bench_env(command: str, task_env: TaskEnv, task: BenchTask, provider: str) -> str:
     exports = [
         f"export BENCH_TASK_ENV_TYPE={shlex.quote(task_env.env_type)}",
         f"export BENCH_TASK_WORKDIR={shlex.quote(task_env.workdir)}",
         f"export BENCH_TASK_FILE={shlex.quote(f'{task_env.workdir}/TASK.md')}",
         f"export BENCH_TASK_DOCKER_IMAGE={shlex.quote(task_env.docker_image or '')}",
+        f"export BENCH_TASK_ID={shlex.quote(task.task_id)}",
+        f"export BENCH_PROVIDER={shlex.quote(provider)}",
+        f"export BENCH_SOLVER_TRACE_PATH={shlex.quote(SOLVER_TRACE_PATH)}",
     ]
     return "\n".join(exports + [command])
 

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { AdaptiveConcurrencyLimiter, DEFAULT_ADAPTIVE_CONCURRENCY_STATE_PATH, type AdaptiveConcurrencySummary } from "./adaptive_concurrency";
 import { AgentTraceRecorder, summarizeAgentTraces, TracedProvider, type AgentTrace } from "./agent_trace";
 import { estimateCost } from "./cost_model";
@@ -20,6 +20,12 @@ import {
   type ResourceSpec
 } from "./resource_policy";
 import { resolveTaskEnv } from "./task_env";
+import {
+  isSolverTrace,
+  parseSolverTrace,
+  summarizeSolverTraces,
+  type SolverTrace
+} from "./solver_trace";
 import type { BenchArgs, BenchTask, CommandResult, Provider, ProviderName, ResourcePolicyName, RunKind, RunMode, TaskEnv } from "./types";
 
 const archivePrepareCommand = `
@@ -72,6 +78,8 @@ for path in /workspace /testbed /tests /solution /tmp /root/.cache /home/agent/.
 done
 exit 0
 `;
+const solverTracePath = "/logs/solver/trace.json";
+const gatewaySolverRemotePath = "/tmp/code_sandbox_bench_ai_gateway_solver.py";
 
 function parseArgs(argv: string[]): BenchArgs {
   const values = new Map<string, string>();
@@ -507,6 +515,8 @@ async function runTaskAttempt(
   let provider: Provider | undefined;
   let solveElapsedSeconds: number | undefined;
   let solveResult: CommandResult | undefined;
+  let solverTrace: SolverTrace | undefined;
+  let solverTraceError: string | undefined;
   let result: CommandResult = { stdout: "", stderr: "", returnCode: 1 };
   let providerMetadata: Record<string, unknown> = {};
   let diskUsage: DiskUsageSummary | undefined;
@@ -562,16 +572,34 @@ async function runTaskAttempt(
     if (prepare.returnCode === 0) {
       await timed("instruction_write", () => writeTaskInstructions(activeProvider, task, taskEnv, timeoutSeconds));
       if (solveCommand) {
+        if (usesAiGatewaySolver(args)) {
+          await timed("solver_upload", () => uploadAiGatewaySolver(activeProvider, timeoutSeconds));
+        }
         const solveStarted = performance.now();
         solveResult = await timed("solve", () =>
           activeProvider.run(
-            withBenchEnv(withForwardedEnv(solveCommand, args.forwardEnv), taskEnv),
+            withBenchEnv(withForwardedEnv(solveCommand, args.forwardEnv), taskEnv, task, args.provider),
             taskEnv.workdir,
             args.solveTimeoutSeconds,
             { label: "solve" }
           )
         );
         solveElapsedSeconds = (performance.now() - solveStarted) / 1000;
+        if (usesAiGatewaySolver(args)) {
+          const traceResult = await timed("solver_trace_read", () =>
+            activeProvider.run(
+              `if [ -f ${solverTracePath} ]; then cat ${solverTracePath}; fi`,
+              undefined,
+              Math.min(30, timeoutSeconds),
+              { label: "read_solver_trace" }
+            )
+          );
+          try {
+            solverTrace = parseSolverTrace(traceResult.stdout);
+          } catch (error) {
+            solverTraceError = formatError(error);
+          }
+        }
       }
       result = await timed("verify", () =>
         activeProvider.run(verifyCommandFor(taskEnv), taskEnv.verifierCwd, timeoutSeconds, { label: "verify" })
@@ -684,6 +712,8 @@ async function runTaskAttempt(
     ...(retryResourceSpec ? { resource_retry: { resources: retryResourceSpec } } : {}),
     phases,
     agent_trace: agentTrace,
+    ...(solverTrace ? { solver_trace: solverTrace } : {}),
+    ...(solverTraceError ? { solver_trace_error: solverTraceError } : {}),
     ...providerMetadata,
     stdout_tail: result.stdout.slice(-2000),
     stderr_tail: result.stderr.slice(-2000)
@@ -805,14 +835,36 @@ function withForwardedEnv(command: string, names: string[]): string {
   return `${exports.join("\n")}\n${command}`;
 }
 
-function withBenchEnv(command: string, taskEnv: TaskEnv): string {
+function withBenchEnv(
+  command: string,
+  taskEnv: TaskEnv,
+  task: BenchTask,
+  provider: ProviderName
+): string {
   const exports = [
     `export BENCH_TASK_ENV_TYPE=${shellQuote(taskEnv.envType)}`,
     `export BENCH_TASK_WORKDIR=${shellQuote(taskEnv.workdir)}`,
     `export BENCH_TASK_FILE=${shellQuote(`${taskEnv.workdir}/TASK.md`)}`,
-    `export BENCH_TASK_DOCKER_IMAGE=${shellQuote(taskEnv.dockerImage ?? "")}`
+    `export BENCH_TASK_DOCKER_IMAGE=${shellQuote(taskEnv.dockerImage ?? "")}`,
+    `export BENCH_TASK_ID=${shellQuote(task.task_id)}`,
+    `export BENCH_PROVIDER=${shellQuote(provider)}`,
+    `export BENCH_SOLVER_TRACE_PATH=${shellQuote(solverTracePath)}`
   ];
   return `${exports.join("\n")}\n${command}`;
+}
+
+function usesAiGatewaySolver(args: BenchArgs): boolean {
+  return args.solveCommandFile !== undefined && basename(args.solveCommandFile) === "ai_gateway_solver.sh";
+}
+
+async function uploadAiGatewaySolver(provider: Provider, timeoutSeconds: number): Promise<void> {
+  const source = readFileSync(
+    resolve(import.meta.dir, "../../py/code_sandbox_bench/ai_gateway_solver.py"),
+    "utf8"
+  );
+  await writeText(provider, gatewaySolverRemotePath, source, timeoutSeconds, {
+    label: "upload_ai_gateway_solver"
+  });
 }
 
 function taskEnvCounts(tasks: BenchTask[]): Record<string, number> {
@@ -873,6 +925,9 @@ async function main(): Promise<void> {
     adaptive_concurrency: run.adaptiveConcurrency,
     agent_trace_summary: summarizeAgentTraces(
       results.map((item) => item.agent_trace).filter((trace): trace is AgentTrace => isAgentTrace(trace))
+    ),
+    solver_trace_summary: summarizeSolverTraces(
+      results.map((item) => item.solver_trace).filter((trace): trace is SolverTrace => isSolverTrace(trace))
     ),
     results
   };

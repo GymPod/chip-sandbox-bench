@@ -1,12 +1,16 @@
 import json
+import hashlib
 import os
 import pathlib
 import re
 import subprocess
 import sys
 import textwrap
+import time
 import urllib.error
 import urllib.request
+import uuid
+from datetime import datetime, timezone
 
 
 API_BASE = os.environ.get("AI_GATEWAY_BASE_URL", "https://ai-gateway.vercel.sh/v1").rstrip("/")
@@ -26,6 +30,9 @@ MAX_TOKENS = int(os.environ.get("SOLVER_MAX_TOKENS", "6000"))
 TASK_WORKDIR = os.environ.get("BENCH_TASK_WORKDIR", "/workspace")
 TASK_FILE = os.environ.get("BENCH_TASK_FILE", f"{TASK_WORKDIR}/TASK.md")
 TASK_ENV_TYPE = os.environ.get("BENCH_TASK_ENV_TYPE", "terminalbench")
+TASK_ID = os.environ.get("BENCH_TASK_ID", pathlib.Path(TASK_FILE).stem)
+PROVIDER = os.environ.get("BENCH_PROVIDER", "unknown")
+TRACE_PATH = pathlib.Path(os.environ.get("BENCH_SOLVER_TRACE_PATH", "/logs/solver/trace.json"))
 
 
 def main() -> None:
@@ -38,80 +45,139 @@ def main() -> None:
         ]
     )
     context = workspace_context()
+    system_prompt = textwrap.dedent(
+        """
+        You are an autonomous benchmark task solver running inside a Linux sandbox.
+        Work only in the task workdir unless the task or tests require another path.
+        You may install packages, edit files, build code, and create outputs.
+        The base image may only include Python. If the task needs R, Java, build tools,
+        autotools, or another runtime, install it noninteractively before using it.
+        Return only a bash script to execute. Do not include explanation outside the script.
+        The script should be idempotent and should not modify /tests.
+        """
+    ).strip()
+    user_prompt = (
+        f"Task:\n{task}\n\n"
+        f"Task env type: {TASK_ENV_TYPE}\n"
+        f"Task workdir: {TASK_WORKDIR}\n\n"
+        f"Verifier tests:\n{tests}\n\n"
+        f"Initial workspace context:\n{context}\n\n"
+        "Write a bash script that completes the task. The verifier is bash /tests/test.sh when present, "
+        "otherwise pytest /tests/test_outputs.py."
+    )
     messages = [
         {
             "role": "system",
-            "content": textwrap.dedent(
-                """
-                You are an autonomous benchmark task solver running inside a Linux sandbox.
-                Work only in the task workdir unless the task or tests require another path.
-                You may install packages, edit files, build code, and create outputs.
-                The base image may only include Python. If the task needs R, Java, build tools,
-                autotools, or another runtime, install it noninteractively before using it.
-                Return only a bash script to execute. Do not include explanation outside the script.
-                The script should be idempotent and should not modify /tests.
-                """
-            ).strip(),
+            "content": system_prompt,
         },
         {
             "role": "user",
-            "content": (
-                f"Task:\n{task}\n\n"
-                f"Task env type: {TASK_ENV_TYPE}\n"
-                f"Task workdir: {TASK_WORKDIR}\n\n"
-                f"Verifier tests:\n{tests}\n\n"
-                f"Initial workspace context:\n{context}\n\n"
-                "Write a bash script that completes the task. The verifier is bash /tests/test.sh when present, "
-                "otherwise pytest /tests/test_outputs.py."
-            ),
+            "content": user_prompt,
         },
     ]
 
+    trace = {
+        "schema_version": 1,
+        "trace_id": str(uuid.uuid4()),
+        "task_id": TASK_ID,
+        "provider": PROVIDER,
+        "solver": "ai-gateway",
+        "status": "running",
+        "started_at": iso_now(),
+        "step_count": 0,
+        "steps": [],
+    }
+    persist_trace(trace)
     last_verify = ""
-    for step in range(1, MAX_STEPS + 1):
-        print(f"ai_gateway solver step {step}/{MAX_STEPS}", flush=True)
-        content = chat(messages)
-        script = extract_script(content)
-        script_path = pathlib.Path(f"/tmp/ai_gateway_solver_step_{step}.sh")
-        script_path.write_text(script)
-        script_path.chmod(0o755)
-        print(f"--- solver script {step} ---", flush=True)
-        print(script[-12000:], flush=True)
-        print(f"--- end solver script {step} ---", flush=True)
-        print(f"executing {script_path}", flush=True)
-        rc, stdout, stderr = run(str(script_path), STEP_TIMEOUT)
-        print(f"script rc={rc}", flush=True)
-        if stdout:
-            print(stdout[-4000:], flush=True)
-        if stderr:
-            print(stderr[-4000:], file=sys.stderr, flush=True)
-
-        verify_rc, verify_stdout, verify_stderr = run(
-            'if [ -f /tests/test.sh ]; then PATH="$HOME/.local/bin:$PATH" bash /tests/test.sh; '
-            'else PATH="$HOME/.local/bin:$PATH" '
-            "pytest /tests/test_outputs.py -q; fi",
-            STEP_TIMEOUT,
-        )
-        print(f"verify rc={verify_rc}", flush=True)
-        if verify_stdout:
-            print(verify_stdout[-4000:], flush=True)
-        if verify_stderr:
-            print(verify_stderr[-4000:], file=sys.stderr, flush=True)
-        if verify_rc == 0:
-            sys.exit(0)
-        last_verify = f"script rc={rc}\nscript stdout:\n{stdout}\nscript stderr:\n{stderr}\nverify stdout:\n{verify_stdout}\nverify stderr:\n{verify_stderr}"
-        messages.append({"role": "assistant", "content": content})
-        messages.append(
-            {
-                "role": "user",
-                "content": (
-                    "The verifier still failed. Return a revised bash script only.\n\n"
-                    f"Latest script/verifier output:\n{last_verify[-20000:]}"
-                ),
+    try:
+        for step in range(1, MAX_STEPS + 1):
+            print(f"ai_gateway solver step {step}/{MAX_STEPS}", flush=True)
+            trace_step = {
+                "index": step,
+                "status": "running",
+                "started_at": iso_now(),
+                "request": {
+                    "message_count": len(messages),
+                    "prompt": str(messages[-1]["content"]),
+                },
             }
-        )
-    print(last_verify[-12000:], file=sys.stderr)
-    sys.exit(1)
+            trace["steps"].append(trace_step)
+            persist_trace(trace)
+
+            response = chat(messages)
+            content = response["content"]
+            trace["model"] = response["model"]
+            trace_step["response"] = response
+            script = extract_script(content)
+            trace_step["action"] = {
+                "command": script,
+                "command_sha256": hashlib.sha256(script.encode("utf-8")).hexdigest(),
+            }
+            persist_trace(trace)
+
+            script_path = pathlib.Path(f"/tmp/ai_gateway_solver_step_{step}.sh")
+            script_path.write_text(script)
+            script_path.chmod(0o755)
+            print(f"--- solver script {step} ---", flush=True)
+            print(script[-12000:], flush=True)
+            print(f"--- end solver script {step} ---", flush=True)
+            print(f"executing {script_path}", flush=True)
+            execution = run_captured(str(script_path), STEP_TIMEOUT)
+            trace_step["execution"] = execution
+            print(f"script rc={execution['return_code']}", flush=True)
+            if execution["stdout"]:
+                print(execution["stdout"][-4000:], flush=True)
+            if execution["stderr"]:
+                print(execution["stderr"][-4000:], file=sys.stderr, flush=True)
+
+            verification = run_captured(
+                'if [ -f /tests/test.sh ]; then PATH="$HOME/.local/bin:$PATH" bash /tests/test.sh; '
+                'else PATH="$HOME/.local/bin:$PATH" '
+                "pytest /tests/test_outputs.py -q; fi",
+                STEP_TIMEOUT,
+            )
+            trace_step["verification"] = verification
+            trace_step["status"] = "passed" if verification["return_code"] == 0 else "failed"
+            trace_step["completed_at"] = iso_now()
+            persist_trace(trace)
+            print(f"verify rc={verification['return_code']}", flush=True)
+            if verification["stdout"]:
+                print(verification["stdout"][-4000:], flush=True)
+            if verification["stderr"]:
+                print(verification["stderr"][-4000:], file=sys.stderr, flush=True)
+            if verification["return_code"] == 0:
+                finish_trace(trace, "passed")
+                return
+            last_verify = (
+                f"script rc={execution['return_code']}\nscript stdout:\n{execution['stdout']}\n"
+                f"script stderr:\n{execution['stderr']}\nverify stdout:\n{verification['stdout']}\n"
+                f"verify stderr:\n{verification['stderr']}"
+            )
+            messages.append({"role": "assistant", "content": content})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "The verifier still failed. Return a revised bash script only.\n\n"
+                        f"Latest script/verifier output:\n{last_verify[-20000:]}"
+                    ),
+                }
+            )
+        finish_trace(trace, "failed")
+        print(last_verify[-12000:], file=sys.stderr)
+        raise SystemExit(1)
+    except SystemExit:
+        raise
+    except Exception as error:
+        if trace["steps"]:
+            current_step = trace["steps"][-1]
+            if current_step["status"] == "running":
+                current_step["status"] = "error"
+                current_step["completed_at"] = iso_now()
+                current_step["error"] = f"{type(error).__name__}: {error}"
+        trace["error"] = f"{type(error).__name__}: {error}"
+        finish_trace(trace, "error")
+        raise
 
 
 def read_text(path: str, limit: int = 20000) -> str:
@@ -125,14 +191,59 @@ def read_text(path: str, limit: int = 20000) -> str:
 
 
 def run(command: str, timeout: int) -> tuple[int, str, str]:
-    process = subprocess.run(
-        ["/bin/bash", "-lc", command],
-        cwd=TASK_WORKDIR,
-        text=True,
-        capture_output=True,
-        timeout=timeout,
-    )
-    return process.returncode, process.stdout[-12000:], process.stderr[-12000:]
+    result = run_captured(command, timeout)
+    return int(result["return_code"]), str(result["stdout"]), str(result["stderr"])
+
+
+def run_captured(command: str, timeout: int) -> dict[str, object]:
+    started = time.monotonic()
+    try:
+        process = subprocess.run(
+            ["/bin/bash", "-lc", command],
+            cwd=TASK_WORKDIR,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+        return {
+            "return_code": process.returncode,
+            "stdout": process.stdout[-12000:],
+            "stderr": process.stderr[-12000:],
+            "duration_seconds": time.monotonic() - started,
+            "timed_out": False,
+        }
+    except subprocess.TimeoutExpired as error:
+        return {
+            "return_code": 124,
+            "stdout": decode_timeout_output(error.stdout)[-12000:],
+            "stderr": decode_timeout_output(error.stderr)[-12000:],
+            "duration_seconds": time.monotonic() - started,
+            "timed_out": True,
+        }
+
+
+def decode_timeout_output(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value
+
+
+def iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def persist_trace(trace: dict[str, object]) -> None:
+    trace["step_count"] = len(trace["steps"])
+    TRACE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temporary = TRACE_PATH.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(trace, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(TRACE_PATH)
+
+
+def finish_trace(trace: dict[str, object], status: str) -> None:
+    trace["status"] = status
+    trace["completed_at"] = iso_now()
+    persist_trace(trace)
 
 
 def workspace_context() -> str:
@@ -217,7 +328,7 @@ fi
 """
 
 
-def chat(messages: list[dict[str, str]]) -> str:
+def chat(messages: list[dict[str, str]]) -> dict[str, object]:
     key = gateway_key()
     model = resolve_model(key)
     body: dict[str, object] = {
@@ -228,7 +339,11 @@ def chat(messages: list[dict[str, str]]) -> str:
     }
     payload = gateway_request(CHAT_URL, key, body)
     try:
-        return str(payload["choices"][0]["message"]["content"])
+        return {
+            "model": str(payload.get("model") or model),
+            "content": str(payload["choices"][0]["message"]["content"]),
+            **({"usage": payload["usage"]} if isinstance(payload.get("usage"), dict) else {}),
+        }
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError(f"Unexpected AI Gateway response: {json.dumps(payload)[:2000]}") from exc
 
