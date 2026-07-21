@@ -1,3 +1,4 @@
+import inspect
 import json
 import tempfile
 import unittest
@@ -9,6 +10,10 @@ from code_sandbox_bench.solver_trace import is_solver_trace, parse_solver_trace,
 
 
 class SolverTraceTest(unittest.TestCase):
+    def test_solver_defers_annotations_for_python_39_images(self):
+        source = inspect.getsource(ai_gateway_solver)
+        self.assertTrue(source.startswith("from __future__ import annotations"))
+
     def sample(self):
         return {
             "schema_version": 1,
