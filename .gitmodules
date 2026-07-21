@@ -1,0 +1,48 @@
+[submodule "benchmarks/archgym"]
+	path = benchmarks/archgym
+	url = https://github.com/srivatsankrishnan/oss-arch-gym.git
+[submodule "benchmarks/champsim"]
+	path = benchmarks/champsim
+	url = https://github.com/ChampSim/ChampSim.git
+[submodule "benchmarks/gem5"]
+	path = benchmarks/gem5
+	url = https://github.com/gem5/gem5.git
+[submodule "benchmarks/chipbench"]
+	path = benchmarks/chipbench
+	url = https://github.com/zhongkaiyu/ChipBench.git
+[submodule "benchmarks/systemc"]
+	path = benchmarks/systemc
+	url = https://github.com/accellera-official/systemc.git
+[submodule "benchmarks/timeloop-accelergy-exercises"]
+	path = benchmarks/timeloop-accelergy-exercises
+	url = https://github.com/Accelergy-Project/timeloop-accelergy-exercises.git
+[submodule "benchmarks/verilog-eval"]
+	path = benchmarks/verilog-eval
+	url = https://github.com/NVlabs/verilog-eval.git
+[submodule "benchmarks/rtllm"]
+	path = benchmarks/rtllm
+	url = https://github.com/hkust-zhiyao/RTLLM.git
+[submodule "benchmarks/realbench"]
+	path = benchmarks/realbench
+	url = https://github.com/IPRC-DIP/RealBench.git
+[submodule "benchmarks/riscv-formal"]
+	path = benchmarks/riscv-formal
+	url = https://github.com/YosysHQ/riscv-formal.git
+[submodule "benchmarks/mcy"]
+	path = benchmarks/mcy
+	url = https://github.com/YosysHQ/mcy.git
+[submodule "benchmarks/riscv-dv"]
+	path = benchmarks/riscv-dv
+	url = https://github.com/chipsalliance/riscv-dv.git
+[submodule "benchmarks/opentitan"]
+	path = benchmarks/opentitan
+	url = https://github.com/lowRISC/opentitan.git
+[submodule "benchmarks/swe-bench"]
+	path = benchmarks/swe-bench
+	url = https://github.com/SWE-bench/SWE-bench.git
+[submodule "benchmarks/kernelbench"]
+	path = benchmarks/kernelbench
+	url = https://github.com/ScalingIntelligence/KernelBench.git
+[submodule "benchmarks/zephyr"]
+	path = benchmarks/zephyr
+	url = https://github.com/zephyrproject-rtos/zephyr.git
