@@ -16,8 +16,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TASK_ROOT = ROOT / "data" / "chip_tasks"
-DEFAULT_DATASET = ROOT / "data" / "chip_design_smoke10.jsonl"
-DEFAULT_MANIFEST = ROOT / "data" / "chip_design_smoke10.manifest.json"
+DEFAULT_DATASET = ROOT / "data" / "chip_design_50.jsonl"
+DEFAULT_MANIFEST = ROOT / "data" / "chip_design_50.manifest.json"
 
 
 def parse_args() -> argparse.Namespace:

@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 DEFAULT_DATASET = (
-    Path(__file__).resolve().parents[1] / "data" / "chip_design_smoke10.jsonl"
+    Path(__file__).resolve().parents[1] / "data" / "chip_design_50.jsonl"
 )
 SANDBOX_PATHS = (Path("/workspace"), Path("/tests"), Path("/solution"))
 

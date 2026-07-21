@@ -5,13 +5,13 @@ import { expect, test } from "@playwright/test";
 import { loadTasks } from "../src/dataset";
 
 const repoRoot = resolve(process.cwd(), "..");
-const datasetPath = resolve(repoRoot, "data/chip_design_smoke10.jsonl");
+const datasetPath = resolve(repoRoot, "data/chip_design_50.jsonl");
 
-test("chip smoke dataset is balanced and retains provenance metadata", () => {
+test("chip dataset is balanced and retains provenance metadata", () => {
   const tasks = loadTasks(datasetPath, "all");
   const counts = new Map<string, number>();
 
-  expect(tasks).toHaveLength(10);
+  expect(tasks).toHaveLength(50);
   for (const task of tasks) {
     expect(task.env_type).toBe("chip");
     expect(task.discipline).toBeTruthy();
@@ -24,11 +24,11 @@ test("chip smoke dataset is balanced and retains provenance metadata", () => {
   }
 
   expect(Object.fromEntries(counts)).toEqual({
-    "Architecture & Microarchitecture": 2,
-    "Architecture Modeling": 2,
-    "RTL Design": 2,
-    "Software Development": 2,
-    "Verification (DV/FV)": 2
+    "Architecture & Microarchitecture": 10,
+    "Architecture Modeling": 10,
+    "RTL Design": 10,
+    "Software Development": 10,
+    "Verification (DV/FV)": 10
   });
 });
 

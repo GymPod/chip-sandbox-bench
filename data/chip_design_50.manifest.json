@@ -1,0 +1,1133 @@
+{
+  "dataset": "chip_design_50.jsonl",
+  "discipline_counts": {
+    "Architecture & Microarchitecture": 10,
+    "Architecture Modeling": 10,
+    "RTL Design": 10,
+    "Software Development": 10,
+    "Verification (DV/FV)": 10
+  },
+  "schema_version": 1,
+  "task_count": 50,
+  "tasks": [
+    {
+      "archive_bytes": 664,
+      "archive_sha256": "a72316c51d7bb7b7263e366598bc115698135246f23ef59568129ff27534008d",
+      "benchmark": "ArchGym",
+      "data_source": "ArchGym",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement average_memory_access_time(levels, memory_latency) in model.py. Each cache level is a dict with hit_latency and local_hit_rate, where the rate is conditional on reaching that level. Return the expected latency, including lookup latency at every reached cache and memory latency on a complete miss. Validate non-negative latencies and rates in [0, 1].",
+      "source": {
+        "commit": "53f745af87b256794c0cd712c2b8e77aab74b4a6",
+        "paths": [
+          "settings/default_sniper.yaml",
+          "settings/default_timeloop.yaml"
+        ],
+        "repo": "benchmarks/archgym"
+      },
+      "task_id": "arch-microarch-amat",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 1075,
+      "archive_sha256": "c32f3905916906521072d045aab7014b7974ca5edce639be731b54d09f8084f7",
+      "benchmark": "ArchGym",
+      "data_source": "ArchGym",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement the Pareto-frontier selection used by a small architecture design-space exploration pass. Complete pareto_frontier() in dse.py. Each candidate has id, latency, energy, and area fields. All three metrics are minimized. A candidate is dominated only when another candidate is no worse in every metric and strictly better in at least one. Return the non-dominated candidate IDs in lexicographic order. Do not mutate the input.",
+      "source": {
+        "commit": "53f745af87b256794c0cd712c2b8e77aab74b4a6",
+        "paths": [
+          "README.md",
+          "settings/default_timeloop.yaml"
+        ],
+        "repo": "benchmarks/archgym"
+      },
+      "task_id": "arch-microarch-archgym-pareto",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 634,
+      "archive_sha256": "6217ef002c223ebdef938ca1384f6e18b167e733c41a6ded7f9a9eb597c25e90",
+      "benchmark": "gem5",
+      "data_source": "gem5",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement decode_address(address, line_bytes, sets) in model.py. Return (tag, set_index, block_offset) for a physically indexed cache. line_bytes and sets must be positive powers of two; reject invalid inputs with ValueError. Addresses are non-negative integers.",
+      "source": {
+        "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+        "paths": [
+          "src/mem/cache/tags/base.hh",
+          "src/mem/cache/cache.cc"
+        ],
+        "repo": "benchmarks/gem5"
+      },
+      "task_id": "arch-microarch-cache-address",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 996,
+      "archive_sha256": "c50de070d98ef1a9a2c496fc11bc17c4e5ba479eaa6356ab2fee5728488a031f",
+      "benchmark": "ChampSim",
+      "data_source": "ChampSim",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement the unsigned fixed-width saturating counter in saturating_counter.h. SaturatingCounter<Bits> must support Bits from 1 through 16, clamp constructor values to [0, 2^Bits-1], expose value(), is_min(), and is_max(), and implement prefix/postfix ++ and -- plus += and -= for signed integer deltas. Every operation must saturate without unsigned wraparound. Keep this as a header-only C++20 implementation.",
+      "source": {
+        "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+        "paths": [
+          "inc/msl/fwcounter.h",
+          "test/cpp/src/043-fwcounter.cc"
+        ],
+        "repo": "benchmarks/champsim"
+      },
+      "task_id": "arch-microarch-champsim-counter",
+      "tools": [
+        "g++",
+        "C++20"
+      ]
+    },
+    {
+      "archive_bytes": 702,
+      "archive_sha256": "f71c2ba9f2fa88157e6f68e076d070ac11bc55673c362daeb3659992b938f151",
+      "benchmark": "gem5",
+      "data_source": "gem5",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement map_dram(address, burst_bytes, channels, banks, row_bytes). Decode low-order fields in this order: burst offset, channel, bank, column within a row, then row. All geometry values must be positive powers of two and row_bytes must be divisible by burst_bytes. Return a dict containing offset, channel, bank, column, and row.",
+      "source": {
+        "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+        "paths": [
+          "src/mem/mem_ctrl.hh",
+          "src/mem/DRAMInterface.py"
+        ],
+        "repo": "benchmarks/gem5"
+      },
+      "task_id": "arch-microarch-dram-map",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 767,
+      "archive_sha256": "a64b1f657a4c0dcda430a09b724b1d3ff2279955597790e8c048e7c310b8d1ba",
+      "benchmark": "ChampSim",
+      "data_source": "ChampSim",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement GShare in model.py. The predictor has a power-of-two table of 2-bit saturating counters initialized weakly taken (2), an N-bit global history register, and indexes with (pc >> 2) XOR history. predict returns taken for counters >= 2. update changes the indexed counter and then shifts the actual outcome into history. Reject invalid table/history sizes.",
+      "source": {
+        "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+        "paths": [
+          "branch/gshare/gshare.cc",
+          "branch/gshare/gshare.h"
+        ],
+        "repo": "benchmarks/champsim"
+      },
+      "task_id": "arch-microarch-gshare",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 649,
+      "archive_sha256": "fb23611e74121ecc4a8c3ae7698d28b0cd1db5a856ba2fa43770179931e825a1",
+      "benchmark": "ChampSim",
+      "data_source": "ChampSim",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement LRUSet in model.py for one cache set. Lines are numbered from 0 through ways-1. touch marks a line most recently used. victim must return the least recently touched line, preferring never-touched lines in ascending line order. invalidate makes a line eligible as never touched. Reject invalid line numbers and non-positive associativity.",
+      "source": {
+        "commit": "51588e1d6f97875fe8de1a3621d28668bff83fcf",
+        "paths": [
+          "replacement/lru/lru.cc",
+          "inc/util/lru_table.h"
+        ],
+        "repo": "benchmarks/champsim"
+      },
+      "task_id": "arch-microarch-lru",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 582,
+      "archive_sha256": "2992672eb5493ea65d942c51da0dce33ba59d956dac599366428b81c8cb8e6cc",
+      "benchmark": "gem5",
+      "data_source": "gem5",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement pipeline_cycles(instructions, stages, issue_width, stalls). For an in-order ideal pipeline, empty work takes zero cycles; otherwise cycles are stages-1 plus ceil(instructions/issue_width), plus all explicit non-negative stall penalties. Validate that instructions is non-negative and stages and issue_width are positive integers.",
+      "source": {
+        "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+        "paths": [
+          "src/cpu/minor/pipeline.hh",
+          "src/cpu/minor/pipeline.cc"
+        ],
+        "repo": "benchmarks/gem5"
+      },
+      "task_id": "arch-microarch-pipeline",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 626,
+      "archive_sha256": "b752ad3242314505c49a088708b047b75e5711850c4e53820cec51c0a07fad19",
+      "benchmark": "gem5",
+      "data_source": "gem5",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement commit_ready(entries, width) in model.py. Entries are in program order and contain ready and exception booleans. Return the indices committed this cycle. Commit at most width contiguous ready entries from the head. An unready head blocks younger entries. An exception entry may commit but ends the cycle immediately. Reject negative width and do not mutate entries.",
+      "source": {
+        "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+        "paths": [
+          "src/cpu/o3/rob.hh",
+          "src/cpu/o3/rob.cc"
+        ],
+        "repo": "benchmarks/gem5"
+      },
+      "task_id": "arch-microarch-rob-commit",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 800,
+      "archive_sha256": "a8f2ba371f3ff9488b16e5de69a3767eca03b4209c2b46000515070ce7b72c25",
+      "benchmark": "gem5",
+      "data_source": "gem5",
+      "discipline": "Architecture & Microarchitecture",
+      "env_type": "chip",
+      "prompt": "Implement FullyAssociativeTLB in model.py with LRU replacement. lookup(va) returns the translated physical address or None and refreshes recency on a hit. insert(vpn, ppn) updates an existing mapping or evicts the LRU mapping when full. invalidate removes a VPN. Preserve page offsets and support only positive entry counts and power-of-two page sizes.",
+      "source": {
+        "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+        "paths": [
+          "src/arch/generic/tlb.hh",
+          "src/arch/x86/tlb.hh"
+        ],
+        "repo": "benchmarks/gem5"
+      },
+      "task_id": "arch-microarch-tlb",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 715,
+      "archive_sha256": "96c2d7361108b378817e411d5961fd471f23332591106055a0db2f71daa32476",
+      "benchmark": "Accellera SystemC",
+      "data_source": "Accellera SystemC",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement simulate_fifo(capacity, events). events is a sequence of (produced, consumed) counts for each cycle. Consumption occurs from the cycle's starting occupancy, then production fills available slots. Return per-cycle occupancy plus total accepted, dropped, and underflow counts. Reject negative capacity or event counts.",
+      "source": {
+        "commit": "adb09b1e3f998db9cce702fb8dce22a302c58001",
+        "paths": [
+          "examples/sysc/simple_fifo/simple_fifo.cpp"
+        ],
+        "repo": "benchmarks/systemc"
+      },
+      "task_id": "architecture-modeling-buffer",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 663,
+      "archive_sha256": "035d2d26ebb90c88d0a4bc085d0cd2237d4041afebcaaa4226308c8c60d945a6",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement aggregate_energy(action_counts, energy_per_action). For every component and action count, multiply by the matching per-action energy and return component totals plus total. Reject negative counts or energies and raise KeyError when a requested component/action has no energy model. Do not count unused energy-table entries.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/cheatsheets/4_compound_component.yaml",
+          "workspace/cheatsheets/3_architecture.yaml"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-energy",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 599,
+      "archive_sha256": "5ce498692cfb64be142cb43e980d2d2223789158da7b605c71618ff3294d712d",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement validate_mapping(problem, factors). Both dictionaries map dimension names to positive integers. Every problem dimension must appear in factors, no unknown factor dimensions are allowed, and each factor must divide the problem extent. Return a list of human-readable errors sorted by dimension, or an empty list for a valid mapping.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/cheatsheets/3_architecture.yaml",
+          "workspace/example_designs/example_designs/top.yaml.jinja2"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-mapping",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 576,
+      "archive_sha256": "64bf88edf674974fa6112dd2ce06dc2977d242d8f32397b178bf2bbf3e1dc79d",
+      "benchmark": "gem5",
+      "data_source": "gem5",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement mesh_latency(src, dst, width, height, router_cycles, link_cycles). Node IDs use row-major coordinates. Model deterministic XY routing: latency is one router traversal at every visited node plus one link traversal per Manhattan hop. Validate node IDs, dimensions, and non-negative cycle costs.",
+      "source": {
+        "commit": "51edbbb9cfd37e92e9901aea2caa4a8f20eda005",
+        "paths": [
+          "src/mem/ruby/network/garnet/GarnetNetwork.py",
+          "src/mem/ruby/network/garnet/NetworkLink.hh"
+        ],
+        "repo": "benchmarks/gem5"
+      },
+      "task_id": "architecture-modeling-mesh-noc",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 620,
+      "archive_sha256": "acbbade5d1a727edffc26795ed1facebec2201e58bf03511336db58691690336",
+      "benchmark": "Accellera SystemC",
+      "data_source": "Accellera SystemC",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement mm1_metrics(arrival_rate, service_rate). For a stable M/M/1 queue return utilization, average jobs in system, average jobs waiting, average system time, and average waiting time. Rates use the same time unit. Require arrival_rate >= 0, service_rate > 0, and arrival_rate < service_rate.",
+      "source": {
+        "commit": "adb09b1e3f998db9cce702fb8dce22a302c58001",
+        "paths": [
+          "examples/sysc/simple_fifo/simple_fifo.cpp",
+          "examples/sysc/pipe/main.cpp"
+        ],
+        "repo": "benchmarks/systemc"
+      },
+      "task_id": "architecture-modeling-queue",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 653,
+      "archive_sha256": "b260ac03944467cd0b832ca40342a0c1e9c0e06b7dd6e065516c8017d2c08a4d",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement roofline(operations, bytes_moved, peak_ops_per_cycle, bytes_per_cycle) returning arithmetic_intensity, attainable_ops_per_cycle, and cycles. The attainable rate is min(peak compute, intensity times memory bandwidth). Zero operations requires zero cycles; zero bytes means infinite intensity. Reject negative values and non-positive machine rates.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/tutorial_exercises/02_interface_and_design_space_exploration_2024/1_specifications.ipynb"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-roofline",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 686,
+      "archive_sha256": "fe9cc1cd81e702e66beb9367351b8dfeb318e7180f26a9459b04c2543b06b3f6",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement sparse_storage(dense_elements, density, value_bytes, metadata_bits). Use ceil(dense_elements*density) stored nonzeros. Return nonzeros, data_bytes, metadata_bytes rounded up from bits, total_bytes, and compression_ratio (dense value bytes divided by sparse total bytes). For an empty sparse encoding return infinity as the ratio. Validate all inputs.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/tutorial_exercises/03_sparse_tensors_2021_isca/README.md"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-sparse-traffic",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 843,
+      "archive_sha256": "bb584907b3a4d8478681f075fb04964b2bbc54f784ae4ee2326347ecad40af01",
+      "benchmark": "Accellera SystemC",
+      "data_source": "Accellera SystemC",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Complete stream_accumulator.h as a SystemC module. The module has sc_fifo_in<int> in and sc_fifo_out<int> out ports. Its SC_THREAD must consume input tokens continuously, accumulate each non-overlapping group of four tokens, write one sum for every complete group, then continue with the next group. Do not emit partial groups. Keep the implementation header-only and preserve the class and port names.",
+      "source": {
+        "commit": "adb09b1e3f998db9cce702fb8dce22a302c58001",
+        "paths": [
+          "examples/sysc/simple_fifo/simple_fifo.cpp",
+          "examples/sysc/fir/fir.cpp"
+        ],
+        "repo": "benchmarks/systemc"
+      },
+      "task_id": "architecture-modeling-systemc-stream",
+      "tools": [
+        "SystemC 3.0.2",
+        "g++",
+        "pkg-config"
+      ]
+    },
+    {
+      "archive_bytes": 656,
+      "archive_sha256": "f46c2b60dafff376236eddbd94be27ff425d26abdd829dee2ef5b80e16e53410",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Implement enumerate_tiles(extents, capacity). Return every positive integer tile shape whose dimensions divide the corresponding problem extent and whose element product is at most capacity. Order shapes lexicographically. Reject empty/non-positive extents and non-positive capacity.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/example_designs/example_designs/simple_weight_stationary/arch.yaml"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-tiles",
+      "tools": [
+        "python3",
+        "pytest"
+      ]
+    },
+    {
+      "archive_bytes": 1099,
+      "archive_sha256": "7aea28cbdf06ea48d6e946f7819e5df91095d4f47bbabe2d76fb1a45944ede2a",
+      "benchmark": "Timeloop and Accelergy exercises",
+      "data_source": "Timeloop and Accelergy exercises",
+      "discipline": "Architecture Modeling",
+      "env_type": "chip",
+      "prompt": "Repair arch.yaml to describe the requested weight-stationary accelerator. Keep the existing hierarchy and names. DRAM must be 64 bits wide with 16-bit data words. shared_glb must have depth 16384, 32 banks, and read/write bandwidth 16. PE must be a 16 by 16 spatial mesh. pe_spad must have depth 192, keep Weights, and bypass Inputs and Outputs. mac must use an 8-bit multiplier and 16-bit adder. Replace all null placeholders with these values and leave the file as valid YAML.",
+      "source": {
+        "commit": "2d5510807128e9bd5f1cad0705cdf2ec4612fd4e",
+        "paths": [
+          "workspace/example_designs/example_designs/simple_weight_stationary/arch.yaml"
+        ],
+        "repo": "benchmarks/timeloop-accelergy-exercises"
+      },
+      "task_id": "architecture-modeling-timeloop-config",
+      "tools": [
+        "python3",
+        "PyYAML",
+        "Timeloop architecture schema"
+      ]
+    },
+    {
+      "archive_bytes": 914,
+      "archive_sha256": "3515cb77f753633d5f88e996c3b71ca7fad7b686f13898be54f360affa84b6bc",
+      "benchmark": "RTLLM 2.0",
+      "data_source": "RTLLM 2.0",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "Implement the synthesizable module accu in accu.sv. Ports: clk, active-low asynchronous rst_n, data_in[7:0], valid_in, valid_out, and data_out[9:0]. Accept data_in only on rising clock edges where valid_in is high. For every non-overlapping group of four accepted bytes, drive their 10-bit sum on data_out and pulse valid_out high for exactly one cycle. Invalid cycles must not advance the group. Reset clears partial state and valid_out.",
+      "source": {
+        "commit": "41b26896e33b536940116a975626455eed3de65e",
+        "paths": [
+          "Arithmetic/Accumulator/accu/design_description.txt",
+          "Arithmetic/Accumulator/accu/testbench.v",
+          "Arithmetic/Accumulator/accu/verified_accu.v"
+        ],
+        "repo": "benchmarks/rtllm"
+      },
+      "task_id": "rtl-design-rtllm-accumulator",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 744,
+      "archive_sha256": "b110639f9d8b06e149b2a8641b211eeeb72c498d572fc87bf175aa98194bf15b",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "Implement TopModule in TopModule.sv. Its ports are input clk, input reset, and output logic [3:0] q. It is a decade counter that counts 1 through 10 inclusive. All state changes occur on the positive edge of clk. reset is active-high and synchronous and sets q to 1. After q reaches 10, the next active clock edge wraps it to 1.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob035_count1to10_prompt.txt",
+          "dataset_spec-to-rtl/Prob035_count1to10_test.sv",
+          "dataset_spec-to-rtl/Prob035_count1to10_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-counter",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1616,
+      "archive_sha256": "8955216962489ff901c4964c95b9bfaa22fb1d567832520e11486255ef6cf293",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  clk\n - input  d   (8 bits)\n - output q   (8 bits)\n\nThe module should include 8 D flip-flops. All DFFs should be triggered by\nthe positive edge of clock.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob034_dff8_prompt.txt",
+          "dataset_spec-to-rtl/Prob034_dff8_test.sv",
+          "dataset_spec-to-rtl/Prob034_dff8_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-dff8",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1969,
+      "archive_sha256": "cae42ed24694dd5d98fdf790fe5ddf161a764318150b8080162dc5ba619a468e",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  clk\n - input  areset\n - input  d      (8 bits)\n - output q      (8 bits)\n\nThe module should include 8 D flip-flops with active high asynchronous\nreset. The output should be reset to 0. All DFFs should be triggered by\nthe positive edge of clk.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob047_dff8ar_prompt.txt",
+          "dataset_spec-to-rtl/Prob047_dff8ar_test.sv",
+          "dataset_spec-to-rtl/Prob047_dff8ar_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-dff8-async-reset",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1677,
+      "archive_sha256": "0851faaf56601e54611c7abd1f9d661f55a2d593fb92b4705306330821aa0ef2",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  a   (100 bits)\n - input  b   (100 bits)\n - input  sel\n - output out (100 bits)\n\nThe module should implement a 2-1 multiplexer. When sel=0, choose a. When\nsel=1, choose b.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob017_mux2to1v_prompt.txt",
+          "dataset_spec-to-rtl/Prob017_mux2to1v_test.sv",
+          "dataset_spec-to-rtl/Prob017_mux2to1v_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-mux2",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1831,
+      "archive_sha256": "10635a081c341b0ee85a6bb3c295e88ae58a171a2519d480d0a37948a57ab5e1",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  a   (16 bits)\n - input  b   (16 bits)\n - input  c   (16 bits)\n - input  d   (16 bits)\n - input  e   (16 bits)\n - input  f   (16 bits)\n - input  g   (16 bits)\n - input  h   (16 bits)\n - input  i   (16 bits)\n - input  sel ( 4 bits)\n - output out (16 bits)\n\nThe module should implement a 16-bit wide, 9-to-1 multiplexer. sel=0\nchooses a, sel=1 chooses b, etc. For the unused cases (sel=9 to 15), set\nall output bits to '1'.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob097_mux9to1v_prompt.txt",
+          "dataset_spec-to-rtl/Prob097_mux9to1v_test.sv",
+          "dataset_spec-to-rtl/Prob097_mux9to1v_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-mux9",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1609,
+      "archive_sha256": "dcee7077bacfec8afeb2ee3d935570d7bcd4f60d537cf5fa008a4f9c3f5eaeea",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  in  (3 bits)\n - output out (2 bits)\n\nThe module should implement a \"population count\" circuit that counts the\nnumber of '1's in the input vector.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob009_popcount3_prompt.txt",
+          "dataset_spec-to-rtl/Prob009_popcount3_test.sv",
+          "dataset_spec-to-rtl/Prob009_popcount3_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-popcount3",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 2016,
+      "archive_sha256": "5c7fc6eb1c21a65a19f16a6ee65a668f002d2d9e6e1105cf26680224bf6dbdc7",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  mode\n - input  too_cold\n - input  too_hot\n - input  fan_on\n - output heater\n - output aircon\n - output fan\n\nThe module should implement a heating/cooling thermostat controller which\ncontrols both a heater (during winter) and an air conditioner (during\nsummer). The module should on and off the heater, air conditioning, and\nblower fan as appropriate. The thermostat can be in one of two modes:\nheating (mode = 1) and cooling (mode = 0). In heating mode, turn the\nheater on when it is too cold (too_cold = 1) but do not use the air\nconditioner. In cooling mode, turn the air conditioner on when it is too\nhot (too_hot = 1), but do not turn on the heater. When the heater or air\nconditioner are on, also turn on the fan to circulate the air. In\naddition, the user can also request the fan to turn on (fan_on = 1), even\nif the heater and air conditioner are off.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob072_thermostat_prompt.txt",
+          "dataset_spec-to-rtl/Prob072_thermostat_test.sv",
+          "dataset_spec-to-rtl/Prob072_thermostat_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-thermostat",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 1665,
+      "archive_sha256": "efb3efd455bd159514958d0e8737d7fb14145ad5e7a5c42d0f158efe7cd104e7",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  x3\n - input  x2\n - input  x1\n - output f\n\nThe module should implement a combinational circuit for the following\ntruth table:\n\n  x3 | x2 | x1 | f\n  0  | 0  | 0  | 0\n  0  | 0  | 1  | 0\n  0  | 1  | 0  | 1\n  0  | 1  | 1  | 1\n  1  | 0  | 0  | 0\n  1  | 0  | 1  | 1\n  1  | 1  | 0  | 0\n  1  | 1  | 1  | 1",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob069_truthtable1_prompt.txt",
+          "dataset_spec-to-rtl/Prob069_truthtable1_test.sv",
+          "dataset_spec-to-rtl/Prob069_truthtable1_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-truth-table",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 2000,
+      "archive_sha256": "3b32ca89a8b88d031ea4224c26e1b748c407d1d91c52ab8ad4d65b337cd97193",
+      "benchmark": "VerilogEval v2",
+      "data_source": "VerilogEval v2",
+      "discipline": "RTL Design",
+      "env_type": "chip",
+      "prompt": "I would like you to implement a module named TopModule with the following\ninterface. All input and output ports are one bit unless otherwise\nspecified.\n\n - input  a (5 bits)\n - input  b (5 bits)\n - input  c (5 bits)\n - input  d (5 bits)\n - input  e (5 bits)\n - input  f (5 bits)\n - output w (8 bits)\n - output x (8 bits)\n - output y (8 bits)\n - output z (8 bits)\n\nThe module should concatenate the input vectors together then split them\nup into several output vectors. There are six 5-bit input vectors: a, b,\nc, d, e, and f, for a total of 30 bits of input. There are four 8-bit\noutput vectors: w, x, y, and z, for 32 bits of output. The output should\nbe a concatenation of the input vectors followed by two 1 bits (the two 1\nbits should be in the LSB positions).",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob064_vector3_prompt.txt",
+          "dataset_spec-to-rtl/Prob064_vector3_test.sv",
+          "dataset_spec-to-rtl/Prob064_vector3_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "rtl-design-verilogeval-vector-concat",
+      "tools": [
+        "Icarus Verilog 12",
+        "SystemVerilog simulation"
+      ]
+    },
+    {
+      "archive_bytes": 783,
+      "archive_sha256": "9d23a7cb2c9c9674b931bc82ebfb843000ac8a71aa54f06925489f497894bd65",
+      "benchmark": "OpenTitan",
+      "data_source": "OpenTitan",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement bitfield.c. bitfield_read32 extracts field.width bits at field.index. bitfield_write32 replaces exactly that field. Width may be 0 through 32; width 32 is valid only at index 0. Out-of-range fields leave writes unchanged and reads return 0. Avoid undefined shifts.",
+      "source": {
+        "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+        "paths": [
+          "sw/device/lib/base/bitfield.c",
+          "sw/device/lib/base/bitfield.h"
+        ],
+        "repo": "benchmarks/opentitan"
+      },
+      "task_id": "software-opentitan-bitfield",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 1155,
+      "archive_sha256": "e328d6d48d8941845a9a74924005918732f3b3c94d3e97a361792ba5ff0c72a3",
+      "benchmark": "OpenTitan",
+      "data_source": "OpenTitan",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement crc32.c using the API in crc32.h. It must compute reflected IEEE 802.3 CRC-32 with polynomial 0xedb88320 and match Python zlib.crc32. Support one-shot crc32(), streaming init/add8/add32/add/finish, zero-length buffers, and unaligned buffers. crc32_add32 must consume the word in little-endian byte order regardless of host alignment. Do not use zlib or a lookup-table dependency.",
+      "source": {
+        "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+        "paths": [
+          "sw/device/lib/base/crc32.c",
+          "sw/device/lib/base/crc32.h",
+          "sw/device/lib/base/crc32_functest.c"
+        ],
+        "repo": "benchmarks/opentitan"
+      },
+      "task_id": "software-opentitan-crc32",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 590,
+      "archive_sha256": "7a80aabc71943a9d4690dcc8d0bbe9bddebb1774ac42d79de0f3daaf737f36a4",
+      "benchmark": "OpenTitan",
+      "data_source": "OpenTitan",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement saturating unsigned 32-bit add, subtract, and multiply in utility.c. Clamp overflow to UINT32_MAX and subtraction underflow to zero. The implementation must be defined by C11 for all input values.",
+      "source": {
+        "commit": "b583fba84cfd9603694abab6a1f8e97cf2cfcd19",
+        "paths": [
+          "sw/device/lib/base/math.c",
+          "sw/device/lib/base/math.h"
+        ],
+        "repo": "benchmarks/opentitan"
+      },
+      "task_id": "software-opentitan-saturating",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 630,
+      "archive_sha256": "16a07b225632e5d6753bd3297d17f5dd56f8994bb062e102c4c89a0c100ffd35",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement crc16_ccitt in utility.c using polynomial 0x1021, caller-supplied initial state, no reflection, and no final xor. Process each byte most-significant bit first. Support zero length and incremental use without tables or allocation.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "subsys/crc/crc16_sw.c",
+          "tests/unit/crc/main.c"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-crc16",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 755,
+      "archive_sha256": "6ea50c8d48e1f7bfaaecf8a4856b4e31523e760ccdf3fd022efb724b7d2a30e1",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement portable unaligned little- and big-endian 16/32-bit loads and stores in utility.c using the API in utility.h. Do not cast byte pointers to wider integer pointers and do not depend on host byte order or alignment.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "include/zephyr/sys/byteorder.h",
+          "tests/kernel/common/src/byteorder.c"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-endian",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 660,
+      "archive_sha256": "9b3f2781175936fd41de647cc1c842ba22b7ce38d847ec681c3a408904b17ad3",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement signed Q16.16 multiplication and division in utility.c. Round multiplication to nearest with ties away from zero. Division truncates toward zero. Saturate results to INT32_MIN/MAX and report division by zero as the signed saturation matching the numerator (zero divided by zero returns zero).",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "tests/unit/intmath/main.c",
+          "include/zephyr/sys/math_extras.h"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-fixed-point",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 670,
+      "archive_sha256": "85451dfcf94d6ddbc1a18d9d15aa84f273902f387ca82b3cc66bff2f9d2d676a",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement 32-bit FNV-1a in utility.c with offset basis 2166136261 and prime 16777619. fnv1a32 hashes a complete buffer. fnv1a32_update continues from a caller-provided state so chunked and one-shot hashing match. Support zero length and arbitrary byte values with defined uint32_t wraparound.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "tests/lib/hash_function/src/main.c",
+          "include/zephyr/sys/hash_function.h"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-hash",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 752,
+      "archive_sha256": "c0097ab9b9dc847c470680976344411c2478497fb9c5752b0c46a0e0e73a7867",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement the intrusive doubly linked list API in utility.c. list_init uses a circular sentinel. Support append, prepend, remove, pop_front, and pop_back. Removal must leave the removed node self-linked; popping an empty list returns NULL. Do not allocate memory.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "tests/unit/list/dlist.c",
+          "include/zephyr/sys/dlist.h"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-intrusive-list",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 1858,
+      "archive_sha256": "56013c93b615756651774dedce0dd8800c2c20c4d3602c4249b9a58d92932ef7",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement the fixed-storage generic min-heap API in min_heap.c. Elements are opaque fixed-size byte records ordered by the caller comparator. Implement init, push, peek, pop, remove by zero-based heap-array index, and find. Push and removal must preserve heap order in O(log n); find may be O(n). Return -1 when full, false for invalid removal or empty pop, and never allocate memory. Preserve the API in min_heap.h and correctly support element sizes that are not machine-word sized.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "include/zephyr/sys/min_heap.h",
+          "tests/lib/min_heap/src/test_min_heap.c",
+          "samples/data_structures/min-heap/src/main.c"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-min-heap",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 797,
+      "archive_sha256": "10b5fe85cd5c1c3fc133896c8e875ad4eef4f03bd658678b39e852f74cc895d8",
+      "benchmark": "Zephyr RTOS",
+      "data_source": "Zephyr RTOS",
+      "discipline": "Software Development",
+      "env_type": "chip",
+      "prompt": "Implement the fixed-capacity byte ring buffer in utility.c. rb_put and rb_get return the number of bytes transferred, support wraparound and partial transfers, preserve FIFO order, and never allocate. rb_init resets caller-owned storage. A zero-capacity ring must behave safely.",
+      "source": {
+        "commit": "3df5fa4d3fcf664373ffa64b88975ffe2f3a6b68",
+        "paths": [
+          "lib/utils/ring_buffer.c",
+          "tests/lib/ringbuffer/src/main.c"
+        ],
+        "repo": "benchmarks/zephyr"
+      },
+      "task_id": "software-zephyr-ring-buffer",
+      "tools": [
+        "gcc",
+        "C11"
+      ]
+    },
+    {
+      "archive_bytes": 1150,
+      "archive_sha256": "75ea9d7a4395ddc80d7aa26d7dceb5f9334c4a3aa64915f23933263e4dfbd49a",
+      "benchmark": "YosysHQ MCY",
+      "data_source": "YosysHQ MCY",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete bitcnt_tb.sv as a self-checking SystemVerilog testbench for bitcnt.v. The DUT implements CLZ64, CLZ32, CTZ64, CTZ32, CNT64, and CNT32 selected by din_func 000 through 101. Verify every operation, including all-zero inputs and the rule that 32-bit modes ignore din_data[63:32]. The testbench module must be named testbench, print PASS on success, call $fatal on a mismatch, and finish. The verifier will run it against the reference design and mutation variants.",
+      "source": {
+        "commit": "686c816ceaae60003d51a863e0aefe221003185c",
+        "paths": [
+          "examples/bitcnt/bitcnt.v",
+          "examples/bitcnt/bitcnt_tb.v",
+          "examples/bitcnt/test_fm.sv"
+        ],
+        "repo": "benchmarks/mcy"
+      },
+      "task_id": "verification-mcy-bitcnt",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 945,
+      "archive_sha256": "abd899ba32ccc7b62d07d330bcb3f276fec950c0a6851dfe11512c8a18c8ed55",
+      "benchmark": "riscv-formal methodology",
+      "data_source": "riscv-formal methodology",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Write immediate formal properties in properties.sv for a depth-2 FIFO transition relation. The file is included inside formal_top and may reference count[1:0], wr_en, rd_en, and next_count[1:0]. Inputs are unconstrained except that the harness assumes count <= 2. Add at least four assertions proving: next_count never exceeds 2; a write without a read is blocked when full; a read without a write is blocked when empty; and simultaneous read/write preserves count. Use an always @* block and no module declaration.",
+      "source": {
+        "commit": "c992aa61fdfe0846c5ed90324c596202a1c69b76",
+        "paths": [
+          "README.md",
+          "cores/picorv32/checks.cfg",
+          "cores/picorv32/complete.sv"
+        ],
+        "repo": "benchmarks/riscv-formal"
+      },
+      "task_id": "verification-riscv-formal-properties",
+      "tools": [
+        "Yosys 0.59.1",
+        "SAT proof"
+      ]
+    },
+    {
+      "archive_bytes": 702,
+      "archive_sha256": "b9529bbe83b560baffad47a814d52f51955c1f8ca54c26866fa26943b55b29ac",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv to distinguish an active-high asynchronous reset from a synchronous reset in an 8-bit register. Verify data capture and reset asserted between clock edges. Name the module testbench, print PASS, and use $fatal.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob047_dff8ar_prompt.txt",
+          "dataset_spec-to-rtl/Prob047_dff8ar_test.sv",
+          "dataset_spec-to-rtl/Prob047_dff8ar_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-async-reset",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 704,
+      "archive_sha256": "21101818141eafdf2917c13ae720c120f7c038c161c211423293d74cf347198e",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv to verify the synchronous reset and 1-through-10 wrap behavior of dut. Check every count value and at least two wraps. Name the module testbench, print PASS, and call $fatal on mismatch.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob035_count1to10_prompt.txt",
+          "dataset_spec-to-rtl/Prob035_count1to10_test.sv",
+          "dataset_spec-to-rtl/Prob035_count1to10_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-counter-wrap",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 678,
+      "archive_sha256": "483cf4e7fae7b62add33c5bb00ae2d6eb9a3959a11d1154fc4c80a5018a3b413",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv to verify that the 8-bit dut captures d only on positive clock edges, not negative edges or between edges. Name the module testbench, exercise multiple values, print PASS, and call $fatal on mismatch.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob034_dff8_prompt.txt",
+          "dataset_spec-to-rtl/Prob034_dff8_test.sv",
+          "dataset_spec-to-rtl/Prob034_dff8_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-dff-edge",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 642,
+      "archive_sha256": "4cdae6434a0e6b611f5cdffb4503ff04d2b9a2a61ecf1bc0954adee2d458e70f",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv as a self-checking testbench for dut. Exhaustively verify both select values and varied 8-bit inputs. The testbench must be named testbench, print PASS on success, call $fatal on any mismatch, and terminate.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob017_mux2to1v_prompt.txt",
+          "dataset_spec-to-rtl/Prob017_mux2to1v_test.sv",
+          "dataset_spec-to-rtl/Prob017_mux2to1v_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-mux",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 654,
+      "archive_sha256": "9939423710f25c8c4b1cb3fe9e1eb845d12b7d6493bcdd86849f2c5a38ecb51f",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv as an exhaustive self-checking testbench for an 8-bit even-parity generator. Cover all 256 values and compute parity independently without using the DUT output. Name the module testbench, print PASS, and use $fatal.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob064_vector3_prompt.txt",
+          "dataset_spec-to-rtl/Prob064_vector3_test.sv",
+          "dataset_spec-to-rtl/Prob064_vector3_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-parity",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 651,
+      "archive_sha256": "20feb3e0b735a1823be86343197ef6a1fc813291b1762a90920fb549b3089d65",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv as an exhaustive self-checking testbench for the 4-bit population-count dut. Cover all input values and calculate the expected result independently. Name the module testbench, print PASS, and use $fatal on mismatch.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob009_popcount3_prompt.txt",
+          "dataset_spec-to-rtl/Prob009_popcount3_test.sv",
+          "dataset_spec-to-rtl/Prob009_popcount3_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-popcount",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 758,
+      "archive_sha256": "68b30e4f7873eb2c34d3a2dbe7f0d5dc05a06d85b47066d9442afa91169712f0",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv as an exhaustive self-checking testbench for the 4-bit fixed-priority encoder dut. valid is high for nonzero req and index must select the lowest numbered asserted request. Name the module testbench, print PASS, and call $fatal on mismatch.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob097_mux9to1v_prompt.txt",
+          "dataset_spec-to-rtl/Prob097_mux9to1v_test.sv",
+          "dataset_spec-to-rtl/Prob097_mux9to1v_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-priority-encoder",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    },
+    {
+      "archive_bytes": 684,
+      "archive_sha256": "928d3b538565c26615312801a43037e0f0c27a2e7b5594cfef5481e3d63b83f6",
+      "benchmark": "VerilogEval mutation extension",
+      "data_source": "VerilogEval mutation extension",
+      "discipline": "Verification (DV/FV)",
+      "env_type": "chip",
+      "prompt": "Complete tb.sv as an exhaustive self-checking testbench for the thermostat dut ports mode, cold, hot, fan_req, heater, ac, and fan. Cover all 16 input combinations. Name the module testbench, print PASS, and call $fatal on mismatch.",
+      "source": {
+        "commit": "c498220d0a52248f8e3fdffe279075215bde2da6",
+        "paths": [
+          "dataset_spec-to-rtl/Prob072_thermostat_prompt.txt",
+          "dataset_spec-to-rtl/Prob072_thermostat_test.sv",
+          "dataset_spec-to-rtl/Prob072_thermostat_ref.sv"
+        ],
+        "repo": "benchmarks/verilog-eval"
+      },
+      "task_id": "verification-verilogeval-thermostat",
+      "tools": [
+        "Icarus Verilog 12",
+        "mutation testing"
+      ]
+    }
+  ]
+}
