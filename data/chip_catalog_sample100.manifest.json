@@ -1,0 +1,909 @@
+{
+  "dataset": "chip_catalog_sample100.jsonl",
+  "per_discipline": 20,
+  "schema_version": 1,
+  "task_count": 100,
+  "tasks": [
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-acme-acme-adders-reverb-test-cases-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "24f18c4daf486ca0e5c1800a6ed3ede41f8b42623616166b0652813091c09900",
+      "task_id": "catalog-native-archgym-architecture-gym-test-acme-acme-adders-reverb-test-cases-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-branch-predictor-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "d79281af31d8b1aa8a67c9678252fa0734e1e8bac7a982632b4983b3c0dc4b71",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-branch-predictor-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "gem5",
+      "benchmark_id": "gem5",
+      "catalog_task_id": "native-gem5-gem5-test-src-arch-amdgpu-common-dtype-mxfp-test-cc",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "c72178bafa6d1984a9446f07a6df5d5f2fd559e5c7bc8b49f67f16f6332c5a37",
+      "task_id": "catalog-native-gem5-gem5-test-src-arch-amdgpu-common-dtype-mxfp-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-acme-acme-adders-reverb-test-utils-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "28912e4761e752535e22a2fc94128783bbc63e662f8e80dc35cb28e494332dd3",
+      "task_id": "catalog-native-archgym-architecture-gym-test-acme-acme-adders-reverb-test-utils-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-cache-default-inference-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "143cc15658af9910c844f6fd2f33905d67586c5c5fa68ee3c9fc45fe00348051",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-cache-default-inference-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "gem5",
+      "benchmark_id": "gem5",
+      "catalog_task_id": "native-gem5-gem5-test-src-arch-arm-aapcs64-test-cc",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "a487b76570b01ba52352c6e21a9423c8201eeb96ec46ee9249fa3a72ccda0450",
+      "task_id": "catalog-native-gem5-gem5-test-src-arch-arm-aapcs64-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-acme-acme-testing-test-utils-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "02bacf289a08ddfc775b03dd71a60ad115427d0433cfb4e7383d4b46a5fef915",
+      "task_id": "catalog-native-archgym-architecture-gym-test-acme-acme-testing-test-utils-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-cache-modules-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "005a97ca5669f824a87e591f17520924d10cd72da5fa896f081d40a24fe78b76",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-cache-modules-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "gem5",
+      "benchmark_id": "gem5",
+      "catalog_task_id": "native-gem5-gem5-test-src-arch-arm-matrix-test-cc",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "e5a8a847aad2857e2bfc4019d9409c0de6c852f8c3a46b21f8da18d7a3a12b26",
+      "task_id": "catalog-native-gem5-gem5-test-src-arch-arm-matrix-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-aco-deepswarm-tests-test-aco-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "29193fd534c7f71a19770b2d9b1957590017e3aaf3f6875e1df421b57d56a8cd",
+      "task_id": "catalog-native-archgym-architecture-gym-test-aco-deepswarm-tests-test-aco-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-cache-name-reference-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "a4cb54fab035d840e9c66035a3b1dec868edd7b5f91c5e646324abe51bd0f0e8",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-cache-name-reference-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "gem5",
+      "benchmark_id": "gem5",
+      "catalog_task_id": "native-gem5-gem5-test-src-arch-generic-vec-pred-reg-test-cc",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "4cd83853f3940d5f44113319004164195ff38275d241002e94f374fba7b41255",
+      "task_id": "catalog-native-gem5-gem5-test-src-arch-generic-vec-pred-reg-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-aco-deepswarm-tests-test-graph-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "a314d75ccf9bfc28a5af303c100ac5584d53fa431ac066012d39384f84e2ed09",
+      "task_id": "catalog-native-archgym-architecture-gym-test-aco-deepswarm-tests-test-graph-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-cache-options-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "619a13e3ef0a4064607a873209ee5a547e85e7cf7e9cb75b1a2c6afe93ee2e72",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-cache-options-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "gem5",
+      "benchmark_id": "gem5",
+      "catalog_task_id": "native-gem5-gem5-test-src-arch-generic-vec-reg-test-cc",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "9700bd92e6460807263d6983e22f4307d95502d701a0704b336c4dbd4161a5e1",
+      "task_id": "catalog-native-gem5-gem5-test-src-arch-generic-vec-reg-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-aco-deepswarm-tests-test-nodes-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "dd268c6b23c1fa48bc997a6d8169e64106d0d25a91bfebc23dcfa8c251d3fa2d",
+      "task_id": "catalog-native-archgym-architecture-gym-test-aco-deepswarm-tests-test-nodes-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-core-options-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "ad9e54601d7d9ce65761a551bd1d2b38cfc5c47e469b2f5ca50c30d7e4c5f41f",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-core-options-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "gem5",
+      "benchmark_id": "gem5",
+      "catalog_task_id": "native-gem5-gem5-test-src-arch-micro-asm-test-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "c7d19b5a5139a58ed2e4b15189b5676254ab356cbaaba82f50fb32189a5d27fe",
+      "task_id": "catalog-native-gem5-gem5-test-src-arch-micro-asm-test-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ArchGym",
+      "benchmark_id": "archgym",
+      "catalog_task_id": "native-archgym-architecture-gym-test-arch-gym-envs-test-randomparameterenv-py",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "b8d0dd2e10a84cd1266f0640668840a199faa6abd7042dfa0e05cc801ecec2ce",
+      "task_id": "catalog-native-archgym-architecture-gym-test-arch-gym-envs-test-randomparameterenv-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChampSim",
+      "benchmark_id": "champsim",
+      "catalog_task_id": "native-champsim-config-test-config-compile-only-default-json",
+      "discipline": "Architecture & Microarchitecture",
+      "source_sha256": "9bedef86df01d0f1206c77daa5201a361f38e776a69059b6ad076011e270aa81",
+      "task_id": "catalog-native-champsim-config-test-config-compile-only-default-json",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-bugs-sc-bigint-part-select-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "8d8dbc4df3bec7f97d128559a4eff8398b8cb52ff74cb7cc29df9a74274e957c",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-bugs-sc-bigint-part-select-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-ports-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "bd43edf9f0b9e3503144ed41e10ee1b01e078334311d58d5fb334a6ffc196b66",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-ports-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-ports-test02-test02-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "d443041a057203267864ad233dbdfd92d43d74b1a88cbc62869a169c24935113",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-ports-test02-test02-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-ports-test03-test03-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "eb1773649c98901e9a8ae049782c85e4624e41b42b32d17af4c1f3716f493e9c",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-ports-test03-test03-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-ports-test04-test04-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "a572785d036adf9348518eb563d4c6653a112dd100dae1a19d3c74a8bd7d2ed8",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-ports-test04-test04-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-ports-test05-test05-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "d4d332fb9b18ab94be391d1f7155f7cbb69c870a3230363df6f21b32a67fce59",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-ports-test05-test05-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-ports-test06-test06-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "fb70dddd0cda42a70d2cd4db2542d215acb88ec0420142d191dc9b8785a30d80",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-ports-test06-test06-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-reverse-bind-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "2784c8f28ce0f9cea68e8f95fd654687aaaff92bbee36005ccd36e1dcd9f0b2c",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-reverse-bind-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-reverse-bind-test02-test02-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "c5193b825887be9525a8c4e263553f667cae0c9f5658150afa5606cbc9d7c89a",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-reverse-bind-test02-test02-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-buffer-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "fd897f98101f9586c08e90203f5c86d815c1a698da6900f9827f38370d133848",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-buffer-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-clock-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "c52ede6c8ab55d4398d77d7c80cdbfd803448764e168ee523dd1d74b64103156",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-clock-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-clock-test02-test02-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "7f1e2df0ac1c5bc6152d86adc91b5c36702243da2ce08df8283bb82a10578560",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-clock-test02-test02-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-clock-test03-test03-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "0172f40ab845c26c65d00dbca0bc7abc3b70d5fb1638b6a0c0e393a902cd9a87",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-clock-test03-test03-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-clock-test04-test04-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "f5bc30763f6c45477bcc3bd42d7b5f136243bdde7d378aa2f3083fee22155cd3",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-clock-test04-test04-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-event-queue-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "0012a1cb64983feba9683702330107774374960aba20dc01dc5bead86b627a8c",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-event-queue-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-export-test01-test01-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "0343d8e189f895b67e37d086cbb1405085270bced6d92f79a646d09a5a6a69ff",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-export-test01-test01-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-export-test02-test02-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "7a1e7d5253563fe861aacae0f310dcc3ff3cdc74b66d705f0a95b84ff19e0446",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-export-test02-test02-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-export-test03-test03-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "9c9a0188f6eb78efdc40d38086cccdcdc44fa7b15ba264405bd31136f0e59ff2",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-export-test03-test03-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-export-test04-test04-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "c59cecff1372f429ffd7d95aa2776aa845154fe969a78bdcb8f8e5296b05bf62",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-export-test04-test04-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Accellera SystemC",
+      "benchmark_id": "systemc",
+      "catalog_task_id": "native-systemc-systemc-test-tests-systemc-communication-sc-export-test05-test05-cpp",
+      "discipline": "Architecture Modeling",
+      "source_sha256": "00942886d21eee2f058a2da50bf68ddad99e7d6238f056c93aeb3eb49c7cde13",
+      "task_id": "catalog-native-systemc-systemc-test-tests-systemc-communication-sc-export-test05-test05-cpp",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob001-continuous-input-sequence-detect",
+      "discipline": "RTL Design",
+      "source_sha256": "fa5fb34dff49976f3791f76956cf3b49bb89cba9c46b84626a3cd43c3d35b602",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob001-continuous-input-sequence-detect",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-accumulator-accu-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "7ede855722cdef43a31a40c52372f1ec7400652d8dd9cdd9e22e30de3f54c4c2",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-accumulator-accu-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "VerilogEval",
+      "benchmark_id": "verilog-eval",
+      "catalog_task_id": "native-verilog-eval-dataset-code-complete-iccad2023-prob001-zero",
+      "discipline": "RTL Design",
+      "source_sha256": "0485c1d2d9f46586bd14cc3e37bd723c77b5951238c3c1066ad9d2354fa29b1d",
+      "task_id": "catalog-native-verilog-eval-dataset-code-complete-iccad2023-prob001-zero",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob002-extraneous-items-sequence-detect",
+      "discipline": "RTL Design",
+      "source_sha256": "619cdfb3f4e4d0eb265c54a1b0dae2c3d16ce461c7263e4783afbf3387608a86",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob002-extraneous-items-sequence-detect",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-adder-adder-16bit-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "fe03ec15998d6273797d2e9c80f973b374b7511dd3cceb00cbe15e1061e62bd6",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-adder-adder-16bit-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "VerilogEval",
+      "benchmark_id": "verilog-eval",
+      "catalog_task_id": "native-verilog-eval-dataset-code-complete-iccad2023-prob002-m2014-q4i",
+      "discipline": "RTL Design",
+      "source_sha256": "5f5d9d37900223f3e7e1bd0feae21dec6b585e450a040dd0eed2a35326cf4f03",
+      "task_id": "catalog-native-verilog-eval-dataset-code-complete-iccad2023-prob002-m2014-q4i",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob006-data-serial-to-parallel-circuit",
+      "discipline": "RTL Design",
+      "source_sha256": "420e8db7bff9f23697bcad52de6220db20e83cfccc184e5037fdaaaf826b84f7",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob006-data-serial-to-parallel-circuit",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-adder-adder-32bit-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "0349568f9e52a6c3771c83577d7fdf04eae9467f297abdca659772fb6829434a",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-adder-adder-32bit-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "VerilogEval",
+      "benchmark_id": "verilog-eval",
+      "catalog_task_id": "native-verilog-eval-dataset-code-complete-iccad2023-prob003-step-one",
+      "discipline": "RTL Design",
+      "source_sha256": "64766b9c04c519da489ee7c9f4e243179eef391505c96753499159798bd42a50",
+      "task_id": "catalog-native-verilog-eval-dataset-code-complete-iccad2023-prob003-step-one",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob007-data-accumulation-output",
+      "discipline": "RTL Design",
+      "source_sha256": "0d223fe13d2ae48b6e73ede833b1ae39fc45b20423c6d85cb39b8fa584fd329b",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob007-data-accumulation-output",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-adder-adder-8bit-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "e252fc231f969343690f4036230db4e688ef9655d5e425dc8cd3780a76a9e170",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-adder-adder-8bit-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "VerilogEval",
+      "benchmark_id": "verilog-eval",
+      "catalog_task_id": "native-verilog-eval-dataset-code-complete-iccad2023-prob004-vector2",
+      "discipline": "RTL Design",
+      "source_sha256": "4685277a169ac119e8ebe7ed2365d753a8b5e431648916694e422ff8fd319658",
+      "task_id": "catalog-native-verilog-eval-dataset-code-complete-iccad2023-prob004-vector2",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob008-non-integer-data-width-conversion-24to128",
+      "discipline": "RTL Design",
+      "source_sha256": "9b5e36727a44b3f375225d02e4d538a94cd5ea58375c6da203ebb3304f1f7f9b",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob008-non-integer-data-width-conversion-24to128",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-adder-adder-bcd-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "5c78ef6fb3e6041fb7df62489700a9e1659b53d8648ec7ab98e941c0d4c6158a",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-adder-adder-bcd-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "VerilogEval",
+      "benchmark_id": "verilog-eval",
+      "catalog_task_id": "native-verilog-eval-dataset-code-complete-iccad2023-prob005-notgate",
+      "discipline": "RTL Design",
+      "source_sha256": "02cb09c049399b1a4ee2a0f584a2c9824a8ea6d57b51da0e9b8342f31997b444",
+      "task_id": "catalog-native-verilog-eval-dataset-code-complete-iccad2023-prob005-notgate",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob009-non-integer-data-width-conversion-8to12",
+      "discipline": "RTL Design",
+      "source_sha256": "0ae3873117c0b8ecf5d0555e21d37baa81b9241b5d8f940ca20e7981c43ded8a",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob009-non-integer-data-width-conversion-8to12",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-adder-adder-pipe-64bit-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "e027411456b571bf065a71814910d90b203ea485772be610f5529fed871d93e5",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-adder-adder-pipe-64bit-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "VerilogEval",
+      "benchmark_id": "verilog-eval",
+      "catalog_task_id": "native-verilog-eval-dataset-code-complete-iccad2023-prob006-vectorr",
+      "discipline": "RTL Design",
+      "source_sha256": "b357d9e04d00b4eeb3964809469dc14e9d3cc687b511022bf25c76374a284e0c",
+      "task_id": "catalog-native-verilog-eval-dataset-code-complete-iccad2023-prob006-vectorr",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "ChipBench",
+      "benchmark_id": "chipbench",
+      "catalog_task_id": "native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob010-integer-multiple-data-bit-width-conversion-8to16",
+      "discipline": "RTL Design",
+      "source_sha256": "9ec0e6beb208e0865643afb668ce67983c789ba32df9907aa31bb35a214165aa",
+      "task_id": "catalog-native-chipbench-verilog-debugging-dataset-debug-one-shot-arithmetic-prob010-integer-multiple-data-bit-width-conversion-8to16",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RTLLM 2.0",
+      "benchmark_id": "rtllm",
+      "catalog_task_id": "native-rtllm-rtllm-design-arithmetic-comparator-comparator-3bit-design-description-txt",
+      "discipline": "RTL Design",
+      "source_sha256": "d62e2aae363e44c1f61c26290e0464a8b104689bbf81a0129bff6000c4462e3b",
+      "task_id": "catalog-native-rtllm-rtllm-design-arithmetic-comparator-comparator-3bit-design-description-txt",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Mutation Cover with Yosys",
+      "benchmark_id": "mcy",
+      "catalog_task_id": "native-mcy-mcy-example-examples-bitcnt-config-mcy",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "cb72ed0e6ed3abb4700858c48c22d9ad4c9aea66c1e82c31c4848ee20ac3046a",
+      "task_id": "catalog-native-mcy-mcy-example-examples-bitcnt-config-mcy",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-ci-scripts-lib-bazel-query-test-py",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "ea3521a005304e440187f15b865b4d67b79466d18be44d9f155f227efb5dbcf5",
+      "task_id": "catalog-native-opentitan-opentitan-test-ci-scripts-lib-bazel-query-test-py",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RealBench",
+      "benchmark_id": "realbench",
+      "catalog_task_id": "native-realbench-aes-aes-cipher-top",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "672ee1365125f61acfe89d7ed143604f11cb746af89ea9560fef74fa3c6aa0e2",
+      "task_id": "catalog-native-realbench-aes-aes-cipher-top",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RISC-V DV",
+      "benchmark_id": "riscv-dv",
+      "catalog_task_id": "native-riscv-dv-target-ml-testlist-yaml-1-riscv-rand-test",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "77db2094e4581d742fd0e525c7f98f8fa646846f46de00bdf3dd46838fd57e12",
+      "task_id": "catalog-native-riscv-dv-target-ml-testlist-yaml-1-riscv-rand-test",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "Mutation Cover with Yosys",
+      "benchmark_id": "mcy",
+      "catalog_task_id": "native-mcy-mcy-example-examples-picorv32-primes-config-mcy",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "2dd2c315a7893b568bd6272f5ca549d331198c586a24cf4c49590bd32800004e",
+      "task_id": "catalog-native-mcy-mcy-example-examples-picorv32-primes-config-mcy",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-dv-dpi-usbdpi-usbdpi-test-c",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "d4aa0ab57a19f5778a294dc045c58c9c2dcd4a5e87744db043c31a93f3d735f6",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-dv-dpi-usbdpi-usbdpi-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RealBench",
+      "benchmark_id": "realbench",
+      "catalog_task_id": "native-realbench-aes-aes-inv-cipher-top",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "672ee1365125f61acfe89d7ed143604f11cb746af89ea9560fef74fa3c6aa0e2",
+      "task_id": "catalog-native-realbench-aes-aes-inv-cipher-top",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RISC-V DV",
+      "benchmark_id": "riscv-dv",
+      "catalog_task_id": "native-riscv-dv-target-multi-harts-testlist-yaml-1-riscv-non-compressed-instr-test",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "257de49de380d4587d697a08984c4b141f0621c12c9451b16d8f065743700def",
+      "task_id": "catalog-native-riscv-dv-target-multi-harts-testlist-yaml-1-riscv-non-compressed-instr-test",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-dv-sv-cip-lib-cip-base-test-sv",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "d45c078accf4e324ff73dbdcd4523566bb1c3d4cedd5d4b66385b92c31f7471d",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-dv-sv-cip-lib-cip-base-test-sv",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RealBench",
+      "benchmark_id": "realbench",
+      "catalog_task_id": "native-realbench-aes-aes-inv-sbox",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "672ee1365125f61acfe89d7ed143604f11cb746af89ea9560fef74fa3c6aa0e2",
+      "task_id": "catalog-native-realbench-aes-aes-inv-sbox",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RISC-V DV",
+      "benchmark_id": "riscv-dv",
+      "catalog_task_id": "native-riscv-dv-target-multi-harts-testlist-yaml-2-riscv-hint-instr-test",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "257de49de380d4587d697a08984c4b141f0621c12c9451b16d8f065743700def",
+      "task_id": "catalog-native-riscv-dv-target-multi-harts-testlist-yaml-2-riscv-hint-instr-test",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-dv-sv-dv-lib-dv-base-test-sv",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "3416796aec93405fc958175e2aa0214b1c9252a22cafc91862f9b0a4d7871c06",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-dv-sv-dv-lib-dv-base-test-sv",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RealBench",
+      "benchmark_id": "realbench",
+      "catalog_task_id": "native-realbench-aes-aes-key-expand-128",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "672ee1365125f61acfe89d7ed143604f11cb746af89ea9560fef74fa3c6aa0e2",
+      "task_id": "catalog-native-realbench-aes-aes-key-expand-128",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RISC-V DV",
+      "benchmark_id": "riscv-dv",
+      "catalog_task_id": "native-riscv-dv-target-multi-harts-testlist-yaml-3-riscv-load-store-shared-mem-test",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "257de49de380d4587d697a08984c4b141f0621c12c9451b16d8f065743700def",
+      "task_id": "catalog-native-riscv-dv-target-multi-harts-testlist-yaml-3-riscv-load-store-shared-mem-test",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-dv-sv-tl-agent-dv-tests-tl-agent-base-test-sv",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "11a90f5cbf1175cf11fff62319b640182886eafa58fbfcbf5fbaa1f3a6b4ac88",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-dv-sv-tl-agent-dv-tests-tl-agent-base-test-sv",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RealBench",
+      "benchmark_id": "realbench",
+      "catalog_task_id": "native-realbench-aes-aes-rcon",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "672ee1365125f61acfe89d7ed143604f11cb746af89ea9560fef74fa3c6aa0e2",
+      "task_id": "catalog-native-realbench-aes-aes-rcon",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RISC-V DV",
+      "benchmark_id": "riscv-dv",
+      "catalog_task_id": "native-riscv-dv-target-multi-harts-testlist-yaml-4-riscv-amo-test",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "257de49de380d4587d697a08984c4b141f0621c12c9451b16d8f065743700def",
+      "task_id": "catalog-native-riscv-dv-target-multi-harts-testlist-yaml-4-riscv-amo-test",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-ip-adc-ctrl-dv-tests-adc-ctrl-base-test-sv",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "135626aec68ed63240c7906a9baa7f53ad33397256e9afb4b44d3a34d80d744e",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-ip-adc-ctrl-dv-tests-adc-ctrl-base-test-sv",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RealBench",
+      "benchmark_id": "realbench",
+      "catalog_task_id": "native-realbench-aes-aes-sbox",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "672ee1365125f61acfe89d7ed143604f11cb746af89ea9560fef74fa3c6aa0e2",
+      "task_id": "catalog-native-realbench-aes-aes-sbox",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "RISC-V DV",
+      "benchmark_id": "riscv-dv",
+      "catalog_task_id": "native-riscv-dv-target-multi-harts-testlist-yaml-5-riscv-single-hart-test",
+      "discipline": "Verification (DV/FV)",
+      "source_sha256": "257de49de380d4587d697a08984c4b141f0621c12c9451b16d8f065743700def",
+      "task_id": "catalog-native-riscv-dv-target-multi-harts-testlist-yaml-5-riscv-single-hart-test",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-dv-dpi-usbdpi-usbdpi-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "d4aa0ab57a19f5778a294dc045c58c9c2dcd4a5e87744db043c31a93f3d735f6",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-dv-dpi-usbdpi-usbdpi-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-top-darjeeling-sw-autogen-tests-alert-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "462c1153326fc8b306f21355cfdab36d893994dcf2acff5c1f707cb1e3f482da",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-top-darjeeling-sw-autogen-tests-alert-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-top-darjeeling-sw-autogen-tests-plic-all-irqs-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "afd4b2404c344e13c1e8a8e8c044f42da1244cbba99cd550bc624dc7b784dd80",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-top-darjeeling-sw-autogen-tests-plic-all-irqs-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-top-earlgrey-sw-autogen-tests-alert-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "29ecc98e6ff2f979fffc766fac2f283ad10df9f116c90704533efb6ee21e800c",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-top-earlgrey-sw-autogen-tests-alert-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-top-earlgrey-sw-autogen-tests-plic-all-irqs-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "75542195320f684ae16fdc30ce4a80e6a244058377a25e6f2c1e85123cab7939",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-top-earlgrey-sw-autogen-tests-plic-all-irqs-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-top-englishbreakfast-sw-autogen-tests-plic-all-irqs-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "1515cdd368fa134b415e43ad4cfc23eb1155565dae81de0f90a0d322d0a8b8cb",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-top-englishbreakfast-sw-autogen-tests-plic-all-irqs-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-hw-vendor-pulp-riscv-dbg-tb-remote-bitbang-rbs-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "c8622fc8646d795ec0bf026efbd46bf53e32d9e956ee2799981b48ad721f203e",
+      "task_id": "catalog-native-opentitan-opentitan-test-hw-vendor-pulp-riscv-dbg-tb-remote-bitbang-rbs-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-base-mock-mmio-test-cc",
+      "discipline": "Software Development",
+      "source_sha256": "10484e9d48cd8195b04a8ed17c34e9e5298579d4510226db7f29dbe7ed7c3f54",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-base-mock-mmio-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-aes-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "8da1a192bca6a5cea58b9a6227ff1d8750bc76c16f3da06f92b4cf8d57d396dd",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-aes-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-alert-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "025f8a53ae937a7c3db304d8c8762d36fcff8af2841a35fc88d3211ae7b79869",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-alert-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-entropy-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "bf790286ade346f338d3759dbbe9804d84b0765f9b09befe97f5dbe3df0d00c5",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-entropy-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-hmac-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "09ecb74a12c8c7a1ea86fab39b0ec7743c1377dc3e32d8983f7ba16ce9b197df",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-hmac-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-keymgr-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "e9ac15c217f166437263f74e44206fc4bebece83d4ff65adbd849b97a9fad597",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-keymgr-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-kmac-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "cb061b1a440aa4dc2da24e9211b15065db2b6fa7f48b89e8d01b5a19469f6f7d",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-kmac-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-otbn-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "557142d6eb42ddc19cf7a2ec76168771bd5e1ea1ba410d141bcd5715224f90f6",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-otbn-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-rv-core-ibex-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "4fb710e59924764181667b7504e626141ffbefaa4982060787340bb53d783b3f",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-crypto-drivers-rv-core-ibex-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-testing-test-rom-test-rom-test-c",
+      "discipline": "Software Development",
+      "source_sha256": "f0a1a87c1e925b3b565389e7bf4f2a9f93e77a5e9edf627524352422bdea7906",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-testing-test-rom-test-rom-test-c",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-ujson-example-test-cc",
+      "discipline": "Software Development",
+      "source_sha256": "49f3ceb0a58a2280b1d47a658aaa0ecb6ebb1c953def4744972fe373d1903e51",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-ujson-example-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-lib-ujson-ujson-test-cc",
+      "discipline": "Software Development",
+      "source_sha256": "67dd03bfb74225b2fcb1b44f02123a25ad17cb2c3061a3279d9b7909f2d9d2c4",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-lib-ujson-ujson-test-cc",
+      "verification_kind": "execution-evidence"
+    },
+    {
+      "benchmark": "OpenTitan",
+      "benchmark_id": "opentitan",
+      "catalog_task_id": "native-opentitan-opentitan-test-sw-device-silicon-creator-lib-base-mock-csr-test-cc",
+      "discipline": "Software Development",
+      "source_sha256": "450a3f918143163b66cb06abefc49451f90fb450a7fe96308a3925ba10a5ab17",
+      "task_id": "catalog-native-opentitan-opentitan-test-sw-device-silicon-creator-lib-base-mock-csr-test-cc",
+      "verification_kind": "execution-evidence"
+    }
+  ],
+  "verification_kind": "execution-evidence"
+}
